@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mir"           # lowercase package name
+version = "0.0.1"
+description = "Medical-image registration toolkit"
+authors = [{ name = "Junyu Chen", email = "jchen245@jhmi.edu" }]
+readme = "README.md"
+requires-python = ">=3.8"
+
+[project.optional-dependencies]
+dev = ["black", "pytest"]
+
+[tool.setuptools.packages.find]
+include = ["MIR*"]
