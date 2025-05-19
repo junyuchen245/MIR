@@ -393,7 +393,7 @@ class TransMorphTVFSPR(nn.Module):
         composition: Type of composition for flow integration ('composition' or 'addition')
         swin_type: Type of Swin Transformer to use ('swin' or 'dswin')
     '''
-    def __init__(self, config, SVF=True, time_steps=5, SVF_steps=7, composition='composition', swin_type='swin'):
+    def __init__(self, config, SVF=True, time_steps=12, SVF_steps=7, composition='composition', swin_type='swin'):
         '''
         Multi-resolution TransMorph
         '''
@@ -543,10 +543,10 @@ class TransMorphTVFSPR(nn.Module):
             flow = self.reg_heads[t](x)
             flows.append(flow)
             if self.composition == 'composition':
-                flow_new = flow_previous + self.spatial_trans_(flow, flow_previous)
+                flow_new = flow_previous + self.spatial_trans_half(flow, flow_previous)
             else:
                 # essentially addition
-                flow_new = flow_previous + self.spatial_trans_(flow, flow)
+                flow_new = flow_previous + self.spatial_trans_half(flow, flow)
             def_x = self.spatial_trans_half(mov, flow_new)
             flow_previous = flow_new
         flow = flow_new
