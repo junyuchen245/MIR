@@ -8,7 +8,6 @@ Johns Hopkins University
 
 import torch
 import MIR.utils.registration_utils as reg_utils
-from math import prod
 import torch.nn.functional as nnf
 
 class Grad2D(torch.nn.Module):

@@ -3,7 +3,6 @@ import numpy as np
 import os
 import scipy.ndimage
 import argparse
-import pdb
 
 def calc_J_i(trans, grad_args):
     kernel = {}
