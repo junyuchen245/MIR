@@ -12,6 +12,10 @@ from .configs_VFA import get_VFA_default_config
 from .Synthesis_Heads import SynthesisHead3DAdvanced, SynthesisHead3D, EfficientAdvancedSynthHead3D, ConvNeXtSynthHead3D
 from .Segmentation_Heads import AdvancedDecoder3D
 from .convexAdam import convex_adam_MIND, convex_adam_seg_features, get_ConvexAdam_MIND_brain_default_config
+from .VoxelMorph import VxmDense
+from .HyperMorph import HyperVxmDense
+from .HyperTransMorph import HyperTransMorphTVF, HyperTransMorphTVFSPR
+from .configs_VoxelMorph import get_VXM_1_config, get_VXM_default_config, get_VXM_BJ_config
 __all__ = [
     'convex_adam_MIND',
     'convex_adam_seg_features',
@@ -25,6 +29,10 @@ __all__ = [
     'TransMorph',
     'TransMorphTVF',
     'TransMorphTVFSPR',
+    'VxmDense',
+    'HyperVxmDense',
+    'HyperTransMorphTVF',
+    'HyperTransMorphTVFSPR',
     'CONFIGS',
     'get_3DTransMorphDWin3Lvl_config',
     'get_3DTransMorph3Lvl_config',
@@ -39,6 +47,9 @@ __all__ = [
     'get_3DTransMorphSmall_config',
     'get_3DTransMorphTiny_config',
     'get_3DTransMorphRelativePosEmbdSimple_config',
+    'get_VXM_1_config',
+    'get_VXM_default_config',
+    'get_VXM_BJ_config',
     'SpatialTransformer',
     'VecInt',
     'SSLHeadNLvl',
