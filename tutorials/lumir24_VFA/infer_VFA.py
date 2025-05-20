@@ -81,13 +81,13 @@ def main():
     if not os.path.isdir("pretrained_wts/"):
         os.makedirs("pretrained_wts/")
     if not os.path.isfile(pretrained_dir+pretrained_wts):
-        # download
+        # download model
         file_id = "17XEfRYJbnrtCVhaBCOvQVOLkWhix9PAK"
         url = f"https://drive.google.com/uc?id={file_id}"
         gdown.download(url, pretrained_dir+pretrained_wts, quiet=False)
     
     if not os.path.isfile('LUMIR_dataset.json'):
-        # download
+        # download dataset json file
         file_id = "1b0hyH7ggjCysJG-VGvo38XVE8bFVRMxb"
         url = f"https://drive.google.com/uc?id={file_id}"
         gdown.download(url, 'LUMIR_dataset.json', quiet=False)
