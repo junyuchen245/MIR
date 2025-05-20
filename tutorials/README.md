@@ -8,3 +8,11 @@ This directory provides basic tutorials on how to run various models using this 
 |TransMorph|`1SSqI88l1MdrPJgE4Rn8pqXnVfZNPxtry`|`'state_dict'`|
 |LUMIR_dataset.json|`1b0hyH7ggjCysJG-VGvo38XVE8bFVRMxb`|-|
 |LUMIR25_dataset.json|`1IHt0I0HQXnmlwqj5rwXiNEa15fUUFtbf`|-|
+
+## Dataset
+
+|Dataset|Link|
+|---|---|
+|IXI| https://github.com/junyuchen245/Preprocessed_IXI_Dataset |
+|LUMIR24|https://learn2reg.grand-challenge.org/learn2reg-2024/|
+|LUMIR25|https://learn2reg.grand-challenge.org/learn2reg-2025/|
