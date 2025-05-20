@@ -4,8 +4,11 @@ import torch.nn.functional as F
 import torch, sys
 from torch import nn
 
-def dice_val_VOI(y_pred, y_true, num_clus=4):
-    VOI_lbls = np.arange(1, num_clus)
+def dice_val_VOI(y_pred, y_true, num_clus=4, eval_labels=None):
+    if eval_labels is not None:
+        VOI_lbls = eval_labels
+    else:
+        VOI_lbls = np.arange(1, num_clus)
     pred = y_pred.detach().cpu().numpy()[0, 0, ...]
     true = y_true.detach().cpu().numpy()[0, 0, ...]
     DSCs = np.zeros((len(VOI_lbls), 1))
