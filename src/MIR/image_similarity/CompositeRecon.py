@@ -1,9 +1,4 @@
 import torch
-import torch.nn.functional as F
-from torch.autograd import Variable
-import numpy as np
-from math import exp
-import math
 import torch.nn as nn
 
 class CompRecon(nn.Module):
