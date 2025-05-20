@@ -1,4 +1,0 @@
-
-[dev]
-black
-pytest
