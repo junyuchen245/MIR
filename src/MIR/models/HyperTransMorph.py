@@ -304,7 +304,7 @@ class SwinTransformerBlock(nn.Module):
         else:
             x = shifted_x
 
-        if pad_r > 0 or pad_b > 0:
+        if pad_r > 0 or pad_b > 0 or pad_h > 0:
             x = x[:, :H, :W, :T, :].contiguous()
 
         x = x.view(B, H * W * T, C)
@@ -907,7 +907,7 @@ class HyperTransMorphTVF(nn.Module):
         x = self.up1(x, f2, hyper=hyper)
         xx = self.up2(x, f3, hyper=hyper)
         def_x = mov.clone()
-        flow_previous = 0
+        flow_previous = torch.zeros((mov.shape[0], 3, self.img_size[0], self.img_size[1], self.img_size[2])).to(mov.device)
         flows = []
 
         # flow integration

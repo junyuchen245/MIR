@@ -8,11 +8,11 @@ import torch
 from torch import optim
 import matplotlib.pyplot as plt
 from natsort import natsorted
-from MIR.models import HyperVxmDense, SpatialTransformer
+from MIR.models import HyperTransMorphTVF, SpatialTransformer
 from MIR.image_similarity import NCC_vxm
 from MIR.deformation_regularizer import Grad3d
 from MIR.utils import Logger, AverageMeter
-import MIR.models.configs_VoxelMorph as CONFIGS_VXM
+import MIR.models.configs_TransMorph as configs_TransMorph
 from MIR.accuracy_measures import dice_val_VOI
 from MIR.utils import mk_grid_img
 import matplotlib
@@ -29,7 +29,7 @@ def main():
     train_dir = '/scratch2/jchen/DATA/IXI/Train/'
     val_dir = '/scratch2/jchen/DATA/IXI/Val/'
     weights = [1, 1] # loss weights
-    save_dir = 'HyperMorph_0.3_ncc_{}_diffusion_{}/'.format(weights[0], weights[1])
+    save_dir = 'HyperTransMorph_0.3_ncc_{}_diffusion_{}/'.format(weights[0], weights[1])
     if not os.path.exists('experiments/'+save_dir):
         os.makedirs('experiments/'+save_dir)
     if not os.path.exists('logs/'+save_dir):
@@ -44,11 +44,12 @@ def main():
     Initialize model
     '''
     H, W, D = 160, 192, 224
-    scale_factor=1
-    config = CONFIGS_VXM.get_VXM_default_config()
+    scale_factor = 2
+    config = configs_TransMorph.get_3DTransMorph3Lvl_config()
     config.img_size = (H//scale_factor, W//scale_factor, D//scale_factor)
+    config.window_size = (H // 64, W // 64, D // 64)
     print(config)
-    model = HyperVxmDense(config)
+    model = HyperTransMorphTVF(config)
     model.cuda()
 
     '''
@@ -110,7 +111,7 @@ def main():
                 y_half = F.avg_pool3d(y, 2).cuda()
             reg_code = torch.rand(1, dtype=x.dtype, device=x.device).unsqueeze(dim=0)
             flow = model((x_half, y_half), reg_code)
-            flow = F.interpolate(flow.cuda(), scale_factor=2, mode='trilinear', align_corners=False) * 2
+            flow = F.interpolate(flow[0].cuda(), scale_factor=2, mode='trilinear', align_corners=False) * 2
             output = spatial_trans(x, flow)
             loss_ncc = criterion_ncc(output, y) * (1-reg_code)
             loss_reg = criterion_reg(flow, flow) * reg_code#weights[1]
@@ -141,7 +142,7 @@ def main():
                 y_seg = data[3]
                 reg_code = torch.tensor([val_hyper], dtype=x.dtype, device=x.device).unsqueeze(dim=0)
                 flow = model((x_half, y_half), reg_code)
-                flow = F.interpolate(flow.cuda(), scale_factor=2, mode='trilinear', align_corners=False) * 2
+                flow = F.interpolate(flow[0].cuda(), scale_factor=2, mode='trilinear', align_corners=False) * 2
                 grid_img = mk_grid_img(8, 1, (H, W, D), dim=0).cuda()
                 def_seg = spatial_trans_nn(x_seg.cuda().float(), flow.cuda())
                 def_grid = spatial_trans(grid_img.float(), flow.cuda())
