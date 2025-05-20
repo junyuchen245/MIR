@@ -25,13 +25,13 @@ VOI_lbls = [1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20, 21, 22, 
 def main():
     batch_size = 1
     val_hyper = 0.3
-    atlas_dir = '/scratch/jchen/DATA/IXI/atlas.pkl'
-    train_dir = '/scratch/jchen/DATA/IXI/Train/'
-    val_dir = '/scratch/jchen/DATA/IXI/Val/'
+    atlas_dir = '/scratch2/jchen/DATA/IXI/atlas.pkl'
+    train_dir = '/scratch2/jchen/DATA/IXI/Train/'
+    val_dir = '/scratch2/jchen/DATA/IXI/Val/'
     weights = [1, 1] # loss weights
     save_dir = 'HyperMorph2_0.3_ncc_{}_diffusion_{}/'.format(weights[0], weights[1])
-    if not os.path.exists('/scratch2/jchen/IXI/experiments/'+save_dir):
-        os.makedirs('/scratch2/jchen/IXI/experiments/'+save_dir)
+    if not os.path.exists('experiments/'+save_dir):
+        os.makedirs('experiments/'+save_dir)
     if not os.path.exists('logs/'+save_dir):
         os.makedirs('logs/'+save_dir)
     sys.stdout = Logger('logs/'+save_dir)
@@ -109,8 +109,7 @@ def main():
                 x_half = F.avg_pool3d(x, 2).cuda()
                 y_half = F.avg_pool3d(y, 2).cuda()
             reg_code = torch.rand(1, dtype=x.dtype, device=x.device).unsqueeze(dim=0)
-            x_in = torch.cat((x_half, y_half), dim=1)
-            flow = model(x_in, reg_code)
+            flow = model((x_half, y_half), reg_code)
             flow = F.interpolate(flow.cuda(), scale_factor=2, mode='trilinear', align_corners=False) * 2
             output = spatial_trans(x, flow)
             loss_ncc = criterion_ncc(output, y) * (1-reg_code)
@@ -141,8 +140,7 @@ def main():
                 x_seg = data[2]
                 y_seg = data[3]
                 reg_code = torch.tensor([val_hyper], dtype=x.dtype, device=x.device).unsqueeze(dim=0)
-                x_in = torch.cat((x_half, y_half), dim=1)
-                flow = model(x_in, reg_code)
+                flow = model((x_half, y_half), reg_code)
                 flow = F.interpolate(flow.cuda(), scale_factor=2, mode='trilinear', align_corners=False) * 2
                 grid_img = mk_grid_img(8, 1, (H, W, D), dim=0).cuda()
                 def_seg = spatial_trans_nn(x_seg.cuda().float(), flow.cuda())
@@ -156,7 +154,7 @@ def main():
             'state_dict': model.state_dict(),
             'best_dsc': best_dsc,
             'optimizer': optimizer.state_dict(),
-        }, save_dir='/scratch2/jchen/IXI/experiments/'+save_dir, filename='dsc{:.3f}.pth.tar'.format(eval_dsc.avg))
+        }, save_dir='experiments/'+save_dir, filename='dsc{:.3f}.pth.tar'.format(eval_dsc.avg))
         writer.add_scalar('DSC/validate', eval_dsc.avg, epoch)
         plt.switch_backend('agg')
         pred_fig = comput_fig(def_seg)

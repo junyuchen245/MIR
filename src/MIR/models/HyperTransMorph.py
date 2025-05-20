@@ -22,7 +22,7 @@ from timm.models.layers import DropPath, trunc_normal_, to_3tuple
 from torch.distributions.normal import Normal
 import torch.nn.functional as nnf
 import numpy as np
-import models.configs_TransMorph as configs
+import MIR.models.configs_TransMorph as configs
 import MIR.models.registration_utils as utils
 
 class CustomConv(nn.Module):

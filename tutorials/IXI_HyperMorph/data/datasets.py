@@ -8,8 +8,10 @@ import numpy as np
 
 
 class IXIBrainDataset(Dataset):
-    def __init__(self, data_path, atlas_path, transforms):
-        self.paths = data_path
+    def __init__(self, data_path, atlas_path, transforms, amount=1):
+        num_paths = len(data_path)
+        num_to_load = max(1, int(num_paths * amount))  # Ensure at least 1 path is loaded
+        self.paths = data_path[:num_to_load]  # Slice to first 10%
         self.atlas_path = atlas_path
         self.transforms = transforms
 
