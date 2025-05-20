@@ -3,7 +3,7 @@ requires = ["setuptools>=64", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "mir"           # lowercase package name
+name = "MIR"           # lowercase package name
 version = "0.0.1"
 description = "Medical-image registration toolkit"
 authors = [{ name = "Junyu Chen", email = "jchen245@jhmi.edu" }]
@@ -13,5 +13,16 @@ requires-python = ">=3.8"
 [project.optional-dependencies]
 dev = ["black", "pytest"]
 
+[tool.setuptools]
+package-dir = {"" = "src"}    # <-- tell it that your packages live in src/
+
+[tool.setuptools.package-data]
+# this says: in the src/MIR/utils folder, include any .txt
+"MIR.utils" = ["FreeSurfer_label_info.txt"]
+
+# either explicitly list your package
+# packages = ["MIR"]
+# or use find:
 [tool.setuptools.packages.find]
-include = ["MIR*"]
+where  = ["src"]             # <-- look under src/
+include = ["MIR*",] 
