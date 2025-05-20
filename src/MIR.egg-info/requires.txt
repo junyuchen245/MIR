@@ -1,0 +1,4 @@
+
+[dev]
+black
+pytest
