@@ -13,6 +13,6 @@ This directory provides basic tutorials on how to run various models using this 
 
 |Dataset|Link|
 |---|---|
-|IXI| https://github.com/junyuchen245/Preprocessed_IXI_Dataset |
+|IXI| https://github.com/junyuchen245/Preprocessed_IXI_Dataset|
 |LUMIR24|https://learn2reg.grand-challenge.org/learn2reg-2024/|
 |LUMIR25|https://learn2reg.grand-challenge.org/learn2reg-2025/|
