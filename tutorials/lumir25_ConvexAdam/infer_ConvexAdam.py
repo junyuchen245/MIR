@@ -75,7 +75,7 @@ def main():
     model = convex_adam_MIND
     print(config)
     
-    if not os.path.isfile('LUMIR_dataset.json'):
+    if not os.path.isfile('LUMIR25_dataset.json'):
         # download dataset json file
         file_id = "1b0hyH7ggjCysJG-VGvo38XVE8bFVRMxb"
         url = f"https://drive.google.com/uc?id={file_id}"
