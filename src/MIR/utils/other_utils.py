@@ -4,6 +4,8 @@ from pathlib import Path
 import torch
 from torch import nn
 import torch.nn.functional as F
+import zipfile
+import os
 
 HERE = Path(__file__).resolve().parent
 text_path = HERE / "FreeSurfer_label_info.txt"
@@ -136,3 +138,18 @@ class CenterCropPad3D(nn.Module):
             x = F.pad(x, pad_tuple, mode=self.pad_mode, value=padding_value)
 
         return x
+    
+def create_zip(zip_filename, source_dir):
+    """Creates a zip file from a directory.
+
+    Args:
+        zip_filename: The name of the zip file to create.
+        source_dir: The directory to zip.
+    """
+    with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        for root, _, files in os.walk(source_dir):
+            for file in files:
+                file_path = os.path.join(root, file)
+                # Calculate the relative path to store in the zip file
+                relative_path = os.path.relpath(file_path, source_dir)
+                zipf.write(file_path, relative_path)
