@@ -98,7 +98,6 @@ def main():
         x = data[0]
         y = data[1]
         flow = model(x, y, config)
-        flow = F.interpolate(flow.cuda(), scale_factor=2, mode='trilinear', align_corners=False) * 2
         flow = flow.squeeze(0).detach().cpu().numpy()
         save_nii(flow, output_dir + 'disp_{}_{}'.format(fx_id, mv_id))
         print('disp_{}_{}.nii.gz saved to {}'.format(fx_id, mv_id, output_dir))
