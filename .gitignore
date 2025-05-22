@@ -2,3 +2,5 @@
 build/
 dist/
 src/*.egg-info/
+tutorials/VFA_*
+tutorials/lumir24_VFA/infer_VFA_w*
