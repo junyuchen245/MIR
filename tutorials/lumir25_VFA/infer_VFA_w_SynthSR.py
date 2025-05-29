@@ -12,6 +12,7 @@ import torch.nn.functional as F
 import nibabel as nib
 import matplotlib.pyplot as plt
 import random
+from MIR.models import fit_warp_to_svf
 from torch.utils.data import Dataset
 
 class L2RLUMIRJSONDataset(Dataset):
@@ -41,8 +42,8 @@ class L2RLUMIRJSONDataset(Dataset):
             img_dict = self.imgs[index]
             mov_path = img_dict['moving']
             fix_path = img_dict['fixed']
-            x = nib.load(self.base_dir + mov_path)
-            y = nib.load(self.base_dir + fix_path)
+            x = nib.load(self.base_dir + mov_path.replace('imagesVal', 'imagesSynthSR'))
+            y = nib.load(self.base_dir + fix_path.replace('imagesVal', 'imagesSynthSR'))
         x = x.get_fdata() / 255.
         y = y.get_fdata() / 255.
         x, y = x[None, ...], y[None, ...]
@@ -62,7 +63,7 @@ def save_nii(img, file_name, pix_dim=[1., 1., 1.]):
 
 def main():
     batch_size = 1
-    val_dir = '/scratch/jchen/DATA/LUMIR/'
+    val_dir = '/scratch/jchen/DATA/LUMIR/LUMIR25/'
     scale_factor = 1
     output_dir = 'LUMIR_VFA_ValPhase/'
     if not os.path.isdir(output_dir):
@@ -86,12 +87,12 @@ def main():
         url = f"https://drive.google.com/uc?id={file_id}"
         gdown.download(url, pretrained_dir+pretrained_wts, quiet=False)
     
-    if not os.path.isfile('LUMIR_dataset.json'):
+    if not os.path.isfile('LUMIR25_dataset.json'):
         # download dataset json file
-        file_id = "1b0hyH7ggjCysJG-VGvo38XVE8bFVRMxb"
+        file_id = "164Flc1C6oufONGimvpKlrNtq5t3obXEo"
         url = f"https://drive.google.com/uc?id={file_id}"
-        gdown.download(url, 'LUMIR_dataset.json', quiet=False)
-    
+        gdown.download(url, 'LUMIR25_dataset.json', quiet=False)
+
     pretrained = torch.load(pretrained_dir+pretrained_wts)['model_state_dict']
     model.load_state_dict(pretrained)
     print('Pretrained Weights: {} loaded!'.format(pretrained_dir+pretrained_wts))
@@ -100,25 +101,26 @@ def main():
     '''
     Initialize training
     '''
-    val_set = L2RLUMIRJSONDataset(base_dir=val_dir, json_path='LUMIR_dataset.json', stage='test')
+    val_set = L2RLUMIRJSONDataset(base_dir=val_dir, json_path='LUMIR25_dataset.json', stage='test')
     val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=False, num_workers=1, pin_memory=True)
     val_files = val_set.imgs
     '''
     Validation
     '''
-    with torch.no_grad():
-        for i, data in enumerate(val_loader):
-            model.eval()
-            mv_id = val_files[i]['moving'].split('_')[-2]
-            fx_id = val_files[i]['fixed'].split('_')[-2]
-            
+    
+    for i, data in enumerate(val_loader):
+        model.eval()
+        mv_id = val_files[i]['moving'].split('_')[-2]
+        fx_id = val_files[i]['fixed'].split('_')[-2]
+        with torch.no_grad():
             data = [t.cuda() for t in data]
             x = data[0]
             y = data[1]
             flow = model((x, y))
-            flow = flow.squeeze(0).detach().cpu().numpy()
-            save_nii(flow, output_dir + 'disp_{}_{}'.format(fx_id, mv_id))
-            print('disp_{}_{}.nii.gz saved to {}'.format(fx_id, mv_id, output_dir))
+        flow = fit_warp_to_svf(flow, nb_steps=7, iters=500, lr=0.1, output_type='svf')
+        flow = flow.squeeze(0).detach().cpu().numpy()
+        save_nii(flow, output_dir + 'disp_{}_{}'.format(fx_id, mv_id))
+        print('disp_{}_{}.nii.gz saved to {}'.format(fx_id, mv_id, output_dir))
 
 if __name__ == '__main__':
     '''

@@ -169,11 +169,13 @@ def _torch_gradient(x, spacing=1):
  
 def fit_warp_to_svf(
     warp_t,
-    nb_steps: int = 5,
-    iters: int = 100,
+    nb_steps: int = 7,
+    iters: int = 500,
     min_delta: float = 1e-5,
     lr: float = 0.1,
+    objective: str = "mse",  # "mse" | "l1"
     init: str = "warp",          # "warp" | "jacwt"
+    output_type: str = "disp",  # "svf" | "disp"
     verbose: bool = True,
     device: str = 'cpu',):
     """
@@ -202,11 +204,14 @@ def fit_warp_to_svf(
  
     opt = torch.optim.Adam([vel], lr=lr)
     last_loss = None
- 
+    if objective == "mse":
+        criterion = nnf.mse_loss
+    elif objective == "l1":
+        criterion = nnf.l1_loss
     for epoch in range(iters):
         opt.zero_grad(set_to_none=True)
         disp_pred = integrator(vel)                        # exp(v)
-        loss = nnf.mse_loss(disp_pred, warp_t)
+        loss = criterion(disp_pred, warp_t)
         loss.backward()
         opt.step()
  
@@ -219,8 +224,12 @@ def fit_warp_to_svf(
  
         if verbose and epoch % 20 == 0:
             print(f"[{epoch:03d}]  loss={loss.item():.4e}")
-            
-    return vel
+    if output_type == "disp":
+        return vel
+    elif output_type == "svf":
+        return disp_pred
+    else:
+        raise ValueError(f"unknown output_type {output_type}, expected 'disp' or 'svf'")
  
  
 # -----------------------  inverse via velocity  --------------------------- #
