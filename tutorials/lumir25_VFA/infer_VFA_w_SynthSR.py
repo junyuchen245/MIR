@@ -44,8 +44,10 @@ class L2RLUMIRJSONDataset(Dataset):
             fix_path = img_dict['fixed']
             x = nib.load(self.base_dir + mov_path.replace('imagesVal', 'imagesSynthSR'))
             y = nib.load(self.base_dir + fix_path.replace('imagesVal', 'imagesSynthSR'))
-        x = x.get_fdata() / 255.
-        y = y.get_fdata() / 255.
+            x_org = nib.load(self.base_dir + mov_path)
+            y_org = nib.load(self.base_dir + fix_path)
+        x = x.get_fdata() / 255. * (x_org.get_fdata()> 0).astype(np.float32)
+        y = y.get_fdata() / 255. * (y_org.get_fdata()> 0).astype(np.float32)
         x, y = x[None, ...], y[None, ...]
         x = np.ascontiguousarray(x)  # [channels,Height,Width,Depth]
         y = np.ascontiguousarray(y)
