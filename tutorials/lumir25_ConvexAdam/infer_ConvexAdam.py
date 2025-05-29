@@ -77,14 +77,14 @@ def main():
     
     if not os.path.isfile('LUMIR25_dataset.json'):
         # download dataset json file
-        file_id = "1b0hyH7ggjCysJG-VGvo38XVE8bFVRMxb"
+        file_id = "164Flc1C6oufONGimvpKlrNtq5t3obXEo"
         url = f"https://drive.google.com/uc?id={file_id}"
         gdown.download(url, 'LUMIR25_dataset.json', quiet=False)
     
     '''
     Initialize training
     '''
-    val_set = L2RLUMIRJSONDataset(base_dir=val_dir, json_path=val_dir+'LUMIR25_dataset.json', stage='test')
+    val_set = L2RLUMIRJSONDataset(base_dir=val_dir, json_path='LUMIR25_dataset.json', stage='test')
     val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=False, num_workers=1, pin_memory=True)
     val_files = val_set.imgs
     '''
