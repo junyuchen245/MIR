@@ -28,7 +28,6 @@ def main():
     max_epoch = 50
     scale_factor = 2
     win_factor = 64
-    cont_training = False
     
     '''
     Initialize model
@@ -56,15 +55,7 @@ def main():
     reg_model.cuda()
     reg_model_bilin = SpatialTransformer((H, W, D), 'bilinear')
     reg_model_bilin.cuda()
-    if cont_training:
-        epoch_start = 394
-        model_dir = 'experiments/'+save_dir
-        updated_lr = round(lr * np.power(1 - (epoch_start) / max_epoch,0.9),8)
-        best_model = torch.load(model_dir + natsorted(os.listdir(model_dir))[-2])['state_dict']
-        print('Model: {} loaded!'.format(natsorted(os.listdir(model_dir))[-2]))
-        model.load_state_dict(best_model)
-    else:
-        updated_lr = lr
+    updated_lr = lr
     optimizer = optim.AdamW(model.parameters(), lr=updated_lr)
     criterion = NCC_gauss()
     criterion_KL = KL_divergence()
