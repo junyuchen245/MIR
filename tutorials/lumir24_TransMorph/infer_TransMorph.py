@@ -5,6 +5,7 @@ import numpy as np
 import torch
 from natsort import natsorted
 from MIR.models import TransMorphTVF
+from MIR import ModelWeights, DatasetJSONs
 import MIR.models.configs_TransMorph as configs_TransMorph
 import matplotlib
 matplotlib.use('Agg')
@@ -84,17 +85,17 @@ def main():
         os.makedirs("pretrained_wts/")
     if not os.path.isfile(pretrained_dir+pretrained_wts):
         # download model
-        file_id = "1SSqI88l1MdrPJgE4Rn8pqXnVfZNPxtry"
+        file_id = ModelWeights['TransMorphTVF-LUMIR24-MonoModal']['wts']
         url = f"https://drive.google.com/uc?id={file_id}"
         gdown.download(url, pretrained_dir+pretrained_wts, quiet=False)
     
     if not os.path.isfile('LUMIR_dataset.json'):
         # download dataset json file
-        file_id = "1b0hyH7ggjCysJG-VGvo38XVE8bFVRMxb"
+        file_id = DatasetJSONs['LUMIR24']
         url = f"https://drive.google.com/uc?id={file_id}"
         gdown.download(url, 'LUMIR_dataset.json', quiet=False)
-    
-    pretrained = torch.load(pretrained_dir+pretrained_wts)['state_dict']
+
+    pretrained = torch.load(pretrained_dir+pretrained_wts)[ ModelWeights['TransMorphTVF-LUMIR24-MonoModal']['wts_key']]
     model.load_state_dict(pretrained)
     print('Pretrained Weights: {} loaded!'.format(pretrained_dir+pretrained_wts))
     model.cuda()

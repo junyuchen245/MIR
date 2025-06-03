@@ -6,6 +6,7 @@ import torch
 from natsort import natsorted
 from MIR.models import VFA
 import MIR.models.configs_VFA as CONFIGS_VFA
+from MIR import ModelWeights, DatasetJSONs
 import matplotlib
 matplotlib.use('Agg')
 import torch.nn.functional as F
@@ -84,24 +85,24 @@ def main():
         os.makedirs("pretrained_wts/")
     if not os.path.isfile(pretrained_dir+pretrained_wts_multi):
         # download model
-        file_id = ""
+        file_id = ModelWeights['VFA-LUMIR25-MultiModal']['wts']
         url = f"https://drive.google.com/uc?id={file_id}"
         gdown.download(url, pretrained_dir+pretrained_wts_multi, quiet=False)
 
     if not os.path.isfile(pretrained_dir+pretrained_wts_mono):
         # download model
-        file_id = "17XEfRYJbnrtCVhaBCOvQVOLkWhix9PAK"
+        file_id = ModelWeights['VFA-LUMIR24-MonoModal']['wts']
         url = f"https://drive.google.com/uc?id={file_id}"
         gdown.download(url, pretrained_dir+pretrained_wts_mono, quiet=False)
 
     if not os.path.isfile('LUMIR25_dataset.json'):
         # download dataset json file
-        file_id = "164Flc1C6oufONGimvpKlrNtq5t3obXEo"
+        file_id = DatasetJSONs['LUMIR25']
         url = f"https://drive.google.com/uc?id={file_id}"
         gdown.download(url, 'LUMIR25_dataset.json', quiet=False)
 
-    pretrained_multi = torch.load(pretrained_dir+pretrained_wts_multi)['state_dict']
-    pretrained_mono = torch.load(pretrained_dir+pretrained_wts_mono)['model_state_dict']
+    pretrained_multi = torch.load(pretrained_dir+pretrained_wts_multi)[ModelWeights['VFA-LUMIR25-MultiModal']['wts_key']]
+    pretrained_mono = torch.load(pretrained_dir+pretrained_wts_mono)[ModelWeights['VFA-LUMIR24-MonoModal']['wts_key']]
     model.cuda()
     
     '''

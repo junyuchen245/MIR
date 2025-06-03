@@ -7,6 +7,7 @@ from . import models
 from . import utils
 from . import random_image_generation
 from . import intensity_normalization
+from .pretrained_wts import ModelWeights, DatasetJSONs
 
 __all__ = [
     'flip_aug',
@@ -19,6 +20,8 @@ __all__ = [
     'random_image_generation',
     'intensity_normalization',
     'RandomMultiContrastRemap',
+    'ModelWeights',
+    'DatasetJSONs',
     'fill_holes_torch',
 ]
 
