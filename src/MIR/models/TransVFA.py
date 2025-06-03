@@ -3,8 +3,39 @@ import torch.nn as nn
 import torch.nn.functional as nnf
 import MIR.models.Swin_Transformer as swin
 import MIR.models.Deformable_Swin_Transformer as dswin
+import MIR.models.Deformable_Swin_Transformer_v2 as dswin_v2
 import MIR.models as mir_m
 from MIR.models.VFA import Decoder, DoubleConv3d, grid_to_flow
+
+class VoxelShuffle(nn.Module):
+    """
+    3D voxel shuffle layer.
+    Upscales a (B, C, H, W, D) input by factor r in each spatial dim,
+    where C = C_out * (r ** 3).
+    """
+    def __init__(self, upscale_factor: int):
+        super().__init__()
+        self.r = upscale_factor
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        x: (B, C_in, H, W, D)
+        returns: (B, C_out, H*r, W*r, D*r)
+        """
+        B, C, H, W, D = x.shape
+        r = self.r
+        if C % (r**3) != 0:
+            raise ValueError(
+                f"Input channels ({C}) must be divisible by r^3 ({r**3})"
+            )
+        C_out = C // (r**3)
+        # reshape to (B, C_out, r, r, r, H, W, D)
+        x = x.view(B, C_out, r, r, r, H, W, D)
+        # permute to (B, C_out, H, r, W, r, D, r)
+        x = x.permute(0, 1, 5, 2, 6, 3, 7, 4).contiguous()
+        # merge interleaved dims → (B, C_out, H*r, W*r, D*r)
+        x = x.view(B, C_out, H * r, W * r, D * r)
+        return x
 
 class Feature2VFA(nn.Module):
     '''
@@ -58,24 +89,44 @@ class Feature2VFA(nn.Module):
                                            dwin_size=configs_sw.dwin_kernel_size,
                                            img_size=configs_sw.img_size,
                                            )
+        elif swin_type == 'dswinv2':
+            self.encoder = dswin_v2.DefSwinTransformerV2(patch_size=configs_sw.patch_size,
+                                           in_chans=2,
+                                           embed_dim=configs_sw.embed_dim,
+                                           depths=configs_sw.depths,
+                                           num_heads=configs_sw.num_heads,
+                                           window_size=configs_sw.window_size,
+                                           mlp_ratio=configs_sw.mlp_ratio,
+                                           qkv_bias=configs_sw.qkv_bias,
+                                           drop_rate=configs_sw.drop_rate,
+                                           drop_path_rate=configs_sw.drop_path_rate,
+                                           ape=configs_sw.ape,
+                                           spe=configs_sw.spe,
+                                           rpe=configs_sw.rpe,
+                                           patch_norm=configs_sw.patch_norm,
+                                           use_checkpoint=configs_sw.use_checkpoint,
+                                           out_indices=configs_sw.out_indices,
+                                           pat_merg_rf=configs_sw.pat_merg_rf,
+                                           dwin_size=configs_sw.dwin_kernel_size,
+                                           img_size=configs_sw.img_size,
+                                           )
         else:
             raise ValueError(f'Unknown Transformer type: {swin_type}')
         if in_norm:
             self.norm_first = nn.InstanceNorm3d(1, affine=True)
         self.in_norm = in_norm
-        self.c1 = DoubleConv3d(
-                in_channels=1,
-                mid_channels=vfa_channels[0]//4,
-                out_channels=vfa_channels[0]
-            )
-        self.c2 = DoubleConv3d(
-                in_channels=1,
-                mid_channels=vfa_channels[1]//4,
-                out_channels=vfa_channels[1]
-            )
-        self.cs = nn.ModuleList()
-        for i in range(2, len(vfa_channels)):
-            self.cs.append(mir_m.Conv3dReLU(embed_dim*2**(i-2), vfa_channels[i], 1, 0, use_batchnorm=False))
+        if_transskip = True
+        if_convskip = True
+        self.swin_type = swin_type
+        self.up0 = mir_m.DecoderBlock(embed_dim*4, vfa_channels[3], skip_channels=embed_dim*2 if if_transskip else 0, use_batchnorm=False)
+        self.up1 = mir_m.DecoderBlock(vfa_channels[3], vfa_channels[2], skip_channels=embed_dim if if_transskip else 0, use_batchnorm=False)  # 384, 20, 20, 64
+        self.up2 = mir_m.DecoderBlock(vfa_channels[2], vfa_channels[1], skip_channels=embed_dim//2 if if_transskip else 0, use_batchnorm=False)  # 384, 40, 40, 64
+        self.up3 = mir_m.DecoderBlock(vfa_channels[1], vfa_channels[0], skip_channels=vfa_channels[0] if if_convskip else 0, use_batchnorm=False)  # 384, 80, 80, 128
+        #self.up4 = DecoderBlock(embed_dim//2, config.reg_head_chan, skip_channels=config.reg_head_chan if if_convskip else 0, use_batchnorm=False)  # 384, 160, 160, 256
+        self.c1 = mir_m.Conv3dReLU(1, embed_dim//2, 3, 1, use_batchnorm=False)
+        self.c2 = mir_m.Conv3dReLU(1, vfa_channels[0], 3, 1, use_batchnorm=False)
+        self.cb = mir_m.Conv3dReLU(embed_dim*4, vfa_channels[4], 3, 1, use_batchnorm=False)
+        self.avg_pool = nn.AvgPool3d(3, stride=2, padding=1)
         self.vfa_channels = vfa_channels
         self.swin_type = swin_type
         
@@ -83,23 +134,51 @@ class Feature2VFA(nn.Module):
         if self.swin_type == 'swin':
             if self.in_norm:
                 x = self.norm_first(x)
-            out_features = [self.c1(x), self.c2(nnf.avg_pool3d(x, 2))]
-            trans_feats = self.encoder(x)
-            for i in range(2, len(self.vfa_channels)):
-                feat = self.cs[i-2](trans_feats[i-2])
-                out_features.append(feat)
+            x_s1 = self.avg_pool(x)
+            f3 = self.c1(x_s1)
+            f4 = self.c2(x)
+            out_feats = self.encoder(x)
+            f0 = out_feats[-1]
+            f1 = out_feats[-2]
+            f2 = out_feats[-3]
+            feats_0 = self.cb(f0)
+            feats_1 = self.up0(f0, f1)
+            feats_2 = self.up1(feats_1, f2)
+            feats_3 = self.up2(feats_2, f3)
+            feats_4 = self.up3(feats_3, f4)
+            out_features = [feats_4, feats_3, feats_2, feats_1, feats_0]
             return out_features
         else:
             if self.in_norm:
                 x = [self.norm_first(x[0]), self.norm_first(x[1])]
-            out_features_m = [self.c1(x[0]), self.c2(nnf.avg_pool3d(x[0], 2))]
-            out_features_f = [self.c1(x[1]), self.c2(nnf.avg_pool3d(x[1], 2))]
-            trans_feats = self.encoder(x)
-            for i in range(2, len(self.vfa_channels)):
-                feat_m = self.cs[i-2](trans_feats[i-2][0])
-                feat_f = self.cs[i-2](trans_feats[i-2][1])
-                out_features_m.append(feat_m)
-                out_features_f.append(feat_f)
+            x_in = x  
+            out_feats = self.encoder((x_in[0], x_in[1]))
+            x = self.avg_pool(x_in[0])
+            f3 = self.c1(x)
+            f4 = self.c2(x_in[0])
+            f0 = out_feats[-1][0]
+            f1 = out_feats[-2][0]
+            f2 = out_feats[-3][0]
+            feats_0 = self.cb(f0)
+            feats_1 = self.up0(f0, f1)
+            feats_2 = self.up1(feats_1, f2)
+            feats_3 = self.up2(feats_2, f3)
+            feats_4 = self.up3(feats_3, f4)
+            
+            out_features_m = [feats_4, feats_3, feats_2, feats_1, feats_0]
+            
+            x = self.avg_pool(x_in[1])
+            f3 = self.c1(x)
+            f4 = self.c2(x_in[1])
+            f0 = out_feats[-1][1]
+            f1 = out_feats[-2][1]
+            f2 = out_feats[-3][1]
+            feats_0 = self.cb(f0)
+            feats_1 = self.up0(f0, f1)
+            feats_2 = self.up1(feats_1, f2)
+            feats_3 = self.up2(feats_2, f3)
+            feats_4 = self.up3(feats_3, f4)
+            out_features_f = [feats_4, feats_3, feats_2, feats_1, feats_0]
             return out_features_m, out_features_f
         
 

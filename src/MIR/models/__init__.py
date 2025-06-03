@@ -1,5 +1,6 @@
 """Auto-generated on 2025-05-01 – edit as needed."""
 from .Deformable_Swin_Transformer import DefSwinTransformer
+from .Deformable_Swin_Transformer_v2 import DefSwinTransformerV2
 from .Swin_Transformer import SwinTransformer
 from .TransMorph import Conv3dReLU, DecoderBlock, RegistrationHead, TransMorphAffine, TransMorph, TransMorphTVF, TransMorphTVFSPR, CONFIGS
 from .configs_TransMorph import get_3DTransMorphDWin3Lvl_config, get_3DTransMorph3Lvl_config, get_3DTransMorph_config, get_3DTransMorphNoRelativePosEmbd_config, get_3DTransMorphSin_config, get_3DTransMorphLrn_config, get_3DTransMorphNoConvSkip_config, get_3DTransMorphNoTransSkip_config, get_3DTransMorphNoSkip_config, get_3DTransMorphLarge_config, get_3DTransMorphSmall_config, get_3DTransMorphTiny_config, get_3DTransMorphRelativePosEmbdSimple_config
@@ -22,6 +23,7 @@ __all__ = [
     'convex_adam_features',
     'get_ConvexAdam_MIND_brain_default_config',
     'DefSwinTransformer',
+    'DefSwinTransformerV2',
     'SwinTransformer',
     'Conv3dReLU',
     'DecoderBlock',

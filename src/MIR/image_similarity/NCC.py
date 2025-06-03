@@ -417,6 +417,7 @@ class NCC_vfa(torch.nn.Module):
 class FastNCC(torch.nn.Module):
     """
     Local (over window) normalized cross correlation loss by XiJia
+    https://github.com/xi-jia/FastLNCC
     
     # For PyTorch versions > 2.0, if there are numerical differences, please add the following code.
     torch.backends.cudnn.allow_tf32 = False

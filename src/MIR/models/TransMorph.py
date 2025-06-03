@@ -22,6 +22,7 @@ import MIR.models.configs_TransMorph as configs
 import MIR.models.Swin_Transformer as swin
 import MIR.models.registration_utils as utils
 import MIR.models.Deformable_Swin_Transformer as dswin
+import MIR.models.Deformable_Swin_Transformer_v2 as dswin_v2
 import numpy as np
 
 class Conv3dReLU(nn.Sequential):
@@ -131,6 +132,27 @@ class TransMorph(nn.Module):
                                            )
         elif swin_type == 'dswin':
             self.transformer = dswin.DefSwinTransformer(patch_size=config.patch_size,
+                                           in_chans=config.in_chans,
+                                           embed_dim=config.embed_dim,
+                                           depths=config.depths,
+                                           num_heads=config.num_heads,
+                                           window_size=config.window_size,
+                                           mlp_ratio=config.mlp_ratio,
+                                           qkv_bias=config.qkv_bias,
+                                           drop_rate=config.drop_rate,
+                                           drop_path_rate=config.drop_path_rate,
+                                           ape=config.ape,
+                                           spe=config.spe,
+                                           rpe=config.rpe,
+                                           patch_norm=config.patch_norm,
+                                           use_checkpoint=config.use_checkpoint,
+                                           out_indices=config.out_indices,
+                                           pat_merg_rf=config.pat_merg_rf,
+                                           dwin_size=config.dwin_kernel_size,
+                                           img_size=config.img_size,
+                                           )
+        elif swin_type == 'dswinv2':
+            self.transformer = dswin_v2.DefSwinTransformerV2(patch_size=config.patch_size,
                                            in_chans=config.in_chans,
                                            embed_dim=config.embed_dim,
                                            depths=config.depths,
@@ -266,6 +288,27 @@ class TransMorphTVF(nn.Module):
                                            )
         elif swin_type == 'dswin':
             self.transformer = dswin.DefSwinTransformer(patch_size=config.patch_size,
+                                           in_chans=config.in_chans,
+                                           embed_dim=config.embed_dim,
+                                           depths=config.depths,
+                                           num_heads=config.num_heads,
+                                           window_size=config.window_size,
+                                           mlp_ratio=config.mlp_ratio,
+                                           qkv_bias=config.qkv_bias,
+                                           drop_rate=config.drop_rate,
+                                           drop_path_rate=config.drop_path_rate,
+                                           ape=config.ape,
+                                           spe=config.spe,
+                                           rpe=config.rpe,
+                                           patch_norm=config.patch_norm,
+                                           use_checkpoint=config.use_checkpoint,
+                                           out_indices=config.out_indices,
+                                           pat_merg_rf=config.pat_merg_rf,
+                                           dwin_size=config.dwin_kernel_size,
+                                           img_size=config.img_size,
+                                           )
+        elif swin_type == 'dswinv2':
+            self.transformer = dswin_v2.DefSwinTransformerV2(patch_size=config.patch_size,
                                            in_chans=config.in_chans,
                                            embed_dim=config.embed_dim,
                                            depths=config.depths,
@@ -446,6 +489,27 @@ class TransMorphTVFSPR(nn.Module):
                                            dwin_size=config.dwin_kernel_size,
                                            img_size=config.img_size,
                                            )
+        elif swin_type == 'dswinv2':
+            self.transformer = dswin_v2.DefSwinTransformerV2(patch_size=config.patch_size,
+                                           in_chans=config.in_chans,
+                                           embed_dim=config.embed_dim,
+                                           depths=config.depths,
+                                           num_heads=config.num_heads,
+                                           window_size=config.window_size,
+                                           mlp_ratio=config.mlp_ratio,
+                                           qkv_bias=config.qkv_bias,
+                                           drop_rate=config.drop_rate,
+                                           drop_path_rate=config.drop_path_rate,
+                                           ape=config.ape,
+                                           spe=config.spe,
+                                           rpe=config.rpe,
+                                           patch_norm=config.patch_norm,
+                                           use_checkpoint=config.use_checkpoint,
+                                           out_indices=config.out_indices,
+                                           pat_merg_rf=config.pat_merg_rf,
+                                           dwin_size=config.dwin_kernel_size,
+                                           img_size=config.img_size,
+                                           )
         else:
             raise ValueError(f'Unknown Transformer type: {swin_type}')
         self.swin_type = swin_type
@@ -600,6 +664,27 @@ class TransMorphAffine(nn.Module):
                                             )
         elif swin_type == 'dswin':
             self.transformer = dswin.DefSwinTransformer(patch_size=config.patch_size,
+                                            in_chans=config.in_chans,
+                                            embed_dim=config.embed_dim,
+                                            depths=config.depths,
+                                            num_heads=config.num_heads,
+                                            window_size=config.window_size,
+                                            mlp_ratio=config.mlp_ratio,
+                                            qkv_bias=config.qkv_bias,
+                                            drop_rate=config.drop_rate,
+                                            drop_path_rate=config.drop_path_rate,
+                                            ape=config.ape,
+                                            spe=config.spe,
+                                            rpe=config.rpe,
+                                            patch_norm=config.patch_norm,
+                                            use_checkpoint=config.use_checkpoint,
+                                            out_indices=config.out_indices,
+                                            pat_merg_rf=config.pat_merg_rf,
+                                            dwin_size=config.dwin_kernel_size,
+                                            img_size=config.img_size,
+                                            )
+        elif swin_type == 'dswinv2':
+            self.transformer = dswin_v2.DefSwinTransformerV2(patch_size=config.patch_size,
                                             in_chans=config.in_chans,
                                             embed_dim=config.embed_dim,
                                             depths=config.depths,
