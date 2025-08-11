@@ -13,11 +13,11 @@ class TemplateCreation(nn.Module):
     '''
     def __init__(self, reg_model, img_size, mean_cap=100):
         super().__init__()
-        self.reg_model = reg_model()
+        self.reg_model = reg_model
         self.mean_stream = MeanStream(mean_cap, img_size)
 
-    def forward(self, inputs, inputs_full):
-        def_atlas, def_image, pos_flow, neg_flow = self.reg_model(inputs, inputs_full)
+    def forward(self, inputs):
+        def_atlas, def_image, pos_flow, neg_flow = self.reg_model(inputs)
         mean_stream = self.mean_stream(pos_flow)
         return def_atlas, def_image, pos_flow, neg_flow, mean_stream
 

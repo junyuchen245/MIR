@@ -5,3 +5,12 @@ src/*.egg-info/
 tutorials/VFA_*
 tutorials/lumir24_VFA/infer_VFA_w*
 tutorials/lumir25_VFA/infer_VFA.py
+tutorials/lumir25_SITReg/
+src/MIR/models/SITReg/
+
+# Ignore any folder named "experiments" or "logs" anywhere in the repo
+**/experiments/
+**/logs/
+**/atlas/
+**/__pycache__/
+tutorials/PSMA_atlas_building/
