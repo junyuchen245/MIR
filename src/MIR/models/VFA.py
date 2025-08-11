@@ -1,8 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as nnf
-import MIR.models.Swin_Transformer as swin
-import MIR.models.Deformable_Swin_Transformer as dswin
+import MIR.models.registration_utils as utils
 
 def grid_upsample(grid, mode='bilinear', align_corners=True, scale_factor=2):
     '''upsample the grid by a factor of two'''
@@ -99,15 +98,15 @@ def grid_to_flow(grid: torch.Tensor):
     flow    = grid - id_grid
     return flow
 
-class VFA(nn.Module):
-    '''VFA model for image registration
+class VFASPR(nn.Module):
+    '''VFA model for image registration with spatially varying regularization (VFA-SPR)
     Args:
         configs: VFA configs
         device: Device to run the model on
         return_orginal: Whether to return the original deformation field used for original VFA, otherwise return the flow as displacement
         return_all_flows: Whether to return all flows
     '''
-    def __init__(self, configs, device, return_orginal=False, return_all_flows=False):
+    def __init__(self, configs, device, return_orginal=False, return_all_flows=False, SVF=False, SVF_steps=7, return_full=False):
         super().__init__()
 
         self.dim = len(configs.img_size)
@@ -134,6 +133,92 @@ class VFA(nn.Module):
         self.decoder.R = self.decoder.R.to(device)
         self.return_orginal = return_orginal
         self.return_all_flows = return_all_flows
+        self.SPRDecoder = SPRDecoder(self.dim, configs.start_channels)
+        self.SVF = SVF
+        if self.SVF:
+            self.integrate = utils.VecInt(configs.img_size, SVF_steps)
+        self.return_full = return_full
+        if self.return_full:
+            self.spatial_trans = utils.SpatialTransformer(configs.img_size).cuda()
+
+    def forward(self, sample):
+        mov, fix = sample
+        F = self.encoder(fix)
+        M = self.encoder(mov)
+        spatial_wts = self.SPRDecoder(M[0], F[0])
+        composed_grids = self.decoder(F, M)
+        if self.return_orginal:
+            results = self.generate_results(composed_grids[-1], sample)
+            results.update({'composed_grids': composed_grids,
+                            'beta':self.decoder.beta.clone(),})
+
+            if self.configs.affine:
+                affine_results = self.generate_affine_results(
+                                                        composed_grids[-1],
+                                                        sample,
+                )
+                results.update(affine_results)
+        
+            return results
+        elif self.return_all_flows:
+            composed_flows = []
+            for i in range(len(composed_grids)):
+                composed_flows.append(grid_to_flow(composed_grids[i]))
+            return composed_flows, spatial_wts
+        else:
+            flow = grid_to_flow(composed_grids[-1])
+            if self.SVF:
+                pos_flow = self.integrate(flow)
+                if self.return_full:
+                    neg_flow = -pos_flow
+                    neg_flow = self.integrate(neg_flow)
+                    def_sor = self.spatial_trans(mov, pos_flow)
+                    def_tar = self.spatial_trans(fix, neg_flow)
+                    return def_sor, def_tar, pos_flow, neg_flow, spatial_wts
+                return pos_flow, spatial_wts
+            return flow, spatial_wts
+
+class VFA(nn.Module):
+    '''VFA model for image registration
+    Args:
+        configs: VFA configs
+        device: Device to run the model on
+        return_orginal: Whether to return the original deformation field used for original VFA, otherwise return the flow as displacement
+        return_all_flows: Whether to return all flows
+    '''
+    def __init__(self, configs, device, return_orginal=False, return_all_flows=False, SVF=False, SVF_steps=7, return_full=False):
+        super().__init__()
+
+        self.dim = len(configs.img_size)
+        self.encoder = Encoder(
+                        dimension=self.dim,
+                        in_channels=configs.in_channels,
+                        downsamples=configs.downsamples,
+                        start_channels=configs.start_channels,
+                        max_channels=configs.max_channels,
+        ).type(torch.float32)
+
+        self.decoder = Decoder(
+                        dimension=self.dim,
+                        downsamples=configs.downsamples,
+                        matching_channels=configs.matching_channels,
+                        start_channels=configs.start_channels,
+                        max_channels=configs.max_channels,
+                        skip=configs.skip,
+                        initialize=configs.initialize,
+                        int_steps=configs.int_steps,
+        ).type(torch.float32)
+        self.configs = configs
+        self.device = device
+        self.decoder.R = self.decoder.R.to(device)
+        self.return_orginal = return_orginal
+        self.return_all_flows = return_all_flows
+        self.SVF = SVF
+        if self.SVF:
+            self.integrate = utils.VecInt(configs.img_size, SVF_steps)
+        self.return_full = return_full
+        if self.return_full:
+            self.spatial_trans = utils.SpatialTransformer(configs.img_size).cuda()
 
     def forward(self, sample):
         mov, fix = sample
@@ -159,8 +244,39 @@ class VFA(nn.Module):
                 composed_flows.append(grid_to_flow(composed_grids[i]))
             return composed_flows
         else:
-            return grid_to_flow(composed_grids[-1])
-
+            flow = grid_to_flow(composed_grids[-1])
+            if self.SVF:
+                pos_flow = self.integrate(flow)
+                if self.return_full:
+                    neg_flow = -pos_flow
+                    neg_flow = self.integrate(neg_flow)
+                    def_sor = self.spatial_trans(mov, pos_flow)
+                    def_tar = self.spatial_trans(fix, neg_flow)
+                    return def_sor, def_tar, pos_flow, neg_flow
+                return pos_flow
+            return flow
+        
+class SPRDecoder(nn.Module):
+    def __init__(self, dimension, start_channels):
+        super().__init__()
+        self.dim = dimension
+        DoubleConv = globals()[f'DoubleConv{self.dim}d']
+        self.SPR_conv = DoubleConv(
+                in_channels= start_channels * 4,
+                mid_channels=start_channels * 2,
+                out_channels=start_channels,
+            )
+        self.lambda_out = nn.Conv3d(start_channels, 1, kernel_size=3, padding=1)
+        self.wts_act = nn.Sigmoid()
+        self.eps = 1e-6
+    def forward(self, M_feat, F_feat):
+        x = torch.cat((M_feat, F_feat), dim=1)
+        x = self.SPR_conv(x)
+        lambda_out = self.lambda_out(x)
+        spatial_wts = self.wts_act(lambda_out)
+        spatial_wts = torch.clamp(spatial_wts, self.eps, 1.0)
+        return spatial_wts
+    
 class Encoder(nn.Module):
     '''VFA encoder network'''
     def __init__(self, dimension, in_channels, downsamples, start_channels, max_channels):
