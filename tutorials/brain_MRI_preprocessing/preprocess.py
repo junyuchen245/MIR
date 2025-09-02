@@ -47,11 +47,16 @@ def main():
     parser.add_argument("img_path", help="Path to moving image (NIfTI)")
     parser.add_argument("template_path", help="Path to template image (NIfTI)")
     parser.add_argument("output_path", help="Path to save output image (NIfTI)")
+    parser.add_argument("-m", "--mask", dest="mask_path", default=None,
+                    help="Path to brain mask of the moving image (NIfTI)")
     args = parser.parse_args()
 
     img_modality = Modality.T1
     img_nib = nib.load(args.img_path)
     template_nib = nib.load(args.template_path)
+    if args.mask_path is not None:
+        mask_nib = nib.load(args.mask_path)
+        mask_nib = reorient_image_to_match(template_nib, mask_nib)
 
     img_nib = reorient_image_to_match(template_nib, img_nib)
     affine_type = 'Affine'
@@ -59,7 +64,11 @@ def main():
     tar_pixdim = [1.0, 1.0, 1.0]  # Target pixel dimensions
     img_pixdim = img_nib.header.structarr['pixdim'][1:-4]
     img_npy = img_nib.get_fdata()
-    
+    if args.mask_path is not None:
+        mask_npy = mask_nib.get_fdata()
+        print(img_npy.shape, mask_npy.shape)
+        img_npy = img_npy * (mask_npy > 0)
+        
     # N4 bias field correction
     img_ants = ants.from_numpy(img_npy)
     img_ants = ants.n4_bias_field_correction(img_ants)

@@ -8,4 +8,4 @@ Visit the [official website](https://surfer.nmr.mgh.harvard.edu/docs/synthstrip/
 
 ## STEP 2 MRI preprocessing
 
-`python3.8 preprocess.py Example_1_img.nii.gz mni_icbm152_2009c_t1_1mm_masked_img.nii.gz output.nii.gz`
+`python3.8 preprocess.py sub-01_T1w.nii.gz template_img.nii.gz output.nii.gz`
