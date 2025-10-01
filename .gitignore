@@ -2,9 +2,6 @@
 build/
 dist/
 src/*.egg-info/
-tutorials/VFA_*
-tutorials/lumir24_VFA/infer_VFA_w*
-tutorials/lumir25_VFA/infer_VFA.py
 tutorials/lumir25_SITReg/
 src/MIR/models/SITReg/
 

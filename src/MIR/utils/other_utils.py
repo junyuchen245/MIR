@@ -6,7 +6,8 @@ from torch import nn
 import torch.nn.functional as F
 import zipfile
 import os
-
+from scipy.ndimage import zoom
+import numpy as np
 HERE = Path(__file__).resolve().parent
 text_path = HERE / "FreeSurfer_label_info.txt"
 
@@ -193,3 +194,18 @@ def load_partial_weights(model, checkpoint_path, weights_key='state_dict', stric
     model.load_state_dict(loadable_state_dict, strict=False)
 
     print(f"Loaded {len(loadable_state_dict)} / {len(model_state_dict)} layers from checkpoint.")
+    
+def zoom_img(img, pixel_dims, order=3):
+    """
+    Resize a 3D image tensor to match target pixel dimensions.
+    Args:
+        img (np.ndarray): Input image tensor of shape (C, H, W, D).
+        pixel_dims (tuple): Target pixel dimensions as a tuple (img_pixdim, tar_pix).
+        order (int): Interpolation order for resizing. Default is 3 (cubic).
+    Returns:
+        np.ndarray: Resized image tensor.
+    """
+    img_pixdim, tar_pix = pixel_dims
+    ratio = np.array(img_pixdim) / np.array(tar_pix)
+    img = zoom(img, ratio, order=order)
+    return img
