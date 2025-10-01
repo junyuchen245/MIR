@@ -4,8 +4,9 @@ This directory provides basic tutorials on how to run various models using this 
 
 |Model/File|Google Drive ID |Dict Key|
 |---|---|---|
-|VFA (LUMIR24)| `17XEfRYJbnrtCVhaBCOvQVOLkWhix9PAK` |`'model_state_dict'`|
-|TransMorph (LUMIR24)|`1SSqI88l1MdrPJgE4Rn8pqXnVfZNPxtry`|`'state_dict'`|
+|VFA (LUMIR24) - mono-contrast| `17XEfRYJbnrtCVhaBCOvQVOLkWhix9PAK` |`'model_state_dict'`|
+|VFA (LUMIR25) - mono- & multi-contrast| `1cDY3isltI-uSCiivgP2zcx_5LeR8vIJ6` |`'state_dict'`|
+|TransMorph (LUMIR24)- mono-contrast|`1SSqI88l1MdrPJgE4Rn8pqXnVfZNPxtry`|`'state_dict'`|
 |LUMIR_dataset.json|`1b0hyH7ggjCysJG-VGvo38XVE8bFVRMxb`|-|
 |LUMIR25_dataset.json|`164Flc1C6oufONGimvpKlrNtq5t3obXEo`|-|
 
