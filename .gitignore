@@ -11,5 +11,9 @@ tutorials/IPEN_registration/
 **/atlas/
 **/__pycache__/
 
+# Ignore compiled Python artifacts everywhere
+*.py[cod]
+*.$py.class
+
 tutorials/PSMA_atlas_building/
 tutorials/PSMA_atlas_building_MultiMorph/
