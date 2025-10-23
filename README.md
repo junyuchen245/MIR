@@ -57,4 +57,7 @@ I may include documentation and tutorial scripts depending on interest and avail
    *Siebert, Hanna, et al. IEEE TMI, 2024.*  
    [[Paper](https://ieeexplore.ieee.org/abstract/document/10681158)] | [[Repo](https://github.com/multimodallearning/convexAdam)]
 
+3. **MultiMorph: On-demand Atlas Construction**  
+   *Abulnaga, S. Mazdak, et al. CVPR, 2025.*  
+   [[Paper](https://openaccess.thecvf.com/content/CVPR2025/html/Abulnaga_MultiMorph_On-demand_Atlas_Construction_CVPR_2025_paper.html)] | [[Repo](https://github.com/mabulnaga/multimorph)]
 ---
