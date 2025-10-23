@@ -5,12 +5,11 @@ src/*.egg-info/
 tutorials/lumir25_SITReg/
 src/MIR/models/SITReg/
 tutorials/IPEN_registration/
-
 # Ignore any folder named "experiments" or "logs" anywhere in the repo
 **/experiments/
 **/logs/
 **/atlas/
 **/__pycache__/
-src/MIR/**/__pycache__/
+
 tutorials/PSMA_atlas_building/
 tutorials/PSMA_atlas_building_MultiMorph/
