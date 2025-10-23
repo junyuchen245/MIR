@@ -11,5 +11,6 @@ tutorials/IPEN_registration/
 **/logs/
 **/atlas/
 **/__pycache__/
+src/MIR/**/__pycache__/
 tutorials/PSMA_atlas_building/
 tutorials/PSMA_atlas_building_MultiMorph/
