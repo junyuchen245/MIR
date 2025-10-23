@@ -304,7 +304,7 @@ totalseg_merged_29labels = {
     28: "Urinary bladder",
 }
 
-def remap_totalsegmentator_lbls(self, lbl, total_seg_version='v1', label_scheme='40lbls'):
+def remap_totalsegmentator_lbls(lbl, total_seg_version='v1', label_scheme='40lbls'):
     groups29_from_40 = [
         [1],                #  1  Spleen
         [2, 3],             #  2  Kidneys (R+L)
