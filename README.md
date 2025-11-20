@@ -18,7 +18,7 @@ I may include documentation and tutorial scripts depending on interest and avail
    [[Paper](https://www.spiedigitallibrary.org/conference-proceedings-of-spie/13406/1340632/Correlation-ratio-for-unsupervised-learning-of-multi-modal-deformable-registration/10.1117/12.3047699.full)] | [[Repo](https://github.com/junyuchen245/Correlation_Ratio)]
 
 3. **Unsupervised Learning of Spatially Varying Regularization for Diffeomorphic Image Registration**  
-   *Chen, Junyu, et al. arXiv preprint arXiv:2412.17982 (2024).*  
+   *Chen, Junyu, et al. Medical Image Analysis, 2025.*  
    [[Paper](https://arxiv.org/abs/2412.17982)] | [[Repo](https://github.com/junyuchen245/Spatially-Varying-Regularization-ImgReg)]
 
 4. **Vector Field Attention for Deformable Image Registration**  
