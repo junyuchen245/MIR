@@ -61,3 +61,6 @@ I may include documentation and tutorial scripts depending on interest and avail
    *Abulnaga, S. Mazdak, et al. CVPR, 2025.*  
    [[Paper](https://openaccess.thecvf.com/content/CVPR2025/html/Abulnaga_MultiMorph_On-demand_Atlas_Construction_CVPR_2025_paper.html)] | [[Repo](https://github.com/mabulnaga/multimorph)]
 ---
+
+
+### <a href="https://junyuchen245.github.io"> About Me</a>
