@@ -5,7 +5,9 @@ ModelWeights = {
     'VFA-LUMIR25-MultiModal': {'wts':'1cDY3isltI-uSCiivgP2zcx_5LeR8vIJ6', 'wts_key':'state_dict'},
     'TransMorphTVF-LUMIR24-MonoModal': {'wts':'1SSqI88l1MdrPJgE4Rn8pqXnVfZNPxtry', 'wts_key':'state_dict'},
     'VFA-SegHead': {'wts':'1gbWE5t_QwntpiY6vYEvf2wFi1YVm49Kg', 'wts_key':'state_dict'},
-    'VFA-SynthHead': {'wts':'17Dn5xXTnVs0LB35IWOM22F6d5BORbgRH', 'wts_key':'state_dict'}
+    'VFA-SynthHead': {'wts':'17Dn5xXTnVs0LB35IWOM22F6d5BORbgRH', 'wts_key':'state_dict'},
+    'MedIA-TM-SPR-Beta-autoPET': {'wts':'1NCdoK4khv4j8JAjlgeJo6EB4dSQr83r6', 'wts_key':'state_dict'},
+    'MedIA-TM-SPR-Gaussian-autoPET': {'wts':'1WqiR5YB8ypx-NUvYU_kQMb3edRVOLi09', 'wts_key':'state_dict'},
 }
 
 DatasetJSONs = {

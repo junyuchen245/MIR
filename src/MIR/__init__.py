@@ -7,6 +7,7 @@ from . import models
 from . import utils
 from . import random_image_generation
 from . import intensity_normalization
+from . import statistical_analysis
 from .pretrained_wts import ModelWeights, DatasetJSONs
 from . import label_reference
 
@@ -24,7 +25,8 @@ __all__ = [
     'ModelWeights',
     'DatasetJSONs',
     'fill_holes_torch',
-    'label_reference'
+    'label_reference',
+    'statistical_analysis',
 ]
 
 # ───────────────────────────────────────

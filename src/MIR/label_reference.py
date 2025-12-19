@@ -229,6 +229,71 @@ totalseg_v2_118labels = {
     117: 'Costal cartilages'
 }
 
+merged_regions_coarse_from_totalsegv2 = {
+    "Background": [0],
+
+    # Brain and head
+    "Brain": [90],
+    "Skull": [91],
+
+    # Thoracic organs
+    "Lungs": [10, 11, 12, 13, 14],
+    "Heart_Mediastinum_Vessels": [
+        51, 52, 53, 54, 55, 56, 57, 58,
+        59, 60, 61, 62, 63, 64
+    ],
+
+    # Abdominal solid organs
+    "Liver": [5],
+    "Spleen": [1],
+    "Kidneys_and_Cysts": [2, 3, 23, 24],
+    "Adrenals": [8, 9],
+    "Pancreas": [7],
+    "Gallbladder": [4],
+
+    # Gastrointestinal tract
+    "Stomach": [6],
+    "Small_bowel": [18, 19],
+    "Colon": [20],
+
+    # Pelvic organs
+    "Urinary_bladder": [21],
+    "Prostate_region": [22],
+
+    # Axial skeleton
+    "Cervical_spine": [44, 45, 46, 47, 48, 49, 50],
+    "Thoracic_spine": [32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43],
+    "Lumbar_spine": [27, 28, 29, 30, 31],
+    "Sacrum_S1": [25, 26],
+
+    # Ribs and chest wall bones
+    "Ribs_and_Sternum": [
+        92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103,
+        104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115,
+        116  # sternum
+    ],
+    "Clavicles_and_Scapulae": [71, 72, 73, 74],
+
+    # Appendicular skeleton
+    "Humeri": [69, 70],
+    "Femora": [75, 76],
+    "Hip_bones": [77, 78],
+
+    # Major muscle groups (optional, can be one big region)
+    "Gluteal_muscles": [80, 81, 82, 83, 84, 85],
+    "Paraspinal_muscles": [86, 87],
+    "Iliopsoas_muscles": [88, 89],
+
+    # Spinal cord (rarely relevant for PSMA mets, but keep separate)
+    "Spinal_cord": [79],
+
+    # Costal_cartilage (rarely needed, can be merged with ribs if you like)
+    "Costal_cartilages": [117],
+
+    # Thyroid, trachea, esophagus (optional separate soft tissue region)
+    "Neck_and_esophagus_soft_tissue": [15, 16, 17]
+}
+
 totalseg_merged_40labels = {
     0: "Background",
     1: "Spleen",
@@ -427,10 +492,75 @@ def remap_totalsegmentator_lbls(lbl, total_seg_version='v1', label_scheme='40lbl
         [21]                           # 39 urinary_bladder
     ]
     
+    grouping_table_biological_meaningful_fromv2_118 = [
+        #[0],                                            # 0 "Background": 0
+         
+        # Brain and head
+        #[90, 91],                                           # 1 "Brain": 
+        #[91],                                           # 2 "Skull": 
+
+        # Thoracic organs
+        [10, 11, 12, 13, 14],                           # 3 "Lungs": 1
+        [51, 52, 53, 54, 55, 56, 57, 58,
+        59, 60, 61, 62, 63, 64],                        # 4 "Heart_Mediastinum_Vessels": 2 
+
+        # Abdominal solid organs
+        #[5],                                            # 5 "Liver": 
+        #[1],                                            # 6 "Spleen": 
+        #[2, 3, 23, 24],                                 # 7 "Kidneys_and_Cysts": 
+        #[8, 9],                                         # 8 "Adrenals": 
+        [7],                                            # 9 "Pancreas": 3
+        [4],                                            # 10 "Gallbladder": 4 
+
+        # Gastrointestinal tract
+        [6],                                           # 11 "Stomach": 5
+        #[18, 19],                                      # 12 "Small_bowel": 
+        #[20],                                          # 13 "Colon": 
+
+        # Pelvic organs
+        #[21, 22],                                          # 14 "Urinary_bladder": 
+        #[22],                                          # 15 "Prostate_region": 
+
+        # Axial skeleton
+        [44, 45, 46, 47, 48, 49, 50],                     # 16 "Cervical_spine": 6 
+        [32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43], # 17 "Thoracic_spine": 7
+        [27, 28, 29, 30, 31],                             # 18 "Lumbar_spine":   8
+        [25, 26],                                         # 19 "Sacrum_S1":      9
+
+        # Ribs and chest wall bones
+        [92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 105, 
+         106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116], # 20 "Ribs_and_Sternum": 10 
+        [71, 72, 73, 74],                                        # 21 "Clavicles_and_Scapulae": 11
+
+        # Appendicular skeleton
+        [69, 70, 75, 76, 77, 78],                                       # 22 "Humeri": 12
+        #[75, 76],                                       # 23 "Femora":
+        #[77, 78],                                       # 24 "Hip_bones":
+
+        # Major muscle groups (optional, can be one big region)
+        #[80, 81, 82, 83, 84, 85],                       # 25 "Gluteal_muscles":
+        #[86, 87],                                       # 26 "Paraspinal_muscles":
+        #[88, 89],                                       # 27 "Iliopsoas_muscles":
+
+        # Spinal cord (rarely relevant for PSMA mets, but keep separate)
+        [79],                                          # 28 "Spinal_cord": 13
+
+        # Costal_cartilage (rarely needed, can be merged with ribs if you like)
+        [117],                                         # 29 "Costal_cartilages": 14
+
+        # Thyroid, trachea, esophagus (optional separate soft tissue region)
+        [15, 16, 17]                                   # 30 "Neck_and_esophagus_soft_tissue": 15
+    ]
+    
+    
     if total_seg_version == 'v1':
         grouping_table = grouping_table_v1_40
     elif total_seg_version == 'v2':
         grouping_table = grouping_table_v2_40
+    elif total_seg_version == 'v2_biological_meaningful':
+        grouping_table = grouping_table_biological_meaningful_fromv2_118
+    else:
+        raise ValueError(f"Unknown total_seg_version: {total_seg_version}")
 
     label_out = np.zeros_like(lbl)
     for idx, item in enumerate(grouping_table):
