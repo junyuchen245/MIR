@@ -7,6 +7,8 @@ This directory provides basic tutorials on how to run various models using this 
 |VFA (LUMIR24) - mono-contrast| `17XEfRYJbnrtCVhaBCOvQVOLkWhix9PAK` |`'model_state_dict'`|
 |VFA (LUMIR25) - mono- & multi-contrast| `1cDY3isltI-uSCiivgP2zcx_5LeR8vIJ6` |`'state_dict'`|
 |TransMorph (LUMIR24)- mono-contrast|`1SSqI88l1MdrPJgE4Rn8pqXnVfZNPxtry`|`'state_dict'`|
+|MedIA-TM-SPR-Beta-autoPET|`1NCdoK4khv4j8JAjlgeJo6EB4dSQr83r6`|`'state_dict'`|
+|MedIA-TM-SPR-Gaussian-autoPET|`1WqiR5YB8ypx-NUvYU_kQMb3edRVOLi09`|`'state_dict'`|
 |LUMIR_dataset.json|`1b0hyH7ggjCysJG-VGvo38XVE8bFVRMxb`|-|
 |LUMIR25_dataset.json|`164Flc1C6oufONGimvpKlrNtq5t3obXEo`|-|
 
