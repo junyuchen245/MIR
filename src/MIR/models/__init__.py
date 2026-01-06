@@ -14,7 +14,7 @@ from .atlas_builder import TemplateCreation, MeanStream
 from .configs_VFA import get_VFA_default_config
 from .Synthesis_Heads import SynthesisHead3DAdvanced, SynthesisHead3D, EfficientAdvancedSynthHead3D, ConvNeXtSynthHead3D
 from .Segmentation_Heads import AdvancedDecoder3D
-from .convexAdam import convex_adam_MIND, convex_adam_seg_features, convex_adam_features, get_ConvexAdam_MIND_brain_default_config
+from .convexAdam import convex_adam_MIND, convex_adam_MIND_SPR, convex_adam_seg_features, convex_adam_features, get_ConvexAdam_MIND_brain_default_config
 from .VoxelMorph import VxmDense
 from .HyperMorph import HyperVxmDense
 from .HyperTransMorph import HyperTransMorphTVF, HyperTransMorphTVFSPR
@@ -22,6 +22,7 @@ from .configs_VoxelMorph import get_VXM_1_config, get_VXM_default_config, get_VX
 #from .SITReg import SITReg, MappingPair, EncoderFeatureExtractor
 __all__ = [
     'convex_adam_MIND',
+    'convex_adam_MIND_SPR',
     'convex_adam_seg_features',
     'convex_adam_features',
     'get_ConvexAdam_MIND_brain_default_config',
