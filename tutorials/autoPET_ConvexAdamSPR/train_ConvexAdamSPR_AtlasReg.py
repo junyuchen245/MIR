@@ -1,13 +1,11 @@
-"""
-Optuna example that optimizes multi-layer perceptrons using PyTorch.
+'''
+Optuna for ConvexAdam with SPR regularization hyperparameter tuning on AutoPET dataset
 
-In this example, we optimize the validation accuracy of fashion product recognition using
-PyTorch and FashionMNIST. We optimize the neural network architecture as well as the optimizer
-configuration. As it is too time consuming to use the whole FashionMNIST dataset,
-we here use a small subset of it.
 
-"""
-
+See paper:
+"Unsupervised Learning of Spatially Varying Regularization for Diffeomorphic Image Registration"
+by Junyu Chen et al. Medical Image Analysis, 2026.
+'''
 import os
 import logging
 import optuna
