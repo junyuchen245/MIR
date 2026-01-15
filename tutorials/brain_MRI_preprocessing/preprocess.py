@@ -5,6 +5,10 @@ import numpy as np
 from scipy.ndimage import zoom
 import ants
 import argparse
+import json
+import os
+import shutil
+import base64
 
 def reorient_image_to_match(reference_nii, target_nii):
     reference_ornt = nib.aff2axcodes(reference_nii.affine)
@@ -49,11 +53,16 @@ def main():
     parser.add_argument("output_path", help="Path to save output image (NIfTI)")
     parser.add_argument("-m", "--mask", dest="mask_path", default=None,
                     help="Path to brain mask of the moving image (NIfTI)")
+    parser.add_argument("-s", "--save-preprocess", dest="meta_path", default=None,
+                    help="Path to save preprocessing metadata (JSON). Defaults to output_path + '.preprocess.json'")
     args = parser.parse_args()
 
     img_modality = Modality.T1
     img_nib = nib.load(args.img_path)
     template_nib = nib.load(args.template_path)
+    original_affine = img_nib.affine.copy()
+    original_shape = img_nib.shape
+    original_pixdim = img_nib.header.structarr['pixdim'][1:-4]
     if args.mask_path is not None:
         mask_nib = nib.load(args.mask_path)
         mask_nib = reorient_image_to_match(template_nib, mask_nib)
@@ -89,6 +98,40 @@ def main():
     img_npy = img_ants.numpy()
     nib_img = nib.Nifti1Image(img_npy, template_nib.affine, header=template_nib.header)
     nib.save(nib_img, args.output_path)
+
+    output_root = args.output_path
+    if output_root.endswith('.nii.gz'):
+        output_root = output_root[:-7]
+    else:
+        output_root = os.path.splitext(output_root)[0]
+    
+    meta_path = args.meta_path or f"{output_root}.preprocess.json"
+    saved_transforms = []
+    for idx, tfm_path in enumerate(regMovTmp['fwdtransforms']):
+        tfm_name = os.path.basename(tfm_path)
+        tfm_out = f"{output_root}.{idx}.{tfm_name}"
+        shutil.copy(tfm_path, tfm_out)
+        saved_transforms.append(tfm_out)
+
+    try:
+        header_bytes = img_nib.header.binaryblock
+    except Exception:
+        header_bytes = img_nib.header.as_bytes()
+
+    meta = {
+        "template_path": os.path.abspath(args.template_path),
+        "template_affine": template_nib.affine.tolist(),
+        "template_shape": list(template_nib.shape),
+        "original_affine": original_affine.tolist(),
+        "original_shape": list(original_shape),
+        "original_pixdim": original_pixdim.tolist(),
+        "original_header": base64.b64encode(header_bytes).decode('ascii'),
+        "target_pixdim": tar_pixdim,
+        "transformlist": saved_transforms,
+        "output_path": os.path.abspath(args.output_path),
+    }
+    with open(meta_path, 'w', encoding='utf-8') as f:
+        json.dump(meta, f, indent=2)
     
 if __name__ == '__main__':
     main()
