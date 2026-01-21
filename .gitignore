@@ -18,3 +18,5 @@ tutorials/IPEN_registration/
 
 tutorials/PSMA_atlas_building/
 tutorials/PSMA_atlas_building_MultiMorph/
+
+# git rm --cached -r . removing all cached files before git add .
