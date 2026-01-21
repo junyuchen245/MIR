@@ -236,7 +236,7 @@ if __name__ == "__main__":
 
     #optuna.delete_study(study_name="TransMorph-SPR", storage="sqlite:///db.TM_SPR")
     optuna.logging.get_logger("optuna").addHandler(logging.StreamHandler(sys.stdout))
-    study = optuna.create_study(storage="sqlite:///db.ConvexAdam_SPR", study_name="ConvexAdam-SPR", direction="maximize", load_if_exists=True)
+    study = optuna.create_study(storage="sqlite:///db.ConvexAdam_SPR.db", study_name="ConvexAdam-SPR", direction="maximize", load_if_exists=True)
     study.optimize(objective, n_trials=200)
 
     pruned_trials = study.get_trials(deepcopy=False, states=[TrialState.PRUNED])
