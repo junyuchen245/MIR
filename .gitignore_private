@@ -1,0 +1,16 @@
+# ignore build artifacts
+build/
+dist/
+src/*.egg-info/
+tutorials/lumir25_SITReg/
+src/MIR/models/SITReg/
+
+# Ignore any folder named "experiments" or "logs" anywhere in the repo
+**/experiments/
+**/logs/
+**/atlas/
+**/__pycache__/
+
+# Ignore compiled Python artifacts everywhere
+*.py[cod]
+*.$py.class
