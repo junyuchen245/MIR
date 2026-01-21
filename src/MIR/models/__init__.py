@@ -15,6 +15,7 @@ from .configs_VFA import get_VFA_default_config
 from .Synthesis_Heads import SynthesisHead3DAdvanced, SynthesisHead3D, EfficientAdvancedSynthHead3D, ConvNeXtSynthHead3D
 from .Segmentation_Heads import AdvancedDecoder3D
 from .convexAdam import convex_adam_MIND, convex_adam_MIND_SPR, convex_adam_seg_features, convex_adam_features, get_ConvexAdam_MIND_brain_default_config
+from . import fireants
 from .VoxelMorph import VxmDense
 from .HyperMorph import HyperVxmDense
 from .HyperTransMorph import HyperTransMorphTVF, HyperTransMorphTVFSPR
@@ -87,5 +88,6 @@ __all__ = [
     'SynthesisHead3D',
     'EfficientAdvancedSynthHead3D',
     'ConvNeXtSynthHead3D',
-    'AdvancedDecoder3D'
+    'AdvancedDecoder3D',
+    'fireants',
 ]
