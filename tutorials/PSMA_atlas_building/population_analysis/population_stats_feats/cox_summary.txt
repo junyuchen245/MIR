@@ -1,0 +1,12 @@
+Patients N=128, Vmask=1659109
+Events=97, Median time=1896.5 days
+Endpoint=Overall Survival
+Clinical C-index=0.693
+Clinical+topK_atlas_features C-index=0.703
+Number of atlas features considered=52 (selected topK by p-value)
+Features-only (topK) C-index=0.643
+Delta C-index (clinical+features vs clinical)=0.010
+Delta C-index (clinical+features vs features-only)=0.059
+Voxelwise Cox: skipped (USE_VOXELWISE=False)
+Clinical covariates included: age, log_psa_at_scan (fallback pre/initial), grade_group, t_ord, BMI, indication (primary/recurrence/metastatic), pre_androgen_targeted, pre_cytotoxic.
+Excluded post-PSMA covariates (post_local, post_focal, post_at, post_cyto).
