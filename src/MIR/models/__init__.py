@@ -23,7 +23,14 @@ from .VoxelMorph import VxmDense
 from .HyperMorph import HyperVxmDense
 from .HyperTransMorph import HyperTransMorphTVF, HyperTransMorphTVFSPR
 from .configs_VoxelMorph import get_VXM_1_config, get_VXM_default_config, get_VXM_BJ_config
-#from .SITReg import SITReg, MappingPair, EncoderFeatureExtractor
+try:
+    from .SITReg import SITReg, MappingPair, EncoderFeatureExtractor, ReLUFactory, GroupNormalizerFactory
+except Exception:  # pragma: no cover - optional dependency
+    SITReg = None
+    MappingPair = None
+    EncoderFeatureExtractor = None
+    ReLUFactory = None
+    GroupNormalizerFactory = None
 __all__ = [
     'convex_adam_MIND',
     'convex_adam_MIND_SPR',
@@ -48,9 +55,13 @@ __all__ = [
     'Warp3d',
     'make_epoch_batches',
     'ListBatchSampler',
-    #'SITReg',
-    #'MappingPair',
-    #'EncoderFeatureExtractor',
+    *([
+        'SITReg',
+        'MappingPair',
+        'EncoderFeatureExtractor',
+        'ReLUFactory',
+        'GroupNormalizerFactory',
+    ] if SITReg is not None else []),
     'CONFIGS',
     'get_3DTransMorphDWin3Lvl_config',
     'get_3DTransMorph3Lvl_config',
