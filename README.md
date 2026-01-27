@@ -60,7 +60,7 @@ I may include documentation and tutorial scripts depending on interest and avail
    *Abulnaga, S. Mazdak, et al. CVPR, 2025.*  
    [[Paper](https://openaccess.thecvf.com/content/CVPR2025/html/Abulnaga_MultiMorph_On-demand_Atlas_Construction_CVPR_2025_paper.html)] | [[Repo](https://github.com/mabulnaga/multimorph)]
 
-4. **SITReg: Multi-resolution architecture for symmetric, inverse consistent, and topology preserving image registration.**
+4. **SITReg: Multi-resolution architecture for symmetric, inverse consistent, and topology preserving image registration.**\\
    *Honkamaa, Joel, and Pekka Marttinen. MELBA 2024.*
    [[Paper](https://www.melba-journal.org/papers/2024:026.html)] | [[Repo](https://github.com/honkamj/SITReg)]
 ---
