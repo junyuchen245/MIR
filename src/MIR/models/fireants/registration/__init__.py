@@ -11,3 +11,6 @@
 # - Proper attribution in derivative works
 #
 # For full license details, see: https://github.com/rohitrango/FireANTs/blob/main/LICENSE 
+
+
+"""Registration modules for FireANTs."""

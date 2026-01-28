@@ -1,4 +1,4 @@
-"""Mappings composable with each other, and acting on mappable tensors."""
+"""Core composable mapping classes and interfaces."""
 
 from .composable_mapping import (
     ComposableMapping,

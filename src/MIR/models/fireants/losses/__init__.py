@@ -13,6 +13,8 @@
 # For full license details, see: https://github.com/rohitrango/FireANTs/blob/main/LICENSE 
 
 
+"""Loss functions for FireANTs registration models."""
+
 from .mi import GlobalMutualInformationLoss
 from .cc import LocalNormalizedCrossCorrelationLoss
 from .mse import NoOp, MeanSquaredError

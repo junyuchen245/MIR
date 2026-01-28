@@ -1,4 +1,4 @@
-"""Auto-generated on 2025-05-01 – edit as needed."""
+"""Model zoo and configuration helpers for MIR registration pipelines."""
 from .Deformable_Swin_Transformer import DefSwinTransformer
 from .Deformable_Swin_Transformer_v2 import DefSwinTransformerV2
 from .Swin_Transformer import SwinTransformer

@@ -1,4 +1,4 @@
-"""Auto-generated on 2025-05-01 – edit as needed."""
+"""Utility helpers for registration, training, visualization, and IO."""
 from .registration_utils import SpatialTransformer, VecInt, resample_to_orginal_space_and_save, make_affine_from_pixdim
 from .training_utils import Logger, AverageMeter, pad_image, normalize_01, RandomPatchSampler3D, MultiResPatchSampler3D
 from .other_utils import pkload, savepkl, write2csv, process_label, CenterCropPad3D, SLANT_label_reassign, create_zip, load_partial_weights, zoom_img

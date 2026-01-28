@@ -1,4 +1,4 @@
-"""Affine transformations on PyTorch tensors."""
+"""Affine transformation utilities for PyTorch tensors."""
 
 from . import diagonal_matrix, matrix
 from .affine_transformation import (

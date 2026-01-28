@@ -1,4 +1,4 @@
-"""Grid sample implementation that allows for second order differentiation.
+"""Second-order differentiable grid sampling implementation.
 
 Copyright (c) 2022-2023 Aliaksandr Siarohin
 

@@ -1,4 +1,4 @@
-"""Sampler module for sampling volumes defined on regular grids."""
+"""Sampling utilities for volumes defined on regular grids."""
 
 from .b_spline import CubicSplineSampler
 from .default import (

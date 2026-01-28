@@ -13,4 +13,6 @@
 # For full license details, see: https://github.com/rohitrango/FireANTs/blob/main/LICENSE 
 
 
+"""IO utilities for FireANTs image containers."""
+
 from MIR.models.fireants.io.image import Image, BatchedImages, FakeBatchedImages

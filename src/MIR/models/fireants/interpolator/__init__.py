@@ -13,9 +13,7 @@
 # For full license details, see: https://github.com/rohitrango/FireANTs/blob/main/LICENSE 
 
 
-'''
-Dispatcher for fused operations
-'''
+"""Interpolation backends and fused operation dispatchers for FireANTs."""
 import os
 from typing import Dict, Any, Callable
 from MIR.models.fireants.interpolator.grid_sample import torch_grid_sampler_2d, torch_grid_sampler_3d, torch_warp_composer_2d, torch_warp_composer_3d, torch_affine_warp_2d, torch_affine_warp_3d

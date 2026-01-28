@@ -1,4 +1,4 @@
-"""Statistical analysis utilities for MIR."""
+"""Statistical analysis utilities for MIR experiments and reports."""
 
 from .GLM import GLM, winsorize, janmahasatian_lbm, robust_bp_ref
 

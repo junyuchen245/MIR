@@ -1,4 +1,4 @@
-"""Auto-generated on 2025-05-01 – edit as needed."""
+"""Top-level MIR package for medical image registration and utilities."""
 from .data_augmentation import flip_aug, affine_aug, RandomMultiContrastRemap, fill_holes_torch
 from . import accuracy_measures
 from . import deformation_regularizer
