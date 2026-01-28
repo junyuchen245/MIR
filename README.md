@@ -4,7 +4,7 @@
 
 This repository hosts implementations of several projects I’ve contributed to, along with helpful preprocessing and post-processing utilities for medical image analysis. It also provides wrappers for selected external packages to enable seamless integration into **TransMorph-like registration workflows**.
 
-I may include documentation and tutorial scripts depending on interest and available time.
+Auto-generated documentation is available at: [https://junyuchen245.github.io/MIR](https://junyuchen245.github.io/MIR)
 
 ## 📄 Included Projects
 
