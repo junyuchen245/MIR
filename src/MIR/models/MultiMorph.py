@@ -23,6 +23,16 @@ import numpy as np
 import random
 
 def make_epoch_batches(n_samples, min_bs, max_bs):
+    """Create randomized batch index lists for one epoch.
+
+    Args:
+        n_samples: Total number of samples.
+        min_bs: Minimum batch size.
+        max_bs: Maximum batch size.
+
+    Returns:
+        List of numpy arrays of indices for each batch.
+    """
     # shuffle indices once per epoch (use numpy for permutation)
     inds = np.random.permutation(n_samples)
     batches = []
@@ -163,26 +173,28 @@ class DeformationFieldComposer(nn.Module):
         return self.compose(fields)
 
 class Lambda(nn.Module):
+    """Wrap a callable inside an `nn.Module`."""
     def __init__(self, lambd):
         super(Lambda, self).__init__()
         self.lambd = lambd
 
     def forward(self, x):
+        """Apply the wrapped callable to input."""
         return self.lambd(x)
 
 
 class SubtractMean(nn.Module):
+    """Subtract mean along a specified dimension."""
     def __init__(self, dim):
         super(SubtractMean, self).__init__()
         self.dim = dim
 
     def forward(self, x):
+        """Subtract mean along `self.dim` from input tensor."""
         return x - torch.mean(x, dim=self.dim, keepdim=True)
 
 class VecInt(nn.Module):
-    """
-    Integrates a vector field via scaling and squaring.
-    """
+    """Integrate a vector field via scaling and squaring."""
 
     def __init__(self, inshape, nsteps):
         super().__init__()
@@ -193,15 +205,21 @@ class VecInt(nn.Module):
         self.transformer = utils.SpatialTransformer(inshape)
 
     def forward(self, vec):
+        """Integrate the vector field.
+
+        Args:
+            vec: Tensor of shape [B, C, *spatial].
+
+        Returns:
+            Integrated vector field tensor.
+        """
         vec = vec * self.scale
         for _ in range(self.nsteps):
             vec = vec + self.transformer(vec, vec)
         return vec
 
 class ResizeTransform(nn.Module):
-    """
-    Resize a transform, which involves resizing the vector field *and* rescaling it.
-    """
+    """Resize and rescale a vector field transform."""
 
     def __init__(self, vel_resize, ndims):
         super().__init__()
@@ -213,6 +231,14 @@ class ResizeTransform(nn.Module):
             self.mode = 'tri' + self.mode
 
     def forward(self, x):
+        """Resize and rescale the transform.
+
+        Args:
+            x: Vector field tensor.
+
+        Returns:
+            Resized vector field tensor.
+        """
         if self.factor < 1:
             # resize first to save memory
             x = FileNotFoundError.interpolate(x, align_corners=True, scale_factor=self.factor, mode=self.mode)

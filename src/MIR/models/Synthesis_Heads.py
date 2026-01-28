@@ -1,17 +1,25 @@
+"""Synthesis heads for image reconstruction from features."""
+
 import torch.nn.functional as F
 import torch.nn as nn
 import torch
 
 class SynthesisHead3D(nn.Module):
-    '''
-    Simple Synthesis head for 3D features (specifically for VFA encoders)
+    """Simple synthesis head for 3D feature maps.
+
     Args:
-        in_channels: Number of input channels
-        mid_channels: Number of intermediate channels
-        out_channels: Number of output channels
-        norm: Normalization type ('instance' or 'batch')
-        activation: Activation function ('leaky_relu' or 'relu')
-    '''
+        in_channels: Number of input channels.
+        mid_channels: Number of intermediate channels.
+        out_channels: Number of output channels.
+        norm: Normalization type ('instance' or 'batch').
+        activation: Activation function ('leaky_relu' or 'relu').
+
+    Inputs:
+        x: Tensor of shape [B, C, D, H, W].
+
+    Returns:
+        Tensor of shape [B, out_channels, D, H, W].
+    """
     def __init__(
         self,
         in_channels: int,
@@ -42,19 +50,18 @@ class SynthesisHead3D(nn.Module):
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        x: (B, C, H, W, D)
-        returns: (B, 1, H, W, D)
-        """
+        """Apply synthesis head."""
         return self.net(x)
 
 class ResBlock3D(nn.Module):
-    '''
-    Residual block with 3D convolution
-    Args:
-        channels: Number of input channels
-        norm: Normalization type ('instance' or 'group')
-    '''
+    """Residual block with 3D convolution.
+
+    Inputs:
+        x: Tensor of shape [B, C, D, H, W].
+
+    Returns:
+        Tensor of the same shape.
+    """
     def __init__(self, channels: int, norm: str = "instance"):
         super().__init__()
         Norm = nn.InstanceNorm3d if norm=="instance" else nn.GroupNorm
@@ -68,6 +75,7 @@ class ResBlock3D(nn.Module):
         self.norm2 = Norm(ng, channels) if norm=="group" else Norm(channels, affine=True)
 
     def forward(self, x):
+        """Apply residual block."""
         identity = x
         out = self.act(self.norm1(self.conv1(x)))
         out = self.norm2(self.conv2(out))
@@ -75,12 +83,7 @@ class ResBlock3D(nn.Module):
 
 
 class SEBlock3D(nn.Module):
-    '''
-    Squeeze-and-Excitation block for 3D convolution
-    Args:
-        channels: Number of input channels
-        reduction: Reduction ratio for the channel dimension
-    '''
+    """Squeeze-and-excitation block for 3D features."""
     def __init__(self, channels: int, reduction: int = 16):
         super().__init__()
         self.fc1 = nn.Linear(channels, channels // reduction, bias=False)
@@ -89,6 +92,7 @@ class SEBlock3D(nn.Module):
         self.sig = nn.Sigmoid()
 
     def forward(self, x):
+        """Apply channel-wise excitation."""
         # x: (B, C, H, W, D)
         b, c, *_ = x.shape
         # squeeze
@@ -99,14 +103,20 @@ class SEBlock3D(nn.Module):
 
 
 class SynthesisHead3DAdvanced(nn.Module):
-    '''
-    Synthesis head with Residual and SE blocks for 3D features (specifically for VFA encoders)
+    """Synthesis head with residual and SE blocks for 3D features.
+
     Args:
-        in_channels: Number of input channels
-        mid_channels: Number of intermediate channels
-        num_res_blocks: Number of residual blocks
-        norm: Normalization type ('instance' or 'group')
-    '''
+        in_channels: Number of input channels.
+        mid_channels: Number of intermediate channels.
+        num_res_blocks: Number of residual blocks.
+        norm: Normalization type ('instance' or 'group').
+
+    Inputs:
+        x: Tensor of shape [B, C, D, H, W].
+
+    Returns:
+        Tensor of shape [B, 1, D, H, W].
+    """
     def __init__(
         self,
         in_channels: int,
@@ -136,10 +146,7 @@ class SynthesisHead3DAdvanced(nn.Module):
         self.out_act  = nn.Sigmoid()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        x: (B, C, H, W, D)
-        returns: (B, 1, H, W, D)
-        """
+        """Apply advanced synthesis head."""
         x = self.init_norm(x)
         x = self.proj(x)
         x = self.blocks(x)
@@ -147,7 +154,7 @@ class SynthesisHead3DAdvanced(nn.Module):
         return self.out_act(x)
     
 class ECA3D(nn.Module):
-    """Efficient Channel Attention (ECA) for 3D feature maps."""
+    """Efficient channel attention for 3D feature maps."""
     def __init__(self, channels: int, k_size: int = 3):
         super().__init__()
         # 1D conv on channel‐wise pooled features
@@ -156,6 +163,7 @@ class ECA3D(nn.Module):
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Apply channel attention."""
         # x: (B, C, H, W, D)
         b, c, _, _, _ = x.size()
         y = self.avg_pool(x).view(b, 1, c)        # (B,1,C)
@@ -164,10 +172,7 @@ class ECA3D(nn.Module):
         return x * y                              # reweight channels
 
 class InvertedResidual3D(nn.Module):
-    """
-    MobileNet-style inverted residual block for 3D.
-    Uses expand -> depthwise conv -> project
-    """
+    """MobileNet-style inverted residual block for 3D features."""
     def __init__(self,
                  in_ch: int,
                  out_ch: int,
@@ -194,6 +199,7 @@ class InvertedResidual3D(nn.Module):
         self.conv = nn.Sequential(*layers)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Apply inverted residual block."""
         out = self.conv(x)
         if self.use_res_connect:
             return x + out

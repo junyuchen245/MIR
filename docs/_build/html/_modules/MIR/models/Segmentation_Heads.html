@@ -69,13 +69,20 @@
            <div itemprop="articleBody">
              
   <h1>Source code for MIR.models.Segmentation_Heads</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">torch.nn.functional</span> <span class="k">as</span> <span class="nn">F</span>
+<span></span><span class="sd">&quot;&quot;&quot;Segmentation heads and decoder blocks for volumetric models.&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">torch.nn.functional</span> <span class="k">as</span> <span class="nn">F</span>
 <span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
 <span class="kn">import</span> <span class="nn">torch</span>
 
 <span class="k">class</span> <span class="nc">SCSEBlock3D</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Concurrent spatial and channel &#39;squeeze &amp; excite&#39;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Concurrent spatial and channel squeeze-and-excite block.</span>
+
+<span class="sd">    Inputs:</span>
+<span class="sd">        x: Tensor of shape [B, C, D, H, W].</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Tensor of the same shape with attention gating applied.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">channels</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">reduction</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">16</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
@@ -94,6 +101,7 @@
         <span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Apply spatial and channel excitation.&quot;&quot;&quot;</span>
         <span class="c1"># channel gate</span>
         <span class="n">xc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cSE</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
         <span class="c1"># spatial gate</span>
@@ -103,9 +111,13 @@
 
 
 <span class="k">class</span> <span class="nc">ASPP3D</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Atrous Spatial Pyramid Pooling without any global pooling branch</span>
-<span class="sd">    (so it still works on small patches).</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;3D atrous spatial pyramid pooling without global pooling.</span>
+
+<span class="sd">    Inputs:</span>
+<span class="sd">        x: Tensor of shape [B, C, D, H, W].</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Tensor with ASPP features.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">in_ch</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">out_ch</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">dilations</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">6</span><span class="p">,</span><span class="mi">12</span><span class="p">)):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
@@ -127,19 +139,25 @@
         <span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Apply ASPP branches and projection.&quot;&quot;&quot;</span>
         <span class="n">res</span> <span class="o">=</span> <span class="p">[</span><span class="n">b</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">branches</span><span class="p">]</span>
         <span class="n">x</span>   <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="n">res</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">project</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="AdvancedDecoder3D"><a class="viewcode-back" href="../../../api.html#MIR.models.AdvancedDecoder3D">[docs]</a><span class="k">class</span> <span class="nc">AdvancedDecoder3D</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Advanced 3D decoder for multi-resolution encoder features.</span>
-<span class="sd">    </span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Advanced 3D decoder for multi-resolution encoder features.</span>
+
 <span class="sd">    Args:</span>
-<span class="sd">      encoder_channels: list of channel counts for each x_feats[i]</span>
-<span class="sd">      aspp_out        : number of channels after ASPP</span>
-<span class="sd">      num_classes     : number of output classes (e.g. 133)</span>
+<span class="sd">        encoder_channels: List of channel counts for each feature level.</span>
+<span class="sd">        aspp_out: Number of channels after ASPP.</span>
+<span class="sd">        num_classes: Number of output classes.</span>
+
+<span class="sd">    Inputs:</span>
+<span class="sd">        x_feats: List of feature maps ordered from low to high resolution.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Logits tensor of shape [B, num_classes, D0, H0, W0].</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
@@ -179,13 +197,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">classifier</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Conv3d</span><span class="p">(</span><span class="n">in_ch</span><span class="p">,</span> <span class="n">num_classes</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 
 <div class="viewcode-block" id="AdvancedDecoder3D.forward"><a class="viewcode-back" href="../../../api.html#MIR.models.AdvancedDecoder3D.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x_feats</span><span class="p">:</span> <span class="nb">list</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        x_feats: list of length L with</span>
-<span class="sd">                 x_feats[i].shape == (B, encoder_channels[i], Di, Hi, Wi)</span>
-<span class="sd">        </span>
-<span class="sd">        returns:</span>
-<span class="sd">          logits (B, num_classes, D0, H0, W0)  at the highest resolution</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Run decoder forward pass.&quot;&quot;&quot;</span>
         <span class="c1"># start from deepest feature</span>
         <span class="n">x</span> <span class="o">=</span> <span class="n">x_feats</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
         <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">aspp</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>

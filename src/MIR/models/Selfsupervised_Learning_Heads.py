@@ -1,8 +1,18 @@
+"""Self-supervised learning heads for registration models."""
+
 import torch
 import torch.nn as nn
 import MIR.models.registration_utils as utils
 
 class SSL_blocks(nn.Module):
+    """Decoder block for SSL heads.
+
+    Inputs:
+        x: Tensor of shape [B, C, D, H, W].
+
+    Returns:
+        Upsampled tensor with `out_dim` channels.
+    """
     def __init__(self, dim, out_dim, scale_fac):
         super(SSL_blocks, self).__init__()
         self.block = nn.Sequential(
@@ -15,10 +25,12 @@ class SSL_blocks(nn.Module):
             nn.LeakyReLU(),
         )
     def forward(self, x):
+        """Apply decoder block."""
         x = self.block(x)
         return x
 
 class flow_blocks(nn.Module):
+    """Predict mean (and optionally log-variance) flow fields."""
     def __init__(self, dim, if_KL=True):
         super(flow_blocks, self).__init__()
         self.if_KL = if_KL
@@ -30,6 +42,7 @@ class flow_blocks(nn.Module):
             self.flow_sigma.weight.data.normal_(0., 1e-10)
             self.flow_sigma.bias.data = torch.Tensor([-10] * 3)
     def forward(self, x):
+        """Compute flow statistics from features."""
         mean = self.flow_mean(x)
         if self.if_KL:
             sigma = self.flow_sigma(x)
@@ -38,19 +51,25 @@ class flow_blocks(nn.Module):
             return mean
 
 class SSLHeadNLvl(nn.Module):
-    '''
-    Self-supervised learning head with multiple levels
+    """Self-supervised learning head with multiple levels.
+
     Args:
-        encoder: Encoder model
-        img_size: Image size
-        num_lvls: Number of levels
-        channels: Number of channels
-        if_upsamp: Whether to upsample
-        encoder_output_type: Type of encoder output ('single' or 'multi')
-        encoder_input_type: Type of encoder input ('single', 'multi', or 'separate')
-        swap_encoder_order: Whether to swap encoder's output order
-        gen_output: Whether to generate deformed output
-    '''
+        encoder: Encoder model.
+        img_size: Image size.
+        num_lvls: Number of levels.
+        channels: Number of channels per level.
+        if_upsamp: Whether to upsample predicted flows.
+        encoder_output_type: Encoder output type ('single' or 'multi').
+        encoder_input_type: Encoder input type ('single', 'multi', or 'separate').
+        swap_encoder_order: Whether to swap encoder output order.
+        gen_output: Whether to generate deformed output.
+
+    Forward inputs:
+        inputs: Tuple `(mov, fix)` tensors.
+
+    Forward outputs:
+        If `gen_output`, returns `(warped, flow, stats)`; otherwise `(flow, stats)`.
+    """
     def __init__(self, encoder, img_size=(128, 128, 128), num_lvls=3, channels=(96*4, 96*2, 96), if_upsamp=True, encoder_output_type='single', encoder_input_type='single', swap_encoder_order=True, gen_output=True):
         super(SSLHeadNLvl, self).__init__()
         self.num_lvls = num_lvls
@@ -70,6 +89,7 @@ class SSLHeadNLvl(nn.Module):
         self.gen_output = gen_output
 
     def forward(self, inputs):
+        """Run SSL head forward pass."""
         mov, fix = inputs
         x_cat = torch.cat((mov, fix), dim=1)
         if self.encoder_input_type == 'multi':
@@ -117,19 +137,24 @@ class SSLHeadNLvl(nn.Module):
             return flow_final, stats
     
 class SSLHead1Lvl(nn.Module):
-    '''
-    Self-supervised learning head with one level
+    """Self-supervised learning head with one level.
+
     Args:
-        encoder: Encoder model
-        img_size: Image size
-        num_lvls: Number of levels
-        channels: Number of channels
-        if_upsamp: Whether to upsample
-        encoder_output_type: Type of encoder output ('single' or 'multi')
-        encoder_input_type: Type of encoder input ('single', 'multi', or 'separate')
-        swap_encoder_order: Whether to swap encoder's output order
-        gen_output: Whether to generate deformed output
-    '''
+        encoder: Encoder model.
+        img_size: Image size.
+        num_lvls: Number of levels.
+        channels: Number of channels per level.
+        if_upsamp: Whether to upsample predicted flows.
+        encoder_output_type: Encoder output type ('single' or 'multi').
+        swap_encoder_order: Whether to swap encoder output order.
+        gen_output: Whether to generate deformed output.
+
+    Forward inputs:
+        inputs: Tuple `(mov, fix)` tensors.
+
+    Forward outputs:
+        If `gen_output`, returns `(warped, flow)`; otherwise `flow`.
+    """
     def __init__(self, encoder, img_size=(128, 128, 128), num_lvls=3, channels=(96*4, 96*2, 96), if_upsamp=True, encoder_output_type='single', swap_encoder_order=True, gen_output=True):
         super(SSLHead1Lvl, self).__init__()
         self.num_lvls = num_lvls
@@ -146,6 +171,7 @@ class SSLHead1Lvl(nn.Module):
         self.gen_output = gen_output
 
     def forward(self, inputs):
+        """Run SSL head forward pass."""
         mov, fix = inputs
         x_cat = torch.cat((mov, fix), dim=1)
         if self.encoder_output_type == 'multi':

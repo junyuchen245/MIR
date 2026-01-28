@@ -97,6 +97,7 @@
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
 <div class="viewcode-block" id="Conv3dReLU"><a class="viewcode-back" href="../../../api.html#MIR.models.Conv3dReLU">[docs]</a><span class="k">class</span> <span class="nc">Conv3dReLU</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;3D convolution + normalization + LeakyReLU block.&quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
             <span class="bp">self</span><span class="p">,</span>
             <span class="n">in_channels</span><span class="p">,</span>
@@ -124,6 +125,7 @@
 
 
 <div class="viewcode-block" id="DecoderBlock"><a class="viewcode-back" href="../../../api.html#MIR.models.DecoderBlock">[docs]</a><span class="k">class</span> <span class="nc">DecoderBlock</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Decoder block with upsampling and optional skip connection.&quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
             <span class="bp">self</span><span class="p">,</span>
             <span class="n">in_channels</span><span class="p">,</span>
@@ -149,6 +151,15 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">up</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Upsample</span><span class="p">(</span><span class="n">scale_factor</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;trilinear&#39;</span><span class="p">,</span> <span class="n">align_corners</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 
 <div class="viewcode-block" id="DecoderBlock.forward"><a class="viewcode-back" href="../../../api.html#MIR.models.DecoderBlock.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">skip</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Forward pass.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            x: Tensor of shape [B, C, D, H, W].</span>
+<span class="sd">            skip: Optional skip tensor concatenated on channel axis.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Tensor after upsampling and convolutions.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">up</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">skip</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">x</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">([</span><span class="n">x</span><span class="p">,</span> <span class="n">skip</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
@@ -157,6 +168,7 @@
         <span class="k">return</span> <span class="n">x</span></div></div>
 
 <div class="viewcode-block" id="RegistrationHead"><a class="viewcode-back" href="../../../api.html#MIR.models.RegistrationHead">[docs]</a><span class="k">class</span> <span class="nc">RegistrationHead</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Predict a dense displacement field from decoder features.&quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">in_channels</span><span class="p">,</span> <span class="n">out_channels</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">upsampling</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
         <span class="n">conv3d</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Conv3d</span><span class="p">(</span><span class="n">in_channels</span><span class="p">,</span> <span class="n">out_channels</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="n">kernel_size</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="n">kernel_size</span> <span class="o">//</span> <span class="mi">2</span><span class="p">)</span>
         <span class="n">conv3d</span><span class="o">.</span><span class="n">weight</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">Normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">1e-5</span><span class="p">)</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">conv3d</span><span class="o">.</span><span class="n">weight</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
@@ -164,14 +176,20 @@
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">conv3d</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="TransMorph"><a class="viewcode-back" href="../../../api.html#MIR.models.TransMorph">[docs]</a><span class="k">class</span> <span class="nc">TransMorph</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    TransMorph model</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;TransMorph model.</span>
+
 <span class="sd">    Args:</span>
-<span class="sd">        config: Configuration object containing model parameters</span>
-<span class="sd">        SVF: Boolean indicating whether to use SVF (Time Stationary Velocity Field) integration</span>
-<span class="sd">        SVF_steps: Number of steps for SVF integration</span>
-<span class="sd">        swin_type: Type of Swin Transformer to use (&#39;swin&#39; or &#39;dswin&#39;)</span>
-<span class="sd">    &#39;&#39;&#39;</span>
+<span class="sd">        config: Configuration object containing model parameters.</span>
+<span class="sd">        SVF: Whether to integrate a stationary velocity field.</span>
+<span class="sd">        SVF_steps: Number of scaling-and-squaring steps.</span>
+<span class="sd">        swin_type: Transformer type (&#39;swin&#39;, &#39;dswin&#39;, &#39;dswinv2&#39;).</span>
+
+<span class="sd">    Forward inputs:</span>
+<span class="sd">        inputs: Tuple `(mov, fix)` tensors of shape [B, 1, D, H, W].</span>
+
+<span class="sd">    Forward outputs:</span>
+<span class="sd">        Dense flow tensor of shape [B, 3, D, H, W].</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">SVF</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">SVF_steps</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span> <span class="n">swin_type</span><span class="o">=</span><span class="s1">&#39;swin&#39;</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Original TransMorph Model</span>
@@ -265,13 +283,14 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">vec_int</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">VecInt</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">img_size</span><span class="p">,</span> <span class="n">SVF_steps</span><span class="p">)</span>
 
 <div class="viewcode-block" id="TransMorph.forward"><a class="viewcode-back" href="../../../api.html#MIR.models.TransMorph.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Forward pass for the TransMorph model.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Forward pass for the TransMorph model.</span>
+
 <span class="sd">        Args:</span>
-<span class="sd">            inputs: Tuple of moving and fixed images (mov, fix).</span>
+<span class="sd">            inputs: Tuple of moving and fixed images `(mov, fix)`.</span>
+
 <span class="sd">        Returns:</span>
-<span class="sd">            flow: The computed flow field for image registration.</span>
-<span class="sd">        &#39;&#39;&#39;</span>
+<span class="sd">            Predicted dense flow field.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">mov</span><span class="p">,</span> <span class="n">fix</span> <span class="o">=</span> <span class="n">inputs</span>
         <span class="n">x</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">mov</span><span class="p">,</span> <span class="n">fix</span><span class="p">),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">if_convskip</span><span class="p">:</span>
@@ -318,16 +337,22 @@
         <span class="k">return</span> <span class="n">flow</span></div></div>
 
 <div class="viewcode-block" id="TransMorphTVF"><a class="viewcode-back" href="../../../api.html#MIR.models.TransMorphTVF">[docs]</a><span class="k">class</span> <span class="nc">TransMorphTVF</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&#39;&#39;&#39; </span>
-<span class="sd">    TransMorph TVF</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;TransMorph TVF model with progressive flow integration.</span>
+
 <span class="sd">    Args:</span>
-<span class="sd">        config: Configuration object containing model parameters</span>
-<span class="sd">        time_steps: Number of time steps for progressive registration</span>
-<span class="sd">        SVF: Boolean indicating whether to use SVF (Time Stationary Velocity Field) integration</span>
-<span class="sd">        SVF_steps: Number of steps for SVF integration</span>
-<span class="sd">        composition: Type of composition for flow integration (&#39;composition&#39; or &#39;addition&#39;)</span>
-<span class="sd">        swin_type: Type of Swin Transformer to use (&#39;swin&#39; or &#39;dswin&#39;)</span>
-<span class="sd">    &#39;&#39;&#39;</span>
+<span class="sd">        config: Configuration object containing model parameters.</span>
+<span class="sd">        time_steps: Number of time steps for progressive registration.</span>
+<span class="sd">        SVF: Whether to integrate a stationary velocity field.</span>
+<span class="sd">        SVF_steps: Number of scaling-and-squaring steps.</span>
+<span class="sd">        composition: Flow composition strategy (&#39;composition&#39; or &#39;addition&#39;).</span>
+<span class="sd">        swin_type: Transformer type (&#39;swin&#39;, &#39;dswin&#39;, &#39;dswinv2&#39;).</span>
+
+<span class="sd">    Forward inputs:</span>
+<span class="sd">        inputs: Tuple `(mov, fix)` tensors of shape [B, 1, D, H, W].</span>
+
+<span class="sd">    Forward outputs:</span>
+<span class="sd">        Dense flow tensor of shape [B, 3, D, H, W].</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">time_steps</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span> <span class="n">SVF</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">SVF_steps</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span> <span class="n">composition</span><span class="o">=</span><span class="s1">&#39;composition&#39;</span><span class="p">,</span> <span class="n">swin_type</span><span class="o">=</span><span class="s1">&#39;swin&#39;</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">(</span><span class="n">TransMorphTVF</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
         <span class="n">if_convskip</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">if_convskip</span>
@@ -433,13 +458,14 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">eps</span> <span class="o">=</span> <span class="mf">1e-6</span>
 
 <div class="viewcode-block" id="TransMorphTVF.forward"><a class="viewcode-back" href="../../../api.html#MIR.models.TransMorphTVF.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Forward pass for the TransMorphTVF model.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Forward pass for the TransMorphTVF model.</span>
+
 <span class="sd">        Args:</span>
-<span class="sd">            inputs: Tuple of moving and fixed images (mov, fix).</span>
+<span class="sd">            inputs: Tuple of moving and fixed images `(mov, fix)`.</span>
+
 <span class="sd">        Returns:</span>
-<span class="sd">            flow: The computed flow field for image registration.</span>
-<span class="sd">        &#39;&#39;&#39;</span>
+<span class="sd">            Predicted dense flow field.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">mov</span><span class="p">,</span> <span class="n">fix</span> <span class="o">=</span> <span class="n">inputs</span>
         <span class="n">x_cat</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">mov</span><span class="p">,</span> <span class="n">fix</span><span class="p">),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
         <span class="n">x_s1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">avg_pool</span><span class="p">(</span><span class="n">x_cat</span><span class="p">)</span>
@@ -498,15 +524,22 @@
         <span class="k">return</span> <span class="n">flow</span></div></div>
     
 <div class="viewcode-block" id="TransMorphTVFSPR"><a class="viewcode-back" href="../../../api.html#MIR.models.TransMorphTVFSPR">[docs]</a><span class="k">class</span> <span class="nc">TransMorphTVFSPR</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&#39;&#39;&#39;TransMorph TVF with Spatially-varying regularization</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;TransMorph TVF with spatially varying regularization.</span>
+
 <span class="sd">    Args:</span>
-<span class="sd">        config: Configuration object containing model parameters</span>
-<span class="sd">        time_steps: Number of time steps for progressive registration</span>
-<span class="sd">        SVF: Boolean indicating whether to use SVF (Time Stationary Velocity Field) integration</span>
-<span class="sd">        SVF_steps: Number of steps for SVF integration</span>
-<span class="sd">        composition: Type of composition for flow integration (&#39;composition&#39; or &#39;addition&#39;)</span>
-<span class="sd">        swin_type: Type of Swin Transformer to use (&#39;swin&#39; or &#39;dswin&#39;)</span>
-<span class="sd">    &#39;&#39;&#39;</span>
+<span class="sd">        config: Configuration object containing model parameters.</span>
+<span class="sd">        time_steps: Number of time steps for progressive registration.</span>
+<span class="sd">        SVF: Whether to integrate a stationary velocity field.</span>
+<span class="sd">        SVF_steps: Number of scaling-and-squaring steps.</span>
+<span class="sd">        composition: Flow composition strategy (&#39;composition&#39; or &#39;addition&#39;).</span>
+<span class="sd">        swin_type: Transformer type (&#39;swin&#39;, &#39;dswin&#39;, &#39;dswinv2&#39;).</span>
+
+<span class="sd">    Forward inputs:</span>
+<span class="sd">        inputs: Tuple `(mov, fix)` tensors of shape [B, 1, D, H, W].</span>
+
+<span class="sd">    Forward outputs:</span>
+<span class="sd">        Tuple `(flow, spatial_wts)` where `flow` is [B, 3, D, H, W].</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">SVF</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">time_steps</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span> <span class="n">SVF_steps</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span> <span class="n">composition</span><span class="o">=</span><span class="s1">&#39;composition&#39;</span><span class="p">,</span> <span class="n">swin_type</span><span class="o">=</span><span class="s1">&#39;swin&#39;</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        Multi-resolution TransMorph</span>
@@ -625,14 +658,15 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">eps</span> <span class="o">=</span> <span class="mf">1e-6</span>
 
 <div class="viewcode-block" id="TransMorphTVFSPR.forward"><a class="viewcode-back" href="../../../api.html#MIR.models.TransMorphTVFSPR.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Forward pass for the TransMorphTVFSPR model.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Forward pass for the TransMorphTVFSPR model.</span>
+
 <span class="sd">        Args:</span>
-<span class="sd">            inputs: Tuple of moving and fixed images (mov, fix).</span>
+<span class="sd">            inputs: Tuple of moving and fixed images `(mov, fix)`.</span>
+
 <span class="sd">        Returns:</span>
-<span class="sd">            flow: The computed flow field for image registration.</span>
-<span class="sd">            x_weight: The spatial weights for regularization.</span>
-<span class="sd">        &#39;&#39;&#39;</span>
+<span class="sd">            Tuple `(flow, x_weight)` or `(pos_flow, neg_flow, x_weight)` when</span>
+<span class="sd">            SVF is enabled.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">mov</span><span class="p">,</span> <span class="n">fix</span> <span class="o">=</span> <span class="n">inputs</span>
         <span class="n">x_cat</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">mov</span><span class="p">,</span> <span class="n">fix</span><span class="p">),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
         <span class="n">x_s1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">avg_pool</span><span class="p">(</span><span class="n">x_cat</span><span class="p">)</span>
@@ -703,12 +737,19 @@
             <span class="k">return</span> <span class="n">flow</span><span class="p">,</span> <span class="n">x_weight</span></div></div>
 
 <div class="viewcode-block" id="TransMorphAffine"><a class="viewcode-back" href="../../../api.html#MIR.models.TransMorphAffine">[docs]</a><span class="k">class</span> <span class="nc">TransMorphAffine</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    TransMorph Affine</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Affine TransMorph head predicting global parameters.</span>
+
 <span class="sd">    Args:</span>
-<span class="sd">        config: Configuration object containing model parameters</span>
-<span class="sd">        swin_type: Type of Swin Transformer to use (&#39;swin&#39; or &#39;dswin&#39;)</span>
-<span class="sd">    &#39;&#39;&#39;</span>
+<span class="sd">        config: Configuration object containing model parameters.</span>
+<span class="sd">        swin_type: Transformer type (&#39;swin&#39;, &#39;dswin&#39;, &#39;dswinv2&#39;).</span>
+
+<span class="sd">    Forward inputs:</span>
+<span class="sd">        inputs: Tuple `(mov, fix)` tensors of shape [B, 1, D, H, W].</span>
+
+<span class="sd">    Forward outputs:</span>
+<span class="sd">        Tuple `(aff, scl, trans, shr)` with rotation, scale, translation,</span>
+<span class="sd">        and shear parameters.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">swin_type</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">(</span><span class="n">TransMorphAffine</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
         <span class="n">out_size</span> <span class="o">=</span> <span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">img_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">//</span><span class="mi">16</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">img_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">//</span><span class="mi">16</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">img_size</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">//</span><span class="mi">16</span><span class="p">)</span>
@@ -819,9 +860,18 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">shear_mlp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">shear_head_f</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">inst_norm</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">InstanceNorm3d</span><span class="p">(</span><span class="n">embed_dim</span> <span class="o">*</span> <span class="mi">4</span><span class="p">)</span>
 <div class="viewcode-block" id="TransMorphAffine.softplus"><a class="viewcode-back" href="../../../api.html#MIR.models.TransMorphAffine.softplus">[docs]</a>    <span class="k">def</span> <span class="nf">softplus</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>  <span class="c1"># Softplus</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Apply softplus activation.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">torch</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">x</span><span class="p">))</span></div>
 
 <div class="viewcode-block" id="TransMorphAffine.forward"><a class="viewcode-back" href="../../../api.html#MIR.models.TransMorphAffine.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Forward pass predicting affine parameters.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            inputs: Tuple of moving and fixed images `(mov, fix)`.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Tuple `(aff, scl, trans, shr)` of affine parameters.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">mov</span><span class="p">,</span> <span class="n">fix</span> <span class="o">=</span> <span class="n">inputs</span>
         <span class="n">x_cat</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">mov</span><span class="p">,</span> <span class="n">fix</span><span class="p">),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">swin_type</span> <span class="o">==</span> <span class="s1">&#39;swin&#39;</span><span class="p">:</span>

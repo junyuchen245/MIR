@@ -1,3 +1,5 @@
+"""Swin Transformer backbone for 3D medical image registration."""
+
 import torch
 import torch.nn as nn
 import torch.utils.checkpoint as checkpoint
@@ -7,6 +9,7 @@ import torch.nn.functional as nnf
 import numpy as np
 
 class Mlp(nn.Module):
+    """Feed-forward MLP block used inside transformer blocks."""
     def __init__(self, in_features, hidden_features=None, out_features=None, act_layer=nn.GELU, drop=0.):
         super().__init__()
         out_features = out_features or in_features
@@ -17,6 +20,7 @@ class Mlp(nn.Module):
         self.drop = nn.Dropout(drop)
 
     def forward(self, x):
+        """Apply MLP to input features."""
         x = self.fc1(x)
         x = self.act(x)
         x = self.drop(x)

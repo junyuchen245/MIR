@@ -69,7 +69,9 @@
            <div itemprop="articleBody">
              
   <h1>Source code for MIR.models.configs_TransMorph</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">ml_collections</span>
+<span></span><span class="sd">&quot;&quot;&quot;Configuration presets for TransMorph models.&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">ml_collections</span>
 <span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">********************************************************</span>
 <span class="sd">                   Swin Transformer</span>
@@ -99,9 +101,11 @@
 <span class="sd">&#39;&#39;&#39;</span>
 
 <div class="viewcode-block" id="get_3DTransMorphDWin3Lvl_config"><a class="viewcode-back" href="../../../api.html#MIR.models.get_3DTransMorphDWin3Lvl_config">[docs]</a><span class="k">def</span> <span class="nf">get_3DTransMorphDWin3Lvl_config</span><span class="p">():</span>
-<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    Trainable params: 15,201,579</span>
-<span class="sd">    &#39;&#39;&#39;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return TransMorph 3-level config with dual-window attention.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        ml_collections.ConfigDict with model hyperparameters.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">config</span> <span class="o">=</span> <span class="n">ml_collections</span><span class="o">.</span><span class="n">ConfigDict</span><span class="p">()</span>
     <span class="n">config</span><span class="o">.</span><span class="n">if_transskip</span> <span class="o">=</span> <span class="kc">True</span>
     <span class="n">config</span><span class="o">.</span><span class="n">if_convskip</span> <span class="o">=</span> <span class="kc">True</span>
@@ -128,9 +132,11 @@
     <span class="k">return</span> <span class="n">config</span></div>
 
 <div class="viewcode-block" id="get_3DTransMorph3Lvl_config"><a class="viewcode-back" href="../../../api.html#MIR.models.get_3DTransMorph3Lvl_config">[docs]</a><span class="k">def</span> <span class="nf">get_3DTransMorph3Lvl_config</span><span class="p">():</span>
-<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    Trainable params: 15,201,579</span>
-<span class="sd">    &#39;&#39;&#39;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return TransMorph 3-level config.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        ml_collections.ConfigDict with model hyperparameters.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">config</span> <span class="o">=</span> <span class="n">ml_collections</span><span class="o">.</span><span class="n">ConfigDict</span><span class="p">()</span>
     <span class="n">config</span><span class="o">.</span><span class="n">if_transskip</span> <span class="o">=</span> <span class="kc">True</span>
     <span class="n">config</span><span class="o">.</span><span class="n">if_convskip</span> <span class="o">=</span> <span class="kc">True</span>
@@ -156,9 +162,11 @@
     <span class="k">return</span> <span class="n">config</span></div>
 
 <span class="k">def</span> <span class="nf">get_3DTransMorphAutoPET3Lvl_config</span><span class="p">():</span>
-<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    Trainable params: 15,201,579</span>
-<span class="sd">    &#39;&#39;&#39;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return TransMorph 3-level config for AutoPET settings.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        ml_collections.ConfigDict with model hyperparameters.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">config</span> <span class="o">=</span> <span class="n">ml_collections</span><span class="o">.</span><span class="n">ConfigDict</span><span class="p">()</span>
     <span class="n">config</span><span class="o">.</span><span class="n">if_transskip</span> <span class="o">=</span> <span class="kc">True</span>
     <span class="n">config</span><span class="o">.</span><span class="n">if_convskip</span> <span class="o">=</span> <span class="kc">True</span>
@@ -185,9 +193,11 @@
     <span class="k">return</span> <span class="n">config</span>
 
 <div class="viewcode-block" id="get_3DTransMorph_config"><a class="viewcode-back" href="../../../api.html#MIR.models.get_3DTransMorph_config">[docs]</a><span class="k">def</span> <span class="nf">get_3DTransMorph_config</span><span class="p">():</span>
-<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    Trainable params: 15,201,579</span>
-<span class="sd">    &#39;&#39;&#39;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return base TransMorph 4-level config.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        ml_collections.ConfigDict with model hyperparameters.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">config</span> <span class="o">=</span> <span class="n">ml_collections</span><span class="o">.</span><span class="n">ConfigDict</span><span class="p">()</span>
     <span class="n">config</span><span class="o">.</span><span class="n">if_transskip</span> <span class="o">=</span> <span class="kc">True</span>
     <span class="n">config</span><span class="o">.</span><span class="n">if_convskip</span> <span class="o">=</span> <span class="kc">True</span>
@@ -213,9 +223,11 @@
     <span class="k">return</span> <span class="n">config</span></div>
 
 <div class="viewcode-block" id="get_3DTransMorphNoRelativePosEmbd_config"><a class="viewcode-back" href="../../../api.html#MIR.models.get_3DTransMorphNoRelativePosEmbd_config">[docs]</a><span class="k">def</span> <span class="nf">get_3DTransMorphNoRelativePosEmbd_config</span><span class="p">():</span>
-<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    Trainable params: 15,201,579</span>
-<span class="sd">    &#39;&#39;&#39;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return TransMorph config without relative positional embeddings.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        ml_collections.ConfigDict with model hyperparameters.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">config</span> <span class="o">=</span> <span class="n">ml_collections</span><span class="o">.</span><span class="n">ConfigDict</span><span class="p">()</span>
     <span class="n">config</span><span class="o">.</span><span class="n">if_transskip</span> <span class="o">=</span> <span class="kc">True</span>
     <span class="n">config</span><span class="o">.</span><span class="n">if_convskip</span> <span class="o">=</span> <span class="kc">True</span>
@@ -241,9 +253,11 @@
     <span class="k">return</span> <span class="n">config</span></div>
 
 <div class="viewcode-block" id="get_3DTransMorphSin_config"><a class="viewcode-back" href="../../../api.html#MIR.models.get_3DTransMorphSin_config">[docs]</a><span class="k">def</span> <span class="nf">get_3DTransMorphSin_config</span><span class="p">():</span>
-<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    TransMorph with Sinusoidal Positional Embedding</span>
-<span class="sd">    &#39;&#39;&#39;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return TransMorph config with sinusoidal positional embeddings.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        ml_collections.ConfigDict with model hyperparameters.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">config</span> <span class="o">=</span> <span class="n">ml_collections</span><span class="o">.</span><span class="n">ConfigDict</span><span class="p">()</span>
     <span class="n">config</span><span class="o">.</span><span class="n">if_transskip</span> <span class="o">=</span> <span class="kc">True</span>
     <span class="n">config</span><span class="o">.</span><span class="n">if_convskip</span> <span class="o">=</span> <span class="kc">True</span>

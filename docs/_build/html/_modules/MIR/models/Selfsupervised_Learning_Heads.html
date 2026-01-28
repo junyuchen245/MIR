@@ -69,11 +69,21 @@
            <div itemprop="articleBody">
              
   <h1>Source code for MIR.models.Selfsupervised_Learning_Heads</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">torch</span>
+<span></span><span class="sd">&quot;&quot;&quot;Self-supervised learning heads for registration models.&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">torch</span>
 <span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
 <span class="kn">import</span> <span class="nn">MIR.models.registration_utils</span> <span class="k">as</span> <span class="nn">utils</span>
 
 <span class="k">class</span> <span class="nc">SSL_blocks</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Decoder block for SSL heads.</span>
+
+<span class="sd">    Inputs:</span>
+<span class="sd">        x: Tensor of shape [B, C, D, H, W].</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Upsampled tensor with `out_dim` channels.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dim</span><span class="p">,</span> <span class="n">out_dim</span><span class="p">,</span> <span class="n">scale_fac</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">(</span><span class="n">SSL_blocks</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">block</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">(</span>
@@ -86,10 +96,12 @@
             <span class="n">nn</span><span class="o">.</span><span class="n">LeakyReLU</span><span class="p">(),</span>
         <span class="p">)</span>
     <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Apply decoder block.&quot;&quot;&quot;</span>
         <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">block</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">x</span>
 
 <span class="k">class</span> <span class="nc">flow_blocks</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Predict mean (and optionally log-variance) flow fields.&quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dim</span><span class="p">,</span> <span class="n">if_KL</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">(</span><span class="n">flow_blocks</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">if_KL</span> <span class="o">=</span> <span class="n">if_KL</span>
@@ -101,6 +113,7 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">flow_sigma</span><span class="o">.</span><span class="n">weight</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">normal_</span><span class="p">(</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">1e-10</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">flow_sigma</span><span class="o">.</span><span class="n">bias</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">([</span><span class="o">-</span><span class="mi">10</span><span class="p">]</span> <span class="o">*</span> <span class="mi">3</span><span class="p">)</span>
     <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute flow statistics from features.&quot;&quot;&quot;</span>
         <span class="n">mean</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">flow_mean</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">if_KL</span><span class="p">:</span>
             <span class="n">sigma</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">flow_sigma</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
@@ -109,19 +122,25 @@
             <span class="k">return</span> <span class="n">mean</span>
 
 <div class="viewcode-block" id="SSLHeadNLvl"><a class="viewcode-back" href="../../../api.html#MIR.models.SSLHeadNLvl">[docs]</a><span class="k">class</span> <span class="nc">SSLHeadNLvl</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    Self-supervised learning head with multiple levels</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Self-supervised learning head with multiple levels.</span>
+
 <span class="sd">    Args:</span>
-<span class="sd">        encoder: Encoder model</span>
-<span class="sd">        img_size: Image size</span>
-<span class="sd">        num_lvls: Number of levels</span>
-<span class="sd">        channels: Number of channels</span>
-<span class="sd">        if_upsamp: Whether to upsample</span>
-<span class="sd">        encoder_output_type: Type of encoder output (&#39;single&#39; or &#39;multi&#39;)</span>
-<span class="sd">        encoder_input_type: Type of encoder input (&#39;single&#39;, &#39;multi&#39;, or &#39;separate&#39;)</span>
-<span class="sd">        swap_encoder_order: Whether to swap encoder&#39;s output order</span>
-<span class="sd">        gen_output: Whether to generate deformed output</span>
-<span class="sd">    &#39;&#39;&#39;</span>
+<span class="sd">        encoder: Encoder model.</span>
+<span class="sd">        img_size: Image size.</span>
+<span class="sd">        num_lvls: Number of levels.</span>
+<span class="sd">        channels: Number of channels per level.</span>
+<span class="sd">        if_upsamp: Whether to upsample predicted flows.</span>
+<span class="sd">        encoder_output_type: Encoder output type (&#39;single&#39; or &#39;multi&#39;).</span>
+<span class="sd">        encoder_input_type: Encoder input type (&#39;single&#39;, &#39;multi&#39;, or &#39;separate&#39;).</span>
+<span class="sd">        swap_encoder_order: Whether to swap encoder output order.</span>
+<span class="sd">        gen_output: Whether to generate deformed output.</span>
+
+<span class="sd">    Forward inputs:</span>
+<span class="sd">        inputs: Tuple `(mov, fix)` tensors.</span>
+
+<span class="sd">    Forward outputs:</span>
+<span class="sd">        If `gen_output`, returns `(warped, flow, stats)`; otherwise `(flow, stats)`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">encoder</span><span class="p">,</span> <span class="n">img_size</span><span class="o">=</span><span class="p">(</span><span class="mi">128</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="mi">128</span><span class="p">),</span> <span class="n">num_lvls</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">channels</span><span class="o">=</span><span class="p">(</span><span class="mi">96</span><span class="o">*</span><span class="mi">4</span><span class="p">,</span> <span class="mi">96</span><span class="o">*</span><span class="mi">2</span><span class="p">,</span> <span class="mi">96</span><span class="p">),</span> <span class="n">if_upsamp</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">encoder_output_type</span><span class="o">=</span><span class="s1">&#39;single&#39;</span><span class="p">,</span> <span class="n">encoder_input_type</span><span class="o">=</span><span class="s1">&#39;single&#39;</span><span class="p">,</span> <span class="n">swap_encoder_order</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">gen_output</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">(</span><span class="n">SSLHeadNLvl</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">num_lvls</span> <span class="o">=</span> <span class="n">num_lvls</span>
@@ -141,6 +160,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">gen_output</span> <span class="o">=</span> <span class="n">gen_output</span>
 
 <div class="viewcode-block" id="SSLHeadNLvl.forward"><a class="viewcode-back" href="../../../api.html#MIR.models.SSLHeadNLvl.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Run SSL head forward pass.&quot;&quot;&quot;</span>
         <span class="n">mov</span><span class="p">,</span> <span class="n">fix</span> <span class="o">=</span> <span class="n">inputs</span>
         <span class="n">x_cat</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">mov</span><span class="p">,</span> <span class="n">fix</span><span class="p">),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">encoder_input_type</span> <span class="o">==</span> <span class="s1">&#39;multi&#39;</span><span class="p">:</span>
@@ -188,19 +208,24 @@
             <span class="k">return</span> <span class="n">flow_final</span><span class="p">,</span> <span class="n">stats</span></div></div>
     
 <div class="viewcode-block" id="SSLHead1Lvl"><a class="viewcode-back" href="../../../api.html#MIR.models.SSLHead1Lvl">[docs]</a><span class="k">class</span> <span class="nc">SSLHead1Lvl</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    Self-supervised learning head with one level</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Self-supervised learning head with one level.</span>
+
 <span class="sd">    Args:</span>
-<span class="sd">        encoder: Encoder model</span>
-<span class="sd">        img_size: Image size</span>
-<span class="sd">        num_lvls: Number of levels</span>
-<span class="sd">        channels: Number of channels</span>
-<span class="sd">        if_upsamp: Whether to upsample</span>
-<span class="sd">        encoder_output_type: Type of encoder output (&#39;single&#39; or &#39;multi&#39;)</span>
-<span class="sd">        encoder_input_type: Type of encoder input (&#39;single&#39;, &#39;multi&#39;, or &#39;separate&#39;)</span>
-<span class="sd">        swap_encoder_order: Whether to swap encoder&#39;s output order</span>
-<span class="sd">        gen_output: Whether to generate deformed output</span>
-<span class="sd">    &#39;&#39;&#39;</span>
+<span class="sd">        encoder: Encoder model.</span>
+<span class="sd">        img_size: Image size.</span>
+<span class="sd">        num_lvls: Number of levels.</span>
+<span class="sd">        channels: Number of channels per level.</span>
+<span class="sd">        if_upsamp: Whether to upsample predicted flows.</span>
+<span class="sd">        encoder_output_type: Encoder output type (&#39;single&#39; or &#39;multi&#39;).</span>
+<span class="sd">        swap_encoder_order: Whether to swap encoder output order.</span>
+<span class="sd">        gen_output: Whether to generate deformed output.</span>
+
+<span class="sd">    Forward inputs:</span>
+<span class="sd">        inputs: Tuple `(mov, fix)` tensors.</span>
+
+<span class="sd">    Forward outputs:</span>
+<span class="sd">        If `gen_output`, returns `(warped, flow)`; otherwise `flow`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">encoder</span><span class="p">,</span> <span class="n">img_size</span><span class="o">=</span><span class="p">(</span><span class="mi">128</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="mi">128</span><span class="p">),</span> <span class="n">num_lvls</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">channels</span><span class="o">=</span><span class="p">(</span><span class="mi">96</span><span class="o">*</span><span class="mi">4</span><span class="p">,</span> <span class="mi">96</span><span class="o">*</span><span class="mi">2</span><span class="p">,</span> <span class="mi">96</span><span class="p">),</span> <span class="n">if_upsamp</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">encoder_output_type</span><span class="o">=</span><span class="s1">&#39;single&#39;</span><span class="p">,</span> <span class="n">swap_encoder_order</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">gen_output</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">(</span><span class="n">SSLHead1Lvl</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">num_lvls</span> <span class="o">=</span> <span class="n">num_lvls</span>
@@ -217,6 +242,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">gen_output</span> <span class="o">=</span> <span class="n">gen_output</span>
 
 <div class="viewcode-block" id="SSLHead1Lvl.forward"><a class="viewcode-back" href="../../../api.html#MIR.models.SSLHead1Lvl.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Run SSL head forward pass.&quot;&quot;&quot;</span>
         <span class="n">mov</span><span class="p">,</span> <span class="n">fix</span> <span class="o">=</span> <span class="n">inputs</span>
         <span class="n">x_cat</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">mov</span><span class="p">,</span> <span class="n">fix</span><span class="p">),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">encoder_output_type</span> <span class="o">==</span> <span class="s1">&#39;multi&#39;</span><span class="p">:</span>

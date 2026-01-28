@@ -1,3 +1,5 @@
+"""Transformer-based VFA variants and feature adapters."""
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as nnf
@@ -8,20 +10,23 @@ import MIR.models as mir_m
 from MIR.models.VFA import Decoder, DoubleConv3d, grid_to_flow
 
 class VoxelShuffle(nn.Module):
-    """
-    3D voxel shuffle layer.
-    Upscales a (B, C, H, W, D) input by factor r in each spatial dim,
-    where C = C_out * (r ** 3).
+    """3D voxel shuffle layer.
+
+    Upscales a tensor by factor `r` in each spatial dimension where
+    `C_in = C_out * r^3`.
+
+    Inputs:
+        x: Tensor of shape [B, C_in, H, W, D].
+
+    Returns:
+        Tensor of shape [B, C_out, H*r, W*r, D*r].
     """
     def __init__(self, upscale_factor: int):
         super().__init__()
         self.r = upscale_factor
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        x: (B, C_in, H, W, D)
-        returns: (B, C_out, H*r, W*r, D*r)
-        """
+        """Rearrange channels into spatial dimensions."""
         B, C, H, W, D = x.shape
         r = self.r
         if C % (r**3) != 0:
@@ -38,15 +43,21 @@ class VoxelShuffle(nn.Module):
         return x
 
 class Feature2VFA(nn.Module):
-    '''
-    Feature converter module to convert Transformer features for VFA
+    """Convert transformer features into VFA multiscale features.
+
     Args:
-        configs_sw: Swin Transformer configs
-        vfa_channels: Number of channels for VFA
-        embed_dim: Embedding dimension for Swin Transformer
-        swin_type: Type of Swin Transformer ('swin' or 'dswin')
-        in_norm: Whether to apply instance normalization to the input
-    '''
+        configs_sw: Swin Transformer config.
+        vfa_channels: Channel widths for VFA decoder stages.
+        embed_dim: Transformer embedding dimension.
+        swin_type: Transformer type ('swin', 'dswin', 'dswinv2').
+        in_norm: If True, apply instance normalization to inputs.
+
+    Forward inputs:
+        x: Tensor [B, 1, D, H, W] or tuple of tensors for deformable variants.
+
+    Forward outputs:
+        List of multiscale feature maps or tuple of lists for dual inputs.
+    """
     def __init__(self, configs_sw, vfa_channels=[8, 16, 32, 64], embed_dim=128, swin_type='swin', in_norm=True):
         super().__init__()
         if swin_type == 'swin':
@@ -131,6 +142,7 @@ class Feature2VFA(nn.Module):
         self.swin_type = swin_type
         
     def forward(self, x):
+        """Run feature extraction and conversion."""
         if self.swin_type == 'swin':
             if self.in_norm:
                 x = self.norm_first(x)
@@ -183,16 +195,22 @@ class Feature2VFA(nn.Module):
         
 
 class TransVFA(nn.Module):
-    '''
-    TransVFA model for image registration
+    """TransVFA model for image registration.
+
     Args:
-        configs_sw: Swin Transformer configs
-        configs: VFA configs
-        device: Device to run the model on
-        swin_type: Type of Swin Transformer ('swin' or 'dswin')
-        return_orginal: Whether to return the original deformation field used for original VFA, otherwise return the flow as displacement
-        return_all_flows: Whether to return all flows
-    '''
+        configs_sw: Swin Transformer config.
+        configs: VFA config.
+        device: Device to run the model on.
+        swin_type: Transformer type ('swin', 'dswin', 'dswinv2').
+        return_orginal: If True, return composed grids and stats.
+        return_all_flows: If True, return flows for all decoder levels.
+
+    Forward inputs:
+        sample: Tuple `(mov, fix)` tensors of shape [B, 1, *spatial].
+
+    Forward outputs:
+        Flow(s) and optional auxiliary outputs depending on flags.
+    """
     def __init__(self, configs_sw, configs, device, swin_type='swin', return_orginal=False, return_all_flows=False, max_channels=64):
         super().__init__()
 
@@ -220,6 +238,14 @@ class TransVFA(nn.Module):
         self.return_all_flows = return_all_flows
 
     def forward(self, sample):
+        """Run forward registration.
+
+        Args:
+            sample: Tuple `(mov, fix)` tensors.
+
+        Returns:
+            Output varies by flags (`return_orginal`, `return_all_flows`).
+        """
         mov, fix = sample
         if self.swin_type == 'swin':
             F = self.encoder(fix)

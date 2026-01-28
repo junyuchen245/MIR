@@ -69,7 +69,9 @@
            <div itemprop="articleBody">
              
   <h1>Source code for MIR.models.registration_utils</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">torch</span>
+<span></span><span class="sd">&quot;&quot;&quot;Model-level registration utilities (transformers and geometry).&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">torch</span>
 <span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
 <span class="kn">import</span> <span class="nn">torch.nn.functional</span> <span class="k">as</span> <span class="nn">nnf</span>
 
@@ -83,6 +85,12 @@
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;bilinear&#39;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize a spatial transformer.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            size: Spatial size tuple (H, W[, D]).</span>
+<span class="sd">            mode: Interpolation mode (&#39;bilinear&#39; or &#39;nearest&#39;).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">=</span> <span class="n">mode</span>
@@ -102,6 +110,15 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">register_buffer</span><span class="p">(</span><span class="s1">&#39;grid&#39;</span><span class="p">,</span> <span class="n">grid</span><span class="p">)</span>
 
 <div class="viewcode-block" id="SpatialTransformer.forward"><a class="viewcode-back" href="../../../api.html#MIR.models.SpatialTransformer.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">src</span><span class="p">,</span> <span class="n">flow</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Warp a source tensor with a displacement field.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            src: Source tensor (B, C, ...).</span>
+<span class="sd">            flow: Displacement field (B, ndim, ...).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Warped tensor.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># new locations</span>
         <span class="n">new_locs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">grid</span> <span class="o">+</span> <span class="n">flow</span>
         <span class="n">shape</span> <span class="o">=</span> <span class="n">flow</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">:]</span>
@@ -130,6 +147,12 @@
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inshape</span><span class="p">,</span> <span class="n">nsteps</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize vector field integrator.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            inshape: Spatial shape of the field.</span>
+<span class="sd">            nsteps: Number of scaling-and-squaring steps.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
 
         <span class="k">assert</span> <span class="n">nsteps</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;nsteps should be &gt;= 0, found: </span><span class="si">%d</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">nsteps</span>
@@ -138,6 +161,14 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">transformer</span> <span class="o">=</span> <span class="n">SpatialTransformer</span><span class="p">(</span><span class="n">inshape</span><span class="p">)</span>
 
 <div class="viewcode-block" id="VecInt.forward"><a class="viewcode-back" href="../../../api.html#MIR.models.VecInt.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vec</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Integrate a vector field via scaling and squaring.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            vec: Velocity field tensor (B, ndim, ...).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Integrated displacement field.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">vec</span> <span class="o">=</span> <span class="n">vec</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale</span>
         <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nsteps</span><span class="p">):</span>
             <span class="n">vec</span> <span class="o">=</span> <span class="n">vec</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">transformer</span><span class="p">(</span><span class="n">vec</span><span class="p">,</span> <span class="n">vec</span><span class="p">)</span>
@@ -151,14 +182,40 @@
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;bilinear&#39;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize affine transformer.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            mode: Interpolation mode (&#39;bilinear&#39; or &#39;nearest&#39;).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">=</span> <span class="n">mode</span>
 
 <div class="viewcode-block" id="AffineTransformer.apply_affine"><a class="viewcode-back" href="../../../api.html#MIR.models.AffineTransformer.apply_affine">[docs]</a>    <span class="k">def</span> <span class="nf">apply_affine</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">src</span><span class="p">,</span> <span class="n">mat</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Apply an affine matrix to a source volume.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            src: Source tensor (B, C, H, W, D).</span>
+<span class="sd">            mat: Affine matrix (B, 3, 4).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Warped tensor.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">grid</span> <span class="o">=</span> <span class="n">nnf</span><span class="o">.</span><span class="n">affine_grid</span><span class="p">(</span><span class="n">mat</span><span class="p">,</span> <span class="p">[</span><span class="n">src</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">3</span><span class="p">,</span> <span class="n">src</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">src</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="n">src</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">4</span><span class="p">]],</span> <span class="n">align_corners</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">nnf</span><span class="o">.</span><span class="n">grid_sample</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="n">grid</span><span class="p">,</span> <span class="n">align_corners</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="AffineTransformer.forward"><a class="viewcode-back" href="../../../api.html#MIR.models.AffineTransformer.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">src</span><span class="p">,</span> <span class="n">affine</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span> <span class="n">translate</span><span class="p">,</span> <span class="n">shear</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Apply composed affine parameters to a volume.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            src: Source tensor (B, C, H, W, D).</span>
+<span class="sd">            affine: Rotation parameters (B, 3).</span>
+<span class="sd">            scale: Scale parameters (B, 3).</span>
+<span class="sd">            translate: Translation parameters (B, 3).</span>
+<span class="sd">            shear: Shear parameters (B, 6).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Tuple of (warped, affine_matrix, inverse_affine_matrix).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="n">theta_x</span> <span class="o">=</span> <span class="n">affine</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span>
         <span class="n">theta_y</span> <span class="o">=</span> <span class="n">affine</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span>
@@ -197,6 +254,15 @@
         <span class="k">return</span> <span class="n">nnf</span><span class="o">.</span><span class="n">grid_sample</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="n">grid</span><span class="p">,</span> <span class="n">align_corners</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">),</span> <span class="n">mat</span><span class="p">,</span> <span class="n">inv_mat</span></div></div>
 
 <span class="k">def</span> <span class="nf">_to_tensor</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert array to float tensor on a device.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        arr: NumPy array or tensor.</span>
+<span class="sd">        device: Target torch device.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Tensor on device.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">arr</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span><span class="o">.</span><span class="n">float</span><span class="p">()</span>
     <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">arr</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span><span class="o">.</span><span class="n">float</span><span class="p">()</span>
@@ -227,6 +293,15 @@
  
  
 <span class="k">def</span> <span class="nf">_torch_gradient</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">spacing</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Fallback torch gradient for older PyTorch versions.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        x: Tensor to differentiate.</span>
+<span class="sd">        spacing: Grid spacing.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        List of gradients per spatial dimension.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># minimal torch‑gradient fallback for &lt; 2.1</span>
     <span class="n">grads</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">dim</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">ndim</span> <span class="o">-</span> <span class="mi">2</span><span class="p">):</span>

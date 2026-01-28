@@ -69,11 +69,24 @@
            <div itemprop="articleBody">
              
   <h1>Source code for MIR.utils.visualization_utils</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span></span><span class="sd">&quot;&quot;&quot;Visualization helpers for grids and colormaps.&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">torch</span>
 <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
 
 <div class="viewcode-block" id="mk_grid_img"><a class="viewcode-back" href="../../../api.html#MIR.utils.mk_grid_img">[docs]</a><span class="k">def</span> <span class="nf">mk_grid_img</span><span class="p">(</span><span class="n">grid_step</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">line_thickness</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">grid_sz</span><span class="o">=</span><span class="p">(</span><span class="mi">160</span><span class="p">,</span> <span class="mi">192</span><span class="p">,</span> <span class="mi">224</span><span class="p">),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a grid image tensor for visualization.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        grid_step: Spacing between grid lines.</span>
+<span class="sd">        line_thickness: Grid line thickness.</span>
+<span class="sd">        grid_sz: Grid size (H, W, D).</span>
+<span class="sd">        dim: Axis along which to draw the grid.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Grid tensor with shape (1, 1, H, W, D).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">grid_img</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">grid_sz</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">dim</span><span class="o">==</span><span class="mi">0</span><span class="p">:</span>
         <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">grid_img</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">grid_step</span><span class="p">):</span>
@@ -95,20 +108,26 @@
     <span class="k">return</span> <span class="n">grid_img</span></div>
 
 <div class="viewcode-block" id="get_cmap"><a class="viewcode-back" href="../../../api.html#MIR.utils.get_cmap">[docs]</a><span class="k">def</span> <span class="nf">get_cmap</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s1">&#39;nipy_spectral&#39;</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&#39;&#39;&#39;Returns a function that maps each index in 0, 1, ..., n-1 to a distinct</span>
-<span class="sd">    RGB color; the keyword argument name must be a standard mpl colormap name.&#39;&#39;&#39;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a matplotlib colormap with n distinct colors.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        n: Number of discrete colors.</span>
+<span class="sd">        name: Matplotlib colormap name.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Colormap instance.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">plt</span><span class="o">.</span><span class="n">cm</span><span class="o">.</span><span class="n">get_cmap</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span></div>
 
 <span class="k">def</span> <span class="nf">pca_reduce_channels_cpu</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">k</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    PCA on the channel dimension via CPU SVD, then project on the original device.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Reduce channel dimension via PCA on CPU and project back to device.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">      x (B, C, H, W, D): feature maps, float32 or float64</span>
-<span class="sd">      k               : number of principal components to keep</span>
+<span class="sd">            x: Feature maps (B, C, H, W, D).</span>
+<span class="sd">            k: Number of principal components to keep.</span>
 
 <span class="sd">    Returns:</span>
-<span class="sd">      y (B, k, H, W, D): channel‐reduced volumes</span>
+<span class="sd">            Channel-reduced tensor (B, k, H, W, D).</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">B</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span> <span class="n">H</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">D</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span>
     <span class="k">assert</span> <span class="n">k</span> <span class="o">&lt;=</span> <span class="n">C</span><span class="p">,</span> <span class="s2">&quot;k must be &lt;= C&quot;</span>

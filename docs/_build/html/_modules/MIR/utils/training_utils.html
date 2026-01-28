@@ -69,7 +69,9 @@
            <div itemprop="articleBody">
              
   <h1>Source code for MIR.utils.training_utils</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">math</span><span class="o">,</span> <span class="nn">random</span><span class="o">,</span> <span class="nn">pickle</span>
+<span></span><span class="sd">&quot;&quot;&quot;Training utilities (logging, metrics, and patch sampling).&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">math</span><span class="o">,</span> <span class="nn">random</span><span class="o">,</span> <span class="nn">pickle</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">torch.nn.functional</span> <span class="k">as</span> <span class="nn">F</span>
 <span class="kn">import</span> <span class="nn">torch</span><span class="o">,</span> <span class="nn">sys</span>
@@ -77,14 +79,21 @@
 
 <div class="viewcode-block" id="Logger"><a class="viewcode-back" href="../../../api.html#MIR.utils.Logger">[docs]</a><span class="k">class</span> <span class="nc">Logger</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">save_dir</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize a stdout logger that also writes to a file.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            save_dir: Directory path for log file.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">terminal</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">log</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">save_dir</span><span class="o">+</span><span class="s2">&quot;logfile.log&quot;</span><span class="p">,</span> <span class="s2">&quot;a&quot;</span><span class="p">)</span>
 
 <div class="viewcode-block" id="Logger.write"><a class="viewcode-back" href="../../../api.html#MIR.utils.Logger.write">[docs]</a>    <span class="k">def</span> <span class="nf">write</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Write a message to both stdout and the log file.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">terminal</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">message</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="Logger.flush"><a class="viewcode-back" href="../../../api.html#MIR.utils.Logger.flush">[docs]</a>    <span class="k">def</span> <span class="nf">flush</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;No-op flush for compatibility with file-like interfaces.&quot;&quot;&quot;</span>
         <span class="k">pass</span></div></div>
     
 <div class="viewcode-block" id="AverageMeter"><a class="viewcode-back" href="../../../api.html#MIR.utils.AverageMeter">[docs]</a><span class="k">class</span> <span class="nc">AverageMeter</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
@@ -93,6 +102,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
 
 <div class="viewcode-block" id="AverageMeter.reset"><a class="viewcode-back" href="../../../api.html#MIR.utils.AverageMeter.reset">[docs]</a>    <span class="k">def</span> <span class="nf">reset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Reset stored statistics.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">val</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">avg</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">sum</span> <span class="o">=</span> <span class="mi">0</span>
@@ -101,6 +111,12 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">std</span> <span class="o">=</span> <span class="mi">0</span></div>
 
 <div class="viewcode-block" id="AverageMeter.update"><a class="viewcode-back" href="../../../api.html#MIR.utils.AverageMeter.update">[docs]</a>    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">val</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Update running statistics.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            val: New value.</span>
+<span class="sd">            n: Weight/count for the value.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">val</span> <span class="o">=</span> <span class="n">val</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">sum</span> <span class="o">+=</span> <span class="n">val</span> <span class="o">*</span> <span class="n">n</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">count</span> <span class="o">+=</span> <span class="n">n</span>
@@ -109,6 +125,15 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vals</span><span class="p">)</span></div></div>
 
 <div class="viewcode-block" id="pad_image"><a class="viewcode-back" href="../../../api.html#MIR.utils.pad_image">[docs]</a><span class="k">def</span> <span class="nf">pad_image</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">target_size</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Pad a 3D tensor to a target size.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        img: Input tensor (B, C, H, W, D).</span>
+<span class="sd">        target_size: Target spatial size (H, W, D).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Padded tensor.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">rows_to_pad</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">target_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">img</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="mi">0</span><span class="p">)</span>
     <span class="n">cols_to_pad</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">target_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">img</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="mi">0</span><span class="p">)</span>
     <span class="n">slcs_to_pad</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">target_size</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="n">img</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">4</span><span class="p">],</span> <span class="mi">0</span><span class="p">)</span>
@@ -116,8 +141,15 @@
     <span class="k">return</span> <span class="n">padded_img</span></div>
 
 <span class="k">def</span> <span class="nf">normalize_01</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;minmax&#39;</span><span class="p">,</span> <span class="n">percentile</span><span class="o">=</span><span class="mf">0.05</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Normalize a tensor to the range [0, 1].</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Normalize a tensor/array to the range [0, 1].</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        x: Torch tensor or NumPy array.</span>
+<span class="sd">        method: &#39;minmax&#39; or &#39;percentile&#39;.</span>
+<span class="sd">        percentile: Percentile for percentile normalization.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Normalized tensor/array.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;minmax&#39;</span><span class="p">:</span>
@@ -159,7 +191,7 @@
 <span class="sd">        feat:   (B, C,  H,  W,  D)</span>
 <span class="sd">        target: (B,    H,  W,  D)   or   (B, 1, H, W, D)</span>
 <span class="sd">        </span>
-<span class="sd">        returns:</span>
+<span class="sd">                Returns:</span>
 <span class="sd">          feat_patch:   (B, C, ph, pw, pd)</span>
 <span class="sd">          target_patch: (B,   ph, pw, pd)  or  (B, 1, ph, pw, pd)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -196,7 +228,7 @@
 <span class="sd">                  feats[i].shape == (B, C_i, H/(2**i), W/(2**i), D/(2**i))</span>
 <span class="sd">          target: (B, H, W, D)     or   (B,1,H,W,D)</span>
 
-<span class="sd">        Returns:</span>
+<span class="sd">                Returns:</span>
 <span class="sd">          feat_patches  : list of tensors [ (B,C_i,ph_i,pw_i,pd_i) ... ]</span>
 <span class="sd">          target_patch  : (B,ph,pw,pd) or (B,1,ph,pw,pd)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
