@@ -26,9 +26,7 @@ import MIR.models.configs_TransMorph as configs
 import MIR.models.registration_utils as utils
 
 class CustomConv(nn.Module):
-    """
-    Specific convolutional block followed by leakyrelu for unet.
-    """
+    """Hyper-conditioned convolution with weights predicted from parameters."""
 
     def __init__(self, in_channels, out_channels, ndims=3, kernel_size=3, stride=1, padding=1, bias=True, normalize=False, nb_hyp_units=96):
         super().__init__()
@@ -45,6 +43,15 @@ class CustomConv(nn.Module):
         self.if_bias = bias
 
     def forward(self, x, hyp_feat):
+        """Apply hyper-conditioned convolution.
+
+        Args:
+            x: Feature tensor.
+            hyp_feat: Hyperparameter embedding.
+
+        Returns:
+            Tensor after applying predicted weights and bias.
+        """
         kernel = self.linear_conv(hyp_feat).reshape([self.out_channels, self.in_channels, self.ks, self.ks, self.ks])
         out = nnf.conv3d(x, kernel, stride=self.stride, padding=self.padding)
         if self.if_bias:
@@ -53,6 +60,7 @@ class CustomConv(nn.Module):
         return out
 
 class HyperBlocks(nn.Module):
+    """MLP that embeds hyperparameters for hypernetwork conditioning."""
     def __init__(self, nb_hyp_params=1, nb_hyp_layers=6, nb_hyp_units=96):
         super().__init__()
         self.fcs = nn.ModuleList()
@@ -62,12 +70,14 @@ class HyperBlocks(nn.Module):
             hyp_last = nb_hyp_units
 
     def forward(self, x):
+        """Project hyperparameters into conditioning features."""
         for fc in self.fcs:
             x = fc(x)
             x = torch.relu(x)
         return x
 
 class HyperLinear(nn.Module):
+    """Linear layer with weights predicted from hyperparameters."""
     def __init__(self, in_features, out_features, nb_hyp_units=96, bias=True):
         super().__init__()
         self.linear_wts = nn.Linear(nb_hyp_units, in_features * out_features, bias=False)
@@ -77,6 +87,7 @@ class HyperLinear(nn.Module):
         self.if_bias = bias
 
     def forward(self, x, h):
+        """Apply hyper-conditioned linear projection."""
         weight = self.linear_wts(h).reshape([self.out_features, self.in_features])
         output = torch.matmul(x, weight.t())
         if self.if_bias:
@@ -85,6 +96,7 @@ class HyperLinear(nn.Module):
         return output
 
 class Mlp(nn.Module):
+    """Feed-forward MLP block used inside transformer blocks."""
     def __init__(self, in_features, hidden_features=None, out_features=None, act_layer=nn.GELU, drop=0.):
         super().__init__()
         out_features = out_features or in_features
@@ -95,6 +107,7 @@ class Mlp(nn.Module):
         self.drop = nn.Dropout(drop)
 
     def forward(self, x, hyper):
+        """Apply MLP to input features conditioned on hyperparameters."""
         x = self.fc1(x, hyper)
         x = self.act(x)
         x = self.drop(x)

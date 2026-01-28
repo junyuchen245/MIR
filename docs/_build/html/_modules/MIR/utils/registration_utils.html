@@ -69,7 +69,9 @@
            <div itemprop="articleBody">
              
   <h1>Source code for MIR.utils.registration_utils</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">torch</span>
+<span></span><span class="sd">&quot;&quot;&quot;Registration utility functions and spatial transformer helpers.&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">torch</span>
 <span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
 <span class="kn">import</span> <span class="nn">torch.nn.functional</span> <span class="k">as</span> <span class="nn">nnf</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
@@ -85,6 +87,12 @@
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;bilinear&#39;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize a spatial transformer.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            size: Spatial size tuple (H, W[, D]).</span>
+<span class="sd">            mode: Interpolation mode (&#39;bilinear&#39; or &#39;nearest&#39;).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">=</span> <span class="n">mode</span>
@@ -104,6 +112,15 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">register_buffer</span><span class="p">(</span><span class="s1">&#39;grid&#39;</span><span class="p">,</span> <span class="n">grid</span><span class="p">)</span>
 
 <div class="viewcode-block" id="SpatialTransformer.forward"><a class="viewcode-back" href="../../../api.html#MIR.utils.SpatialTransformer.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">src</span><span class="p">,</span> <span class="n">flow</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Warp a source image with a displacement field.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            src: Source tensor (B, C, ...).</span>
+<span class="sd">            flow: Displacement field (B, ndim, ...).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Warped source tensor.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># new locations</span>
         <span class="n">new_locs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">grid</span> <span class="o">+</span> <span class="n">flow</span>
         <span class="n">shape</span> <span class="o">=</span> <span class="n">flow</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">:]</span>
@@ -129,6 +146,12 @@
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inshape</span><span class="p">,</span> <span class="n">nsteps</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize vector field integrator.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            inshape: Spatial shape of the field.</span>
+<span class="sd">            nsteps: Number of scaling-and-squaring steps.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
 
         <span class="k">assert</span> <span class="n">nsteps</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;nsteps should be &gt;= 0, found: </span><span class="si">%d</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">nsteps</span>
@@ -137,12 +160,28 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">transformer</span> <span class="o">=</span> <span class="n">SpatialTransformer</span><span class="p">(</span><span class="n">inshape</span><span class="p">)</span>
 
 <div class="viewcode-block" id="VecInt.forward"><a class="viewcode-back" href="../../../api.html#MIR.utils.VecInt.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vec</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Integrate a vector field via scaling and squaring.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            vec: Velocity field tensor (B, ndim, ...).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Integrated displacement field.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">vec</span> <span class="o">=</span> <span class="n">vec</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale</span>
         <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nsteps</span><span class="p">):</span>
             <span class="n">vec</span> <span class="o">=</span> <span class="n">vec</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">transformer</span><span class="p">(</span><span class="n">vec</span><span class="p">,</span> <span class="n">vec</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">vec</span></div></div>
 
 <div class="viewcode-block" id="make_affine_from_pixdim"><a class="viewcode-back" href="../../../api.html#MIR.utils.make_affine_from_pixdim">[docs]</a><span class="k">def</span> <span class="nf">make_affine_from_pixdim</span><span class="p">(</span><span class="n">pixdim</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a 4x4 affine matrix from pixel spacing.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        pixdim: Sequence of spacing values (dx, dy, dz).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        4x4 affine matrix.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># Create a 4x4 affine with spacing along the diagonal</span>
     <span class="n">affine</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
     <span class="n">affine</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">pixdim</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
@@ -151,9 +190,28 @@
     <span class="k">return</span> <span class="n">affine</span></div>
 
 <span class="k">def</span> <span class="nf">get_pixdim</span><span class="p">(</span><span class="n">nib_img</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Extract voxel spacing from a nibabel image.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        nib_img: nibabel image object.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Pixel spacing array (dx, dy, dz).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">nib_img</span><span class="o">.</span><span class="n">header</span><span class="p">[</span><span class="s1">&#39;pixdim&#39;</span><span class="p">][</span><span class="mi">1</span><span class="p">:</span><span class="mi">4</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
 
 <span class="k">def</span> <span class="nf">resample_by_pixdim</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="n">from_pixdim</span><span class="p">,</span> <span class="n">to_pixdim</span><span class="p">,</span> <span class="n">order</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Resample a numpy array by voxel spacing.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        arr: Input numpy array.</span>
+<span class="sd">        from_pixdim: Source spacing.</span>
+<span class="sd">        to_pixdim: Target spacing.</span>
+<span class="sd">        order: Interpolation order.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Resampled numpy array.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">ratio</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">from_pixdim</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">to_pixdim</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">zoom</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="n">ratio</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="n">order</span><span class="p">)</span>
 
@@ -205,20 +263,21 @@
     <span class="k">return</span> <span class="n">output</span>
 
 <div class="viewcode-block" id="resample_to_orginal_space_and_save"><a class="viewcode-back" href="../../../api.html#MIR.utils.resample_to_orginal_space_and_save">[docs]</a><span class="k">def</span> <span class="nf">resample_to_orginal_space_and_save</span><span class="p">(</span><span class="n">deformed_img</span><span class="p">,</span> <span class="n">ants_affine_mat_path</span><span class="p">,</span> <span class="n">img_orig_path</span><span class="p">,</span> <span class="n">out_back_dir</span><span class="p">,</span> <span class="n">img_pixdim</span><span class="p">,</span> <span class="n">if_flip</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">flip_axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">interpolater</span><span class="o">=</span><span class="s1">&#39;nearestNeighbor&#39;</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    Resample a deformed image to the original image space and save it.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Resample a deformed image back to the original image space.</span>
+
 <span class="sd">    Args:</span>
-<span class="sd">        deformed_img: The deformed image tensor.</span>
+<span class="sd">        deformed_img: Deformed image tensor (B, 1, H, W, D).</span>
 <span class="sd">        ants_affine_mat_path: Path to the ANTs affine matrix.</span>
-<span class="sd">        img_orig_path: Path to the original image in .nii.gz.</span>
+<span class="sd">        img_orig_path: Path to the original image (.nii.gz).</span>
 <span class="sd">        out_back_dir: Output directory to save the resampled image.</span>
-<span class="sd">        img_pixdim: Pixel dimensions of the deformed image.</span>
+<span class="sd">        img_pixdim: Pixel spacing used during preprocessing.</span>
 <span class="sd">        if_flip: Whether to flip the image along the specified axis.</span>
 <span class="sd">        flip_axis: Axis along which to flip the image if if_flip is True.</span>
-<span class="sd">        interpolater: Interpolator type for ANTs resampling. Options are &#39;linear&#39;, &#39;nearestNeighbor&#39;, &#39;bSpline&#39; etc.</span>
+<span class="sd">        interpolater: ANTs interpolator (&#39;linear&#39;, &#39;nearestNeighbor&#39;, &#39;bSpline&#39;).</span>
+
 <span class="sd">    Returns:</span>
-<span class="sd">        img_final: The final resampled image in the original space.</span>
-<span class="sd">    &#39;&#39;&#39;</span>
+<span class="sd">        img_final: The resampled image in the original space.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="n">interpolater</span> <span class="o">==</span> <span class="s1">&#39;nearestNeighbor&#39;</span><span class="p">:</span>
         <span class="n">order</span> <span class="o">=</span> <span class="mi">0</span>
     <span class="k">elif</span> <span class="n">interpolater</span> <span class="o">==</span> <span class="s1">&#39;linear&#39;</span><span class="p">:</span>

@@ -31,6 +31,7 @@ from torch.distributions.normal import Normal
 import MIR.models.registration_utils as utils
 
 class HyperBlocks(nn.Module):
+    """MLP that embeds hyperparameters for hypernetwork conditioning."""
     def __init__(self, nb_hyp_params=1, nb_hyp_layers=6, nb_hyp_units=128):
         super().__init__()
         self.fcs = nn.ModuleList()
@@ -40,15 +41,14 @@ class HyperBlocks(nn.Module):
             hyp_last = nb_hyp_units
 
     def forward(self, x):
+        """Project hyperparameters into conditioning features."""
         for fc in self.fcs:
             x = fc(x)
             x = torch.relu(x)
         return x
 
 class ConvBlock_(nn.Module):
-    """
-    Specific convolutional block followed by leakyrelu for unet.
-    """
+    """Convolutional block with hyperparameter-conditioned bias."""
 
     def __init__(self, ndims, in_channels, out_channels, stride=1, nb_hyp_units=128):
         super().__init__()
@@ -59,15 +59,22 @@ class ConvBlock_(nn.Module):
         self.linear = nn.Linear(nb_hyp_units, out_channels)
 
     def forward(self, x, hyp_feat):
+        """Apply convolution with hypernetwork bias.
+
+        Args:
+            x: Feature tensor.
+            hyp_feat: Hyperparameter embedding.
+
+        Returns:
+            Tensor after conditioning and activation.
+        """
         out = self.main(x)
         bias = self.linear(hyp_feat).unsqueeze(2).unsqueeze(2).unsqueeze(2)
         out = self.activation(out+bias)
         return out
 
 class ConvBlock(nn.Module):
-    """
-    Specific convolutional block followed by leakyrelu for unet.
-    """
+    """Convolutional block with hypernetwork-generated weights."""
 
     def __init__(self, ndims, in_channels, out_channels, stride=1, nb_hyp_units=128):
         super().__init__()
@@ -84,6 +91,15 @@ class ConvBlock(nn.Module):
         self.in_channels = in_channels
 
     def forward(self, x, hyp_feat):
+        """Apply hypernetwork-generated convolution.
+
+        Args:
+            x: Feature tensor.
+            hyp_feat: Hyperparameter embedding.
+
+        Returns:
+            Tensor after conditioning and activation.
+        """
         #hyp_feat = self.linear(hyp_feat)
         #hyp_feat = torch.relu(hyp_feat)
         kernel = self.linear_conv(hyp_feat).reshape([self.out_channels, self.in_channels, 3, 3, 3])
@@ -95,9 +111,7 @@ class ConvBlock(nn.Module):
         return out
 
 class CustomConv(nn.Module):
-    """
-    Specific convolutional block followed by leakyrelu for unet.
-    """
+    """Convolution with weights predicted by a hypernetwork."""
 
     def __init__(self, ndims, in_channels, out_channels, stride=1, nb_hyp_units=128):
         super().__init__()
@@ -113,6 +127,15 @@ class CustomConv(nn.Module):
         self.in_channels = in_channels
 
     def forward(self, x, hyp_feat):
+        """Apply hypernetwork-generated convolution.
+
+        Args:
+            x: Feature tensor.
+            hyp_feat: Hyperparameter embedding.
+
+        Returns:
+            Tensor after applying predicted weights and bias.
+        """
         #out = self.main(x)
         #hyp_feat = self.linear(hyp_feat)
         #hyp_feat = torch.relu(hyp_feat)
@@ -123,25 +146,26 @@ class CustomConv(nn.Module):
         return out
 
 class Unet(nn.Module):
-    """
-    A unet architecture. Layer features can be specified directly as a list of encoder and decoder
-    features or as a single integer along with a number of unet levels. The default network features
-    per layer (when no options are specified) are:
-        encoder: [16, 32, 32, 32]
-        decoder: [32, 32, 32, 32, 32, 16, 16]
+    """U-Net backbone with hyperparameter conditioning.
+
+    Inputs:
+        x: Tensor of shape [B, 2, *spatial] with concatenated images.
+        h: Hyperparameter embedding.
+
+    Returns:
+        Tensor of decoded features at full resolution.
     """
 
     def __init__(self, inshape, nb_features=None, nb_levels=None, feat_mult=1):
+        """Initialize the hyper-conditioned U-Net.
+
+        Args:
+            inshape: Spatial input shape, e.g. (192, 192, 192).
+            nb_features: Feature specification for encoder/decoder.
+            nb_levels: Number of U-Net levels when `nb_features` is int.
+            feat_mult: Per-level feature multiplier when `nb_features` is int.
+        """
         super().__init__()
-        """
-        Parameters:
-            inshape: Input shape. e.g. (192, 192, 192)
-            nb_features: Unet convolutional features. Can be specified via a list of lists with
-                the form [[encoder feats], [decoder feats]], or as a single integer. If None (default),
-                the unet features are defined by the default config described in the class documentation.
-            nb_levels: Number of levels in unet. Only used when nb_features is an integer. Default is None.
-            feat_mult: Per-level feature multiplier. Only used when nb_features is an integer. Default is 1.
-        """
 
         # ensure correct dimensionality
         ndims = len(inshape)
@@ -188,6 +212,7 @@ class Unet(nn.Module):
             prev_nf = nf
 
     def forward(self, x, h):
+        """Run U-Net forward pass with hyperparameter conditioning."""
 
         # get encoder activations
         x_enc = [x]
@@ -208,25 +233,23 @@ class Unet(nn.Module):
         return x
         
 class HyperVxmDense(nn.Module):
-    """
-    VoxelMorph network for (unsupervised) nonlinear registration between two images.
+    """HyperMorph variant of VoxelMorph with hyperparameter conditioning.
+
+    Inputs:
+        input_imgs: Tuple `(mov, fix)` of tensors [B, 1, *spatial].
+        hyp_val: Tensor of hyperparameter values.
+
+    Returns:
+        Flow tensor, and optionally warped image if `gen_output` is True.
     """
     def __init__(self,
         configs,
         gen_output=False):
-        """
-        Parameters:
-            inshape: Input shape. e.g. (192, 192, 192)
-            nb_unet_features: Unet convolutional features. Can be specified via a list of lists with
-                the form [[encoder feats], [decoder feats]], or as a single integer. If None (default),
-                the unet features are defined by the default config described in the unet class documentation.
-            nb_unet_levels: Number of levels in unet. Only used when nb_features is an integer. Default is None.
-            unet_feat_mult: Per-level feature multiplier. Only used when nb_features is an integer. Default is 1.
-            int_steps: Number of flow integration steps. The warp is non-diffeomorphic when this value is 0.
-            int_downsize: Integer specifying the flow downsample factor for vector integration. The flow field
-                is not downsampled when this value is 1.
-            bidir: Enable bidirectional cost function. Default is False.
-            use_probs: Use probabilities in flow field. Default is False.
+        """Initialize HyperMorph with config settings.
+
+        Args:
+            configs: Config object with VoxelMorph hyperparameters.
+            gen_output: If True, also return the warped moving image.
         """
         super().__init__()
         inshape = configs.img_size
@@ -268,12 +291,15 @@ class HyperVxmDense(nn.Module):
             self.spatial_trans = utils.SpatialTransformer(inshape)
 
     def forward(self, input_imgs, hyp_val):
-        '''
-        Parameters:
-            source: Source image tensor.
-            target: Target image tensor.
-            registration: Return transformed image and flow. Default is False.
-        '''
+        """Run HyperMorph forward pass.
+
+        Args:
+            input_imgs: Tuple `(mov, fix)` tensors.
+            hyp_val: Hyperparameter tensor.
+
+        Returns:
+            Flow tensor, and optionally warped moving image.
+        """
         mov, fix = input_imgs
         x = torch.cat((mov, fix), dim=1)
         h = self.hyper_model(hyp_val)

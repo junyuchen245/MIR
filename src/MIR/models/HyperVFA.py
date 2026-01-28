@@ -1,12 +1,12 @@
+"""HyperVFA models and utilities for hyperparameter-conditioned registration."""
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as nnf
 from torch.distributions.normal import Normal
 
 class HyperConv(nn.Module):
-    """
-    Hyper convolutional layer
-    """
+    """Hyper convolutional layer with weights predicted from conditioning."""
 
     def __init__(self, in_channels, out_channels, ndims=3, kernel_size=3, stride=1, padding=1, bias=True, normalize=False, nb_hyp_units=96):
         super().__init__()
@@ -23,6 +23,15 @@ class HyperConv(nn.Module):
         self.if_bias = bias
 
     def forward(self, x, hyp_feat):
+        """Apply hyper-conditioned convolution.
+
+        Args:
+            x: Feature tensor.
+            hyp_feat: Hyperparameter embedding.
+
+        Returns:
+            Tensor after applying predicted weights and bias.
+        """
         kernel = self.linear_conv(hyp_feat).reshape([self.out_channels, self.in_channels, self.ks, self.ks, self.ks])
         out = nnf.conv3d(x, kernel, stride=self.stride, padding=self.padding)
         if self.if_bias:
@@ -31,6 +40,7 @@ class HyperConv(nn.Module):
         return out
 
 class HyperBlocks(nn.Module):
+    """MLP that embeds hyperparameters for hypernetwork conditioning."""
     def __init__(self, nb_hyp_params=1, nb_hyp_layers=6, nb_hyp_units=96):
         super().__init__()
         self.fcs = nn.ModuleList()
@@ -40,12 +50,14 @@ class HyperBlocks(nn.Module):
             hyp_last = nb_hyp_units
 
     def forward(self, x):
+        """Project hyperparameters into conditioning features."""
         for fc in self.fcs:
             x = fc(x)
             x = torch.relu(x)
         return x
 
 class HyperLinear(nn.Module):
+    """Linear layer with weights predicted from hyperparameters."""
     def __init__(self, in_features, out_features, nb_hyp_units=96, bias=True):
         super().__init__()
         self.linear_wts = nn.Linear(nb_hyp_units, in_features * out_features, bias=False)
@@ -55,6 +67,7 @@ class HyperLinear(nn.Module):
         self.if_bias = bias
 
     def forward(self, x, h):
+        """Apply hyper-conditioned linear projection."""
         weight = self.linear_wts(h).reshape([self.out_features, self.in_features])
         output = torch.matmul(x, weight.t())
         if self.if_bias:
@@ -63,7 +76,17 @@ class HyperLinear(nn.Module):
         return output
 
 def grid_upsample(grid, mode='bilinear', align_corners=True, scale_factor=2):
-    '''upsample the grid by a factor of two'''
+    """Upsample a sampling grid by a scale factor.
+
+    Args:
+        grid: Tensor of shape [B, C, *spatial] containing absolute coordinates.
+        mode: Interpolation mode.
+        align_corners: Whether to align corners during interpolation.
+        scale_factor: Scale factor to upsample spatial dimensions.
+
+    Returns:
+        Tensor with upsampled spatial dimensions.
+    """
 
     if len(grid.shape[2:]) == 3 and mode == 'bilinear':
         mode = 'trilinear'
@@ -81,7 +104,19 @@ def grid_upsample(grid, mode='bilinear', align_corners=True, scale_factor=2):
     return out
 
 def grid_sampler(source, grid, mode='bilinear', align_corners=True, normalize=True, padding_mode='border'):
-    '''Grid sample with grid store in tensor format'''
+    """Sample `source` at coordinates defined by `grid`.
+
+    Args:
+        source: Tensor of shape [B, C, *spatial].
+        grid: Tensor of shape [B, ndim, *spatial] with absolute coordinates.
+        mode: Interpolation mode for sampling.
+        align_corners: Whether to align corners in grid sampling.
+        normalize: If True, convert `grid` to normalized [-1, 1] coordinates.
+        padding_mode: Padding mode for out-of-bound values.
+
+    Returns:
+        Warped tensor sampled from `source` at `grid` locations.
+    """
     if normalize:
         normed_grid = normalize_grid(grid)
     else:
@@ -108,13 +143,14 @@ def grid_sampler(source, grid, mode='bilinear', align_corners=True, normalize=Tr
     return warped
 
 def normalize_grid(grid):
+    """Normalize an absolute coordinate grid to [-1, 1]."""
     dims = torch.tensor(grid.shape[2:]).to(grid.device)
     dims = dims.view(-1, len(dims), *[1 for x in range(len(dims))])
     normed_grid = grid / (dims - 1) * 2 - 1 # convert to normalized space
     return normed_grid
 
 def identity_grid_like(tensor, normalize, padding=0):
-    '''return the identity grid for the input 2D or 3D tensor'''
+    """Return an identity grid matching a reference tensor."""
     with torch.inference_mode():
         dims = tensor.shape[2:]
         if isinstance(padding, int):
@@ -138,19 +174,13 @@ def identity_grid_like(tensor, normalize, padding=0):
     return grid.clone()
 
 def grid_to_flow(grid: torch.Tensor):
-    """
-    Convert an absolute sampling grid (as produced by VFA) to a
-    voxel‑displacement field that VoxelMorph’s SpatialTransformer expects.
+    """Convert an absolute sampling grid to a displacement field.
 
-    Parameters
-    ----------
-    grid :  Tensor, shape [B, ndim, *spatial_dims]
-            Absolute coordinates in pixel units (0 … size‑1).
+    Args:
+        grid: Tensor of shape [B, ndim, *spatial_dims] with absolute coords.
 
-    Returns
-    -------
-    flow : Tensor, same shape as `grid`
-            Displacements relative to the identity grid.
+    Returns:
+        Tensor of the same shape containing displacements from identity.
     """
     # build an identity grid on the same device / dtype / size
     id_grid = identity_grid_like(grid, normalize=False)  # already channels‑first
@@ -158,13 +188,21 @@ def grid_to_flow(grid: torch.Tensor):
     return flow
 
 class HyperVFASPR(nn.Module):
-    '''VFA model for image registration with spatially varying regularization (HyperVFA-SPR)
+    """HyperVFA model with spatially varying regularization.
+
     Args:
-        configs: VFA configs
-        device: Device to run the model on
-        return_orginal: Whether to return the original deformation field used for original VFA, otherwise return the flow as displacement
-        return_all_flows: Whether to return all flows
-    '''
+        configs: VFA configuration object.
+        device: Device to run the model on.
+        return_orginal: If True, return composed grids and stats.
+        return_all_flows: If True, return flows for all decoder levels.
+
+    Forward inputs:
+        sample: Tuple `(mov, fix)` tensors.
+        hyper_val: Hyperparameter tensor.
+
+    Forward outputs:
+        Flow(s) and spatial weights depending on flags.
+    """
     def __init__(self, configs, device, return_orginal=False, return_all_flows=False):
         super().__init__()
 
@@ -196,6 +234,15 @@ class HyperVFASPR(nn.Module):
         self.hyper_model = HyperBlocks(nb_hyp_params=2)
         
     def forward(self, sample, hyper_val):
+        """Run forward registration.
+
+        Args:
+            sample: Tuple `(mov, fix)` tensors.
+            hyper_val: Hyperparameter tensor.
+
+        Returns:
+            Output varies by flags (`return_orginal`, `return_all_flows`).
+        """
         hyper_feat = self.hyper_model(hyper_val)
         mov, fix = sample
         F = self.encoder(fix, hyper_feat)
@@ -224,13 +271,21 @@ class HyperVFASPR(nn.Module):
             return grid_to_flow(composed_grids[-1]), spatial_wts
 
 class HyperVFA(nn.Module):
-    '''VFA model for image registration
+    """Hyperparameter-conditioned VFA model.
+
     Args:
-        configs: VFA configs
-        device: Device to run the model on
-        return_orginal: Whether to return the original deformation field used for original VFA, otherwise return the flow as displacement
-        return_all_flows: Whether to return all flows
-    '''
+        configs: VFA configuration object.
+        device: Device to run the model on.
+        return_orginal: If True, return composed grids and stats.
+        return_all_flows: If True, return flows for all decoder levels.
+
+    Forward inputs:
+        sample: Tuple `(mov, fix)` tensors.
+        hyper_val: Hyperparameter tensor.
+
+    Forward outputs:
+        Flow(s) depending on flags.
+    """
     def __init__(self, configs, device, return_orginal=False, return_all_flows=False):
         super().__init__()
 
@@ -261,6 +316,15 @@ class HyperVFA(nn.Module):
         self.hyper_model = HyperBlocks()
         
     def forward(self, sample, hyper_val):
+        """Run forward registration.
+
+        Args:
+            sample: Tuple `(mov, fix)` tensors.
+            hyper_val: Hyperparameter tensor.
+
+        Returns:
+            Output varies by flags (`return_orginal`, `return_all_flows`).
+        """
         hyper_feat = self.hyper_model(hyper_val)
         mov, fix = sample
         F = self.encoder(fix, hyper_feat)
@@ -288,6 +352,16 @@ class HyperVFA(nn.Module):
             return grid_to_flow(composed_grids[-1])
         
 class SPRDecoder(nn.Module):
+    """Spatially varying regularization head.
+
+    Inputs:
+        M_feat: Moving-image features.
+        F_feat: Fixed-image features.
+        hyper_feat: Hyperparameter embedding.
+
+    Returns:
+        Tensor of spatial weights in [0, 1].
+    """
     def __init__(self, dimension, start_channels):
         super().__init__()
         self.dim = dimension
@@ -309,7 +383,15 @@ class SPRDecoder(nn.Module):
         return spatial_wts
     
 class Encoder(nn.Module):
-    '''VFA encoder network'''
+    """HyperVFA encoder network.
+
+    Inputs:
+        x: Tensor of shape [B, C, *spatial].
+        hyper_feat: Hyperparameter embedding.
+
+    Returns:
+        List of multiscale feature maps ordered from fine to coarse.
+    """
     def __init__(self, dimension, in_channels, downsamples, start_channels, max_channels):
         super().__init__()
         self.dim = dimension
@@ -354,6 +436,7 @@ class Encoder(nn.Module):
         )
 
     def forward(self, x, hyper_feat):
+        """Run encoder forward pass."""
         x = self.in_norm(x)
         x = nnf.leaky_relu(self.in_conv(x, hyper_feat))
         feature_maps = []
@@ -370,7 +453,16 @@ class Encoder(nn.Module):
         return out_feature_maps[::-1]
 
 class Decoder(nn.Module):
-    '''VFA decoder network'''
+    """HyperVFA decoder network.
+
+    Inputs:
+        F: List of fixed-image feature maps.
+        M: List of moving-image feature maps.
+        hyper_feat: Hyperparameter embedding.
+
+    Returns:
+        List of composed grids at each scale.
+    """
     def __init__(self, dimension, downsamples, matching_channels, start_channels, max_channels,
                  skip, initialize, int_steps):
         super().__init__()
@@ -404,12 +496,13 @@ class Decoder(nn.Module):
         self.R = self.to_token(r).squeeze().detach()
 
     def to_token(self, x):
-        '''flatten the spatial dimensions and put the channel dimension to the end'''
+        """Flatten spatial dimensions and move channels to the last axis."""
         x = x.flatten(start_dim=2)
         x = x.transpose(-1, -2)
         return x
 
     def forward(self, F, M, hyper_feat):
+        """Run decoder forward pass."""
         composed_grids = []
         for i in range(self.downsamples, -1, -1):
             if i != self.downsamples:
@@ -453,6 +546,7 @@ class Decoder(nn.Module):
         return composed_grids
 
     def get_candidate_from_tensor(self, x, dim, kernel=3, stride=1):
+        """Extract local patches into a token tensor."""
         if dim == 3:
             '''from tensor with [Batch x Feature x Height x Weight x Depth],
                     extract patches [Batch x Feature x HxWxD x Patch],
@@ -471,6 +565,7 @@ class Decoder(nn.Module):
         return token
 
 class DoubleConv3d(nn.Module):
+    """Two-layer 3D hyper-conv block with instance norm and LeakyReLU."""
     def __init__(self, in_channels, mid_channels, out_channels):
         super().__init__()
         self.conv1 = HyperConv(in_channels, mid_channels, kernel_size=3, padding=1)
@@ -484,6 +579,7 @@ class DoubleConv3d(nn.Module):
         return x
 
 class DoubleConv2d(nn.Module):
+    """Two-layer 2D hyper-conv block with instance norm and LeakyReLU."""
     def __init__(self, in_channels, mid_channels, out_channels):
         super().__init__()
         self.conv1 = HyperConv(in_channels, mid_channels, ndims=2, kernel_size=3, padding=1)
@@ -497,12 +593,23 @@ class DoubleConv2d(nn.Module):
         return x
 
 class Attention(nn.Module):
+    """Scaled dot-product attention used for feature matching."""
     def __init__(self):
         super().__init__()
         self.softmax = nn.Softmax(dim=-1)
 
     def forward(self, query, key, value, temperature):
-        '''Expect input dimensions: [batch, *, feature]'''
+        """Apply attention.
+
+        Args:
+            query: Query tensor of shape [B, ..., F].
+            key: Key tensor of shape [B, ..., F].
+            value: Value tensor of shape [B, ..., F].
+            temperature: Optional scaling factor.
+
+        Returns:
+            Tensor of attended values.
+        """
         if temperature is None:
             temperature = key.size(-1) ** 0.5
         attention = torch.matmul(query, key.transpose(-1, -2)) / temperature
@@ -511,6 +618,7 @@ class Attention(nn.Module):
         return x
 
 class Upsample3d(nn.Module):
+    """3D upsampling block with hyper-conv and skip concatenation."""
     def __init__(self, in_channels, out_channels):
         super().__init__()
         self.conv = HyperConv(in_channels, out_channels, kernel_size=3, padding=1)
@@ -529,6 +637,7 @@ class Upsample3d(nn.Module):
         return x
 
 class Upsample2d(nn.Module):
+    """2D upsampling block with hyper-conv and skip concatenation."""
     def __init__(self, in_channels, out_channels):
         super().__init__()
         self.conv = HyperConv(in_channels, out_channels, ndims=2, kernel_size=3, padding=1)

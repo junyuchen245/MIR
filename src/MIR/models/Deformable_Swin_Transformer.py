@@ -1,3 +1,5 @@
+"""Deformable Swin Transformer backbone for 3D registration."""
+
 import torch
 import torch.nn as nn
 import torch.utils.checkpoint as checkpoint
@@ -8,16 +10,19 @@ import numpy as np
 import einops
 
 class LayerNormProxy(nn.Module):
+    """LayerNorm applied over channel-last representation."""
     def __init__(self, dim):
         super().__init__()
         self.norm = nn.LayerNorm(dim)
 
     def forward(self, x):
+        """Apply normalization to input tensor."""
         x = einops.rearrange(x, 'b c h w d -> b h w d c')
         x = self.norm(x)
         return einops.rearrange(x, 'b h w d c -> b c h w d')
 
 class Offset_block0(nn.Module):
+    """Offset prediction block for deformable attention (lightweight)."""
     def __init__(self, in_channels, num_heads, kernel_size=3):
         super().__init__()
         self.conv3d = nn.Conv3d(in_channels, num_heads, kernel_size=kernel_size, padding=kernel_size // 2, groups=num_heads, bias=False)
@@ -27,6 +32,7 @@ class Offset_block0(nn.Module):
         self.offsety = nn.Conv3d(num_heads, num_heads, kernel_size=1, bias=False)
         self.offsetz = nn.Conv3d(num_heads, num_heads, kernel_size=1, bias=False)
     def forward(self, x):
+        """Compute offsets from input features."""
         x = self.conv3d(x)
         x = self.LN(x)
         x = self.act(x)
@@ -37,6 +43,7 @@ class Offset_block0(nn.Module):
         return x
 
 class Offset_block(nn.Module):
+    """Offset prediction block for deformable attention."""
     def __init__(self, in_channels, num_heads, kernel_size=3):
         super().__init__()
         self.conv3d_1 = nn.Conv3d(in_channels, in_channels//2, kernel_size=kernel_size, padding=kernel_size // 2, bias=False)
@@ -54,6 +61,7 @@ class Offset_block(nn.Module):
         self.relu_2 = nn.ReLU(inplace=True)
 
     def forward(self, x):
+        """Compute offsets from input features."""
         x = self.conv3d_1(x)
         x = self.bn_1(x)
         x = self.relu_1(x)
@@ -64,6 +72,7 @@ class Offset_block(nn.Module):
         return x
 
 class Mlp(nn.Module):
+    """Feed-forward MLP block used inside transformer blocks."""
     def __init__(self, in_features, hidden_features=None, out_features=None, act_layer=nn.GELU, drop=0.):
         super().__init__()
         out_features = out_features or in_features
@@ -74,6 +83,7 @@ class Mlp(nn.Module):
         self.drop = nn.Dropout(drop)
 
     def forward(self, x):
+        """Apply MLP to input features."""
         x = self.fc1(x)
         x = self.act(x)
         x = self.drop(x)

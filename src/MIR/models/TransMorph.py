@@ -266,16 +266,22 @@ class TransMorph(nn.Module):
         return flow
 
 class TransMorphTVF(nn.Module):
-    ''' 
-    TransMorph TVF
+    """TransMorph TVF model with progressive flow integration.
+
     Args:
-        config: Configuration object containing model parameters
-        time_steps: Number of time steps for progressive registration
-        SVF: Boolean indicating whether to use SVF (Time Stationary Velocity Field) integration
-        SVF_steps: Number of steps for SVF integration
-        composition: Type of composition for flow integration ('composition' or 'addition')
-        swin_type: Type of Swin Transformer to use ('swin' or 'dswin')
-    '''
+        config: Configuration object containing model parameters.
+        time_steps: Number of time steps for progressive registration.
+        SVF: Whether to integrate a stationary velocity field.
+        SVF_steps: Number of scaling-and-squaring steps.
+        composition: Flow composition strategy ('composition' or 'addition').
+        swin_type: Transformer type ('swin', 'dswin', 'dswinv2').
+
+    Forward inputs:
+        inputs: Tuple `(mov, fix)` tensors of shape [B, 1, D, H, W].
+
+    Forward outputs:
+        Dense flow tensor of shape [B, 3, D, H, W].
+    """
     def __init__(self, config, time_steps=12, SVF=False, SVF_steps=7, composition='composition', swin_type='swin'):
         super(TransMorphTVF, self).__init__()
         if_convskip = config.if_convskip
@@ -381,13 +387,14 @@ class TransMorphTVF(nn.Module):
         self.eps = 1e-6
 
     def forward(self, inputs):
-        '''
-        Forward pass for the TransMorphTVF model.
+        """Forward pass for the TransMorphTVF model.
+
         Args:
-            inputs: Tuple of moving and fixed images (mov, fix).
+            inputs: Tuple of moving and fixed images `(mov, fix)`.
+
         Returns:
-            flow: The computed flow field for image registration.
-        '''
+            Predicted dense flow field.
+        """
         mov, fix = inputs
         x_cat = torch.cat((mov, fix), dim=1)
         x_s1 = self.avg_pool(x_cat)
@@ -446,15 +453,22 @@ class TransMorphTVF(nn.Module):
         return flow
     
 class TransMorphTVFSPR(nn.Module):
-    '''TransMorph TVF with Spatially-varying regularization
+    """TransMorph TVF with spatially varying regularization.
+
     Args:
-        config: Configuration object containing model parameters
-        time_steps: Number of time steps for progressive registration
-        SVF: Boolean indicating whether to use SVF (Time Stationary Velocity Field) integration
-        SVF_steps: Number of steps for SVF integration
-        composition: Type of composition for flow integration ('composition' or 'addition')
-        swin_type: Type of Swin Transformer to use ('swin' or 'dswin')
-    '''
+        config: Configuration object containing model parameters.
+        time_steps: Number of time steps for progressive registration.
+        SVF: Whether to integrate a stationary velocity field.
+        SVF_steps: Number of scaling-and-squaring steps.
+        composition: Flow composition strategy ('composition' or 'addition').
+        swin_type: Transformer type ('swin', 'dswin', 'dswinv2').
+
+    Forward inputs:
+        inputs: Tuple `(mov, fix)` tensors of shape [B, 1, D, H, W].
+
+    Forward outputs:
+        Tuple `(flow, spatial_wts)` where `flow` is [B, 3, D, H, W].
+    """
     def __init__(self, config, SVF=True, time_steps=12, SVF_steps=7, composition='composition', swin_type='swin'):
         '''
         Multi-resolution TransMorph
@@ -573,14 +587,15 @@ class TransMorphTVFSPR(nn.Module):
         self.eps = 1e-6
 
     def forward(self, inputs):
-        '''
-        Forward pass for the TransMorphTVFSPR model.
+        """Forward pass for the TransMorphTVFSPR model.
+
         Args:
-            inputs: Tuple of moving and fixed images (mov, fix).
+            inputs: Tuple of moving and fixed images `(mov, fix)`.
+
         Returns:
-            flow: The computed flow field for image registration.
-            x_weight: The spatial weights for regularization.
-        '''
+            Tuple `(flow, x_weight)` or `(pos_flow, neg_flow, x_weight)` when
+            SVF is enabled.
+        """
         mov, fix = inputs
         x_cat = torch.cat((mov, fix), dim=1)
         x_s1 = self.avg_pool(x_cat)
@@ -651,12 +666,19 @@ class TransMorphTVFSPR(nn.Module):
             return flow, x_weight
 
 class TransMorphAffine(nn.Module):
-    '''
-    TransMorph Affine
+    """Affine TransMorph head predicting global parameters.
+
     Args:
-        config: Configuration object containing model parameters
-        swin_type: Type of Swin Transformer to use ('swin' or 'dswin')
-    '''
+        config: Configuration object containing model parameters.
+        swin_type: Transformer type ('swin', 'dswin', 'dswinv2').
+
+    Forward inputs:
+        inputs: Tuple `(mov, fix)` tensors of shape [B, 1, D, H, W].
+
+    Forward outputs:
+        Tuple `(aff, scl, trans, shr)` with rotation, scale, translation,
+        and shear parameters.
+    """
     def __init__(self, config, swin_type):
         super(TransMorphAffine, self).__init__()
         out_size = (config.img_size[0]//16, config.img_size[1]//16, config.img_size[2]//16)
@@ -767,9 +789,18 @@ class TransMorphAffine(nn.Module):
         self.shear_mlp.append(shear_head_f)
         self.inst_norm = nn.InstanceNorm3d(embed_dim * 4)
     def softplus(self, x):  # Softplus
+        """Apply softplus activation."""
         return torch.log(1 + torch.exp(x))
 
     def forward(self, inputs):
+        """Forward pass predicting affine parameters.
+
+        Args:
+            inputs: Tuple of moving and fixed images `(mov, fix)`.
+
+        Returns:
+            Tuple `(aff, scl, trans, shr)` of affine parameters.
+        """
         mov, fix = inputs
         x_cat = torch.cat((mov, fix), dim=1)
         if self.swin_type == 'swin':

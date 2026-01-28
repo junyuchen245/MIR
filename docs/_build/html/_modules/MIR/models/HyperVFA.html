@@ -69,15 +69,15 @@
            <div itemprop="articleBody">
              
   <h1>Source code for MIR.models.HyperVFA</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">torch</span>
+<span></span><span class="sd">&quot;&quot;&quot;HyperVFA models and utilities for hyperparameter-conditioned registration.&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">torch</span>
 <span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
 <span class="kn">import</span> <span class="nn">torch.nn.functional</span> <span class="k">as</span> <span class="nn">nnf</span>
 <span class="kn">from</span> <span class="nn">torch.distributions.normal</span> <span class="kn">import</span> <span class="n">Normal</span>
 
 <span class="k">class</span> <span class="nc">HyperConv</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Hyper convolutional layer</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Hyper convolutional layer with weights predicted from conditioning.&quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">in_channels</span><span class="p">,</span> <span class="n">out_channels</span><span class="p">,</span> <span class="n">ndims</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">bias</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">nb_hyp_units</span><span class="o">=</span><span class="mi">96</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
@@ -94,6 +94,15 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">if_bias</span> <span class="o">=</span> <span class="n">bias</span>
 
     <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">hyp_feat</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Apply hyper-conditioned convolution.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            x: Feature tensor.</span>
+<span class="sd">            hyp_feat: Hyperparameter embedding.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Tensor after applying predicted weights and bias.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">kernel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">linear_conv</span><span class="p">(</span><span class="n">hyp_feat</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">out_channels</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_channels</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ks</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ks</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ks</span><span class="p">])</span>
         <span class="n">out</span> <span class="o">=</span> <span class="n">nnf</span><span class="o">.</span><span class="n">conv3d</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">kernel</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stride</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">padding</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">if_bias</span><span class="p">:</span>
@@ -102,6 +111,7 @@
         <span class="k">return</span> <span class="n">out</span>
 
 <span class="k">class</span> <span class="nc">HyperBlocks</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;MLP that embeds hyperparameters for hypernetwork conditioning.&quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nb_hyp_params</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">nb_hyp_layers</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span> <span class="n">nb_hyp_units</span><span class="o">=</span><span class="mi">96</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">fcs</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">ModuleList</span><span class="p">()</span>
@@ -111,12 +121,14 @@
             <span class="n">hyp_last</span> <span class="o">=</span> <span class="n">nb_hyp_units</span>
 
     <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Project hyperparameters into conditioning features.&quot;&quot;&quot;</span>
         <span class="k">for</span> <span class="n">fc</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fcs</span><span class="p">:</span>
             <span class="n">x</span> <span class="o">=</span> <span class="n">fc</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
             <span class="n">x</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">relu</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">x</span>
 
 <span class="k">class</span> <span class="nc">HyperLinear</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Linear layer with weights predicted from hyperparameters.&quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">in_features</span><span class="p">,</span> <span class="n">out_features</span><span class="p">,</span> <span class="n">nb_hyp_units</span><span class="o">=</span><span class="mi">96</span><span class="p">,</span> <span class="n">bias</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">linear_wts</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">nb_hyp_units</span><span class="p">,</span> <span class="n">in_features</span> <span class="o">*</span> <span class="n">out_features</span><span class="p">,</span> <span class="n">bias</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
@@ -126,6 +138,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">if_bias</span> <span class="o">=</span> <span class="n">bias</span>
 
     <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">h</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Apply hyper-conditioned linear projection.&quot;&quot;&quot;</span>
         <span class="n">weight</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">linear_wts</span><span class="p">(</span><span class="n">h</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">out_features</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_features</span><span class="p">])</span>
         <span class="n">output</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">weight</span><span class="o">.</span><span class="n">t</span><span class="p">())</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">if_bias</span><span class="p">:</span>
@@ -134,7 +147,17 @@
         <span class="k">return</span> <span class="n">output</span>
 
 <span class="k">def</span> <span class="nf">grid_upsample</span><span class="p">(</span><span class="n">grid</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;bilinear&#39;</span><span class="p">,</span> <span class="n">align_corners</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">scale_factor</span><span class="o">=</span><span class="mi">2</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&#39;&#39;&#39;upsample the grid by a factor of two&#39;&#39;&#39;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Upsample a sampling grid by a scale factor.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        grid: Tensor of shape [B, C, *spatial] containing absolute coordinates.</span>
+<span class="sd">        mode: Interpolation mode.</span>
+<span class="sd">        align_corners: Whether to align corners during interpolation.</span>
+<span class="sd">        scale_factor: Scale factor to upsample spatial dimensions.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Tensor with upsampled spatial dimensions.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">:])</span> <span class="o">==</span> <span class="mi">3</span> <span class="ow">and</span> <span class="n">mode</span> <span class="o">==</span> <span class="s1">&#39;bilinear&#39;</span><span class="p">:</span>
         <span class="n">mode</span> <span class="o">=</span> <span class="s1">&#39;trilinear&#39;</span>
@@ -152,7 +175,19 @@
     <span class="k">return</span> <span class="n">out</span>
 
 <span class="k">def</span> <span class="nf">grid_sampler</span><span class="p">(</span><span class="n">source</span><span class="p">,</span> <span class="n">grid</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;bilinear&#39;</span><span class="p">,</span> <span class="n">align_corners</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">padding_mode</span><span class="o">=</span><span class="s1">&#39;border&#39;</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&#39;&#39;&#39;Grid sample with grid store in tensor format&#39;&#39;&#39;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Sample `source` at coordinates defined by `grid`.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        source: Tensor of shape [B, C, *spatial].</span>
+<span class="sd">        grid: Tensor of shape [B, ndim, *spatial] with absolute coordinates.</span>
+<span class="sd">        mode: Interpolation mode for sampling.</span>
+<span class="sd">        align_corners: Whether to align corners in grid sampling.</span>
+<span class="sd">        normalize: If True, convert `grid` to normalized [-1, 1] coordinates.</span>
+<span class="sd">        padding_mode: Padding mode for out-of-bound values.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Warped tensor sampled from `source` at `grid` locations.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="n">normalize</span><span class="p">:</span>
         <span class="n">normed_grid</span> <span class="o">=</span> <span class="n">normalize_grid</span><span class="p">(</span><span class="n">grid</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
@@ -179,13 +214,14 @@
     <span class="k">return</span> <span class="n">warped</span>
 
 <span class="k">def</span> <span class="nf">normalize_grid</span><span class="p">(</span><span class="n">grid</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Normalize an absolute coordinate grid to [-1, 1].&quot;&quot;&quot;</span>
     <span class="n">dims</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">:])</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">grid</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
     <span class="n">dims</span> <span class="o">=</span> <span class="n">dims</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">dims</span><span class="p">),</span> <span class="o">*</span><span class="p">[</span><span class="mi">1</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">dims</span><span class="p">))])</span>
     <span class="n">normed_grid</span> <span class="o">=</span> <span class="n">grid</span> <span class="o">/</span> <span class="p">(</span><span class="n">dims</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">-</span> <span class="mi">1</span> <span class="c1"># convert to normalized space</span>
     <span class="k">return</span> <span class="n">normed_grid</span>
 
 <span class="k">def</span> <span class="nf">identity_grid_like</span><span class="p">(</span><span class="n">tensor</span><span class="p">,</span> <span class="n">normalize</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&#39;&#39;&#39;return the identity grid for the input 2D or 3D tensor&#39;&#39;&#39;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return an identity grid matching a reference tensor.&quot;&quot;&quot;</span>
     <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">inference_mode</span><span class="p">():</span>
         <span class="n">dims</span> <span class="o">=</span> <span class="n">tensor</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">:]</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">padding</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
@@ -209,19 +245,13 @@
     <span class="k">return</span> <span class="n">grid</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
 
 <span class="k">def</span> <span class="nf">grid_to_flow</span><span class="p">(</span><span class="n">grid</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Convert an absolute sampling grid (as produced by VFA) to a</span>
-<span class="sd">    voxel‑displacement field that VoxelMorph’s SpatialTransformer expects.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert an absolute sampling grid to a displacement field.</span>
 
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    grid :  Tensor, shape [B, ndim, *spatial_dims]</span>
-<span class="sd">            Absolute coordinates in pixel units (0 … size‑1).</span>
+<span class="sd">    Args:</span>
+<span class="sd">        grid: Tensor of shape [B, ndim, *spatial_dims] with absolute coords.</span>
 
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    flow : Tensor, same shape as `grid`</span>
-<span class="sd">            Displacements relative to the identity grid.</span>
+<span class="sd">    Returns:</span>
+<span class="sd">        Tensor of the same shape containing displacements from identity.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># build an identity grid on the same device / dtype / size</span>
     <span class="n">id_grid</span> <span class="o">=</span> <span class="n">identity_grid_like</span><span class="p">(</span><span class="n">grid</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>  <span class="c1"># already channels‑first</span>
@@ -229,13 +259,21 @@
     <span class="k">return</span> <span class="n">flow</span>
 
 <div class="viewcode-block" id="HyperVFASPR"><a class="viewcode-back" href="../../../api.html#MIR.models.HyperVFASPR">[docs]</a><span class="k">class</span> <span class="nc">HyperVFASPR</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&#39;&#39;&#39;VFA model for image registration with spatially varying regularization (HyperVFA-SPR)</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;HyperVFA model with spatially varying regularization.</span>
+
 <span class="sd">    Args:</span>
-<span class="sd">        configs: VFA configs</span>
-<span class="sd">        device: Device to run the model on</span>
-<span class="sd">        return_orginal: Whether to return the original deformation field used for original VFA, otherwise return the flow as displacement</span>
-<span class="sd">        return_all_flows: Whether to return all flows</span>
-<span class="sd">    &#39;&#39;&#39;</span>
+<span class="sd">        configs: VFA configuration object.</span>
+<span class="sd">        device: Device to run the model on.</span>
+<span class="sd">        return_orginal: If True, return composed grids and stats.</span>
+<span class="sd">        return_all_flows: If True, return flows for all decoder levels.</span>
+
+<span class="sd">    Forward inputs:</span>
+<span class="sd">        sample: Tuple `(mov, fix)` tensors.</span>
+<span class="sd">        hyper_val: Hyperparameter tensor.</span>
+
+<span class="sd">    Forward outputs:</span>
+<span class="sd">        Flow(s) and spatial weights depending on flags.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">configs</span><span class="p">,</span> <span class="n">device</span><span class="p">,</span> <span class="n">return_orginal</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">return_all_flows</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
 
@@ -267,6 +305,15 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">hyper_model</span> <span class="o">=</span> <span class="n">HyperBlocks</span><span class="p">(</span><span class="n">nb_hyp_params</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
         
 <div class="viewcode-block" id="HyperVFASPR.forward"><a class="viewcode-back" href="../../../api.html#MIR.models.HyperVFASPR.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sample</span><span class="p">,</span> <span class="n">hyper_val</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Run forward registration.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            sample: Tuple `(mov, fix)` tensors.</span>
+<span class="sd">            hyper_val: Hyperparameter tensor.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Output varies by flags (`return_orginal`, `return_all_flows`).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">hyper_feat</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">hyper_model</span><span class="p">(</span><span class="n">hyper_val</span><span class="p">)</span>
         <span class="n">mov</span><span class="p">,</span> <span class="n">fix</span> <span class="o">=</span> <span class="n">sample</span>
         <span class="n">F</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="p">(</span><span class="n">fix</span><span class="p">,</span> <span class="n">hyper_feat</span><span class="p">)</span>
@@ -295,13 +342,21 @@
             <span class="k">return</span> <span class="n">grid_to_flow</span><span class="p">(</span><span class="n">composed_grids</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]),</span> <span class="n">spatial_wts</span></div></div>
 
 <div class="viewcode-block" id="HyperVFA"><a class="viewcode-back" href="../../../api.html#MIR.models.HyperVFA">[docs]</a><span class="k">class</span> <span class="nc">HyperVFA</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&#39;&#39;&#39;VFA model for image registration</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Hyperparameter-conditioned VFA model.</span>
+
 <span class="sd">    Args:</span>
-<span class="sd">        configs: VFA configs</span>
-<span class="sd">        device: Device to run the model on</span>
-<span class="sd">        return_orginal: Whether to return the original deformation field used for original VFA, otherwise return the flow as displacement</span>
-<span class="sd">        return_all_flows: Whether to return all flows</span>
-<span class="sd">    &#39;&#39;&#39;</span>
+<span class="sd">        configs: VFA configuration object.</span>
+<span class="sd">        device: Device to run the model on.</span>
+<span class="sd">        return_orginal: If True, return composed grids and stats.</span>
+<span class="sd">        return_all_flows: If True, return flows for all decoder levels.</span>
+
+<span class="sd">    Forward inputs:</span>
+<span class="sd">        sample: Tuple `(mov, fix)` tensors.</span>
+<span class="sd">        hyper_val: Hyperparameter tensor.</span>
+
+<span class="sd">    Forward outputs:</span>
+<span class="sd">        Flow(s) depending on flags.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">configs</span><span class="p">,</span> <span class="n">device</span><span class="p">,</span> <span class="n">return_orginal</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">return_all_flows</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
 
@@ -332,6 +387,15 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">hyper_model</span> <span class="o">=</span> <span class="n">HyperBlocks</span><span class="p">()</span>
         
 <div class="viewcode-block" id="HyperVFA.forward"><a class="viewcode-back" href="../../../api.html#MIR.models.HyperVFA.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sample</span><span class="p">,</span> <span class="n">hyper_val</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Run forward registration.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            sample: Tuple `(mov, fix)` tensors.</span>
+<span class="sd">            hyper_val: Hyperparameter tensor.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Output varies by flags (`return_orginal`, `return_all_flows`).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">hyper_feat</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">hyper_model</span><span class="p">(</span><span class="n">hyper_val</span><span class="p">)</span>
         <span class="n">mov</span><span class="p">,</span> <span class="n">fix</span> <span class="o">=</span> <span class="n">sample</span>
         <span class="n">F</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="p">(</span><span class="n">fix</span><span class="p">,</span> <span class="n">hyper_feat</span><span class="p">)</span>
@@ -359,6 +423,16 @@
             <span class="k">return</span> <span class="n">grid_to_flow</span><span class="p">(</span><span class="n">composed_grids</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span></div></div>
         
 <span class="k">class</span> <span class="nc">SPRDecoder</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Spatially varying regularization head.</span>
+
+<span class="sd">    Inputs:</span>
+<span class="sd">        M_feat: Moving-image features.</span>
+<span class="sd">        F_feat: Fixed-image features.</span>
+<span class="sd">        hyper_feat: Hyperparameter embedding.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Tensor of spatial weights in [0, 1].</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dimension</span><span class="p">,</span> <span class="n">start_channels</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="o">=</span> <span class="n">dimension</span>
@@ -380,7 +454,15 @@
         <span class="k">return</span> <span class="n">spatial_wts</span>
     
 <span class="k">class</span> <span class="nc">Encoder</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&#39;&#39;&#39;VFA encoder network&#39;&#39;&#39;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;HyperVFA encoder network.</span>
+
+<span class="sd">    Inputs:</span>
+<span class="sd">        x: Tensor of shape [B, C, *spatial].</span>
+<span class="sd">        hyper_feat: Hyperparameter embedding.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        List of multiscale feature maps ordered from fine to coarse.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dimension</span><span class="p">,</span> <span class="n">in_channels</span><span class="p">,</span> <span class="n">downsamples</span><span class="p">,</span> <span class="n">start_channels</span><span class="p">,</span> <span class="n">max_channels</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="o">=</span> <span class="n">dimension</span>
@@ -425,6 +507,7 @@
         <span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">hyper_feat</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Run encoder forward pass.&quot;&quot;&quot;</span>
         <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_norm</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
         <span class="n">x</span> <span class="o">=</span> <span class="n">nnf</span><span class="o">.</span><span class="n">leaky_relu</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">in_conv</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">hyper_feat</span><span class="p">))</span>
         <span class="n">feature_maps</span> <span class="o">=</span> <span class="p">[]</span>
@@ -441,7 +524,16 @@
         <span class="k">return</span> <span class="n">out_feature_maps</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
 
 <span class="k">class</span> <span class="nc">Decoder</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&#39;&#39;&#39;VFA decoder network&#39;&#39;&#39;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;HyperVFA decoder network.</span>
+
+<span class="sd">    Inputs:</span>
+<span class="sd">        F: List of fixed-image feature maps.</span>
+<span class="sd">        M: List of moving-image feature maps.</span>
+<span class="sd">        hyper_feat: Hyperparameter embedding.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        List of composed grids at each scale.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dimension</span><span class="p">,</span> <span class="n">downsamples</span><span class="p">,</span> <span class="n">matching_channels</span><span class="p">,</span> <span class="n">start_channels</span><span class="p">,</span> <span class="n">max_channels</span><span class="p">,</span>
                  <span class="n">skip</span><span class="p">,</span> <span class="n">initialize</span><span class="p">,</span> <span class="n">int_steps</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
@@ -475,12 +567,13 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">R</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">to_token</span><span class="p">(</span><span class="n">r</span><span class="p">)</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">to_token</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&#39;&#39;&#39;flatten the spatial dimensions and put the channel dimension to the end&#39;&#39;&#39;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Flatten spatial dimensions and move channels to the last axis.&quot;&quot;&quot;</span>
         <span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">flatten</span><span class="p">(</span><span class="n">start_dim</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
         <span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">x</span>
 
     <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">F</span><span class="p">,</span> <span class="n">M</span><span class="p">,</span> <span class="n">hyper_feat</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Run decoder forward pass.&quot;&quot;&quot;</span>
         <span class="n">composed_grids</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">downsamples</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
             <span class="k">if</span> <span class="n">i</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">downsamples</span><span class="p">:</span>
@@ -524,6 +617,7 @@
         <span class="k">return</span> <span class="n">composed_grids</span>
 
     <span class="k">def</span> <span class="nf">get_candidate_from_tensor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">dim</span><span class="p">,</span> <span class="n">kernel</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Extract local patches into a token tensor.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
 <span class="w">            </span><span class="sd">&#39;&#39;&#39;from tensor with [Batch x Feature x Height x Weight x Depth],</span>
 <span class="sd">                    extract patches [Batch x Feature x HxWxD x Patch],</span>
@@ -542,6 +636,7 @@
         <span class="k">return</span> <span class="n">token</span>
 
 <span class="k">class</span> <span class="nc">DoubleConv3d</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Two-layer 3D hyper-conv block with instance norm and LeakyReLU.&quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">in_channels</span><span class="p">,</span> <span class="n">mid_channels</span><span class="p">,</span> <span class="n">out_channels</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">conv1</span> <span class="o">=</span> <span class="n">HyperConv</span><span class="p">(</span><span class="n">in_channels</span><span class="p">,</span> <span class="n">mid_channels</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
@@ -555,6 +650,7 @@
         <span class="k">return</span> <span class="n">x</span>
 
 <span class="k">class</span> <span class="nc">DoubleConv2d</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Two-layer 2D hyper-conv block with instance norm and LeakyReLU.&quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">in_channels</span><span class="p">,</span> <span class="n">mid_channels</span><span class="p">,</span> <span class="n">out_channels</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">conv1</span> <span class="o">=</span> <span class="n">HyperConv</span><span class="p">(</span><span class="n">in_channels</span><span class="p">,</span> <span class="n">mid_channels</span><span class="p">,</span> <span class="n">ndims</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
@@ -568,12 +664,23 @@
         <span class="k">return</span> <span class="n">x</span>
 
 <span class="k">class</span> <span class="nc">Attention</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Scaled dot-product attention used for feature matching.&quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">softmax</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Softmax</span><span class="p">(</span><span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">temperature</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&#39;&#39;&#39;Expect input dimensions: [batch, *, feature]&#39;&#39;&#39;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Apply attention.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            query: Query tensor of shape [B, ..., F].</span>
+<span class="sd">            key: Key tensor of shape [B, ..., F].</span>
+<span class="sd">            value: Value tensor of shape [B, ..., F].</span>
+<span class="sd">            temperature: Optional scaling factor.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Tensor of attended values.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">temperature</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">temperature</span> <span class="o">=</span> <span class="n">key</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">**</span> <span class="mf">0.5</span>
         <span class="n">attention</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">key</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">))</span> <span class="o">/</span> <span class="n">temperature</span>
@@ -582,6 +689,7 @@
         <span class="k">return</span> <span class="n">x</span>
 
 <span class="k">class</span> <span class="nc">Upsample3d</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;3D upsampling block with hyper-conv and skip concatenation.&quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">in_channels</span><span class="p">,</span> <span class="n">out_channels</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">conv</span> <span class="o">=</span> <span class="n">HyperConv</span><span class="p">(</span><span class="n">in_channels</span><span class="p">,</span> <span class="n">out_channels</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
@@ -600,6 +708,7 @@
         <span class="k">return</span> <span class="n">x</span>
 
 <span class="k">class</span> <span class="nc">Upsample2d</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;2D upsampling block with hyper-conv and skip concatenation.&quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">in_channels</span><span class="p">,</span> <span class="n">out_channels</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">conv</span> <span class="o">=</span> <span class="n">HyperConv</span><span class="p">(</span><span class="n">in_channels</span><span class="p">,</span> <span class="n">out_channels</span><span class="p">,</span> <span class="n">ndims</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>

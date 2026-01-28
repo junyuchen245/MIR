@@ -69,20 +69,28 @@
            <div itemprop="articleBody">
              
   <h1>Source code for MIR.models.Synthesis_Heads</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">torch.nn.functional</span> <span class="k">as</span> <span class="nn">F</span>
+<span></span><span class="sd">&quot;&quot;&quot;Synthesis heads for image reconstruction from features.&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">torch.nn.functional</span> <span class="k">as</span> <span class="nn">F</span>
 <span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
 <span class="kn">import</span> <span class="nn">torch</span>
 
 <div class="viewcode-block" id="SynthesisHead3D"><a class="viewcode-back" href="../../../api.html#MIR.models.SynthesisHead3D">[docs]</a><span class="k">class</span> <span class="nc">SynthesisHead3D</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    Simple Synthesis head for 3D features (specifically for VFA encoders)</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Simple synthesis head for 3D feature maps.</span>
+
 <span class="sd">    Args:</span>
-<span class="sd">        in_channels: Number of input channels</span>
-<span class="sd">        mid_channels: Number of intermediate channels</span>
-<span class="sd">        out_channels: Number of output channels</span>
-<span class="sd">        norm: Normalization type (&#39;instance&#39; or &#39;batch&#39;)</span>
-<span class="sd">        activation: Activation function (&#39;leaky_relu&#39; or &#39;relu&#39;)</span>
-<span class="sd">    &#39;&#39;&#39;</span>
+<span class="sd">        in_channels: Number of input channels.</span>
+<span class="sd">        mid_channels: Number of intermediate channels.</span>
+<span class="sd">        out_channels: Number of output channels.</span>
+<span class="sd">        norm: Normalization type (&#39;instance&#39; or &#39;batch&#39;).</span>
+<span class="sd">        activation: Activation function (&#39;leaky_relu&#39; or &#39;relu&#39;).</span>
+
+<span class="sd">    Inputs:</span>
+<span class="sd">        x: Tensor of shape [B, C, D, H, W].</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Tensor of shape [B, out_channels, D, H, W].</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">in_channels</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
@@ -113,19 +121,18 @@
         <span class="p">)</span>
 
 <div class="viewcode-block" id="SynthesisHead3D.forward"><a class="viewcode-back" href="../../../api.html#MIR.models.SynthesisHead3D.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        x: (B, C, H, W, D)</span>
-<span class="sd">        returns: (B, 1, H, W, D)</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Apply synthesis head.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">net</span><span class="p">(</span><span class="n">x</span><span class="p">)</span></div></div>
 
 <span class="k">class</span> <span class="nc">ResBlock3D</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    Residual block with 3D convolution</span>
-<span class="sd">    Args:</span>
-<span class="sd">        channels: Number of input channels</span>
-<span class="sd">        norm: Normalization type (&#39;instance&#39; or &#39;group&#39;)</span>
-<span class="sd">    &#39;&#39;&#39;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Residual block with 3D convolution.</span>
+
+<span class="sd">    Inputs:</span>
+<span class="sd">        x: Tensor of shape [B, C, D, H, W].</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Tensor of the same shape.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">channels</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">norm</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;instance&quot;</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
         <span class="n">Norm</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">InstanceNorm3d</span> <span class="k">if</span> <span class="n">norm</span><span class="o">==</span><span class="s2">&quot;instance&quot;</span> <span class="k">else</span> <span class="n">nn</span><span class="o">.</span><span class="n">GroupNorm</span>
@@ -139,6 +146,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">norm2</span> <span class="o">=</span> <span class="n">Norm</span><span class="p">(</span><span class="n">ng</span><span class="p">,</span> <span class="n">channels</span><span class="p">)</span> <span class="k">if</span> <span class="n">norm</span><span class="o">==</span><span class="s2">&quot;group&quot;</span> <span class="k">else</span> <span class="n">Norm</span><span class="p">(</span><span class="n">channels</span><span class="p">,</span> <span class="n">affine</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Apply residual block.&quot;&quot;&quot;</span>
         <span class="n">identity</span> <span class="o">=</span> <span class="n">x</span>
         <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">act</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">norm1</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">conv1</span><span class="p">(</span><span class="n">x</span><span class="p">)))</span>
         <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">norm2</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">conv2</span><span class="p">(</span><span class="n">out</span><span class="p">))</span>
@@ -146,12 +154,7 @@
 
 
 <span class="k">class</span> <span class="nc">SEBlock3D</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    Squeeze-and-Excitation block for 3D convolution</span>
-<span class="sd">    Args:</span>
-<span class="sd">        channels: Number of input channels</span>
-<span class="sd">        reduction: Reduction ratio for the channel dimension</span>
-<span class="sd">    &#39;&#39;&#39;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Squeeze-and-excitation block for 3D features.&quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">channels</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">reduction</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">16</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">fc1</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">channels</span><span class="p">,</span> <span class="n">channels</span> <span class="o">//</span> <span class="n">reduction</span><span class="p">,</span> <span class="n">bias</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
@@ -160,6 +163,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">sig</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sigmoid</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Apply channel-wise excitation.&quot;&quot;&quot;</span>
         <span class="c1"># x: (B, C, H, W, D)</span>
         <span class="n">b</span><span class="p">,</span> <span class="n">c</span><span class="p">,</span> <span class="o">*</span><span class="n">_</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span>
         <span class="c1"># squeeze</span>
@@ -170,14 +174,20 @@
 
 
 <div class="viewcode-block" id="SynthesisHead3DAdvanced"><a class="viewcode-back" href="../../../api.html#MIR.models.SynthesisHead3DAdvanced">[docs]</a><span class="k">class</span> <span class="nc">SynthesisHead3DAdvanced</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    Synthesis head with Residual and SE blocks for 3D features (specifically for VFA encoders)</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Synthesis head with residual and SE blocks for 3D features.</span>
+
 <span class="sd">    Args:</span>
-<span class="sd">        in_channels: Number of input channels</span>
-<span class="sd">        mid_channels: Number of intermediate channels</span>
-<span class="sd">        num_res_blocks: Number of residual blocks</span>
-<span class="sd">        norm: Normalization type (&#39;instance&#39; or &#39;group&#39;)</span>
-<span class="sd">    &#39;&#39;&#39;</span>
+<span class="sd">        in_channels: Number of input channels.</span>
+<span class="sd">        mid_channels: Number of intermediate channels.</span>
+<span class="sd">        num_res_blocks: Number of residual blocks.</span>
+<span class="sd">        norm: Normalization type (&#39;instance&#39; or &#39;group&#39;).</span>
+
+<span class="sd">    Inputs:</span>
+<span class="sd">        x: Tensor of shape [B, C, D, H, W].</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Tensor of shape [B, 1, D, H, W].</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">in_channels</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
@@ -207,10 +217,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">out_act</span>  <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sigmoid</span><span class="p">()</span>
 
 <div class="viewcode-block" id="SynthesisHead3DAdvanced.forward"><a class="viewcode-back" href="../../../api.html#MIR.models.SynthesisHead3DAdvanced.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        x: (B, C, H, W, D)</span>
-<span class="sd">        returns: (B, 1, H, W, D)</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Apply advanced synthesis head.&quot;&quot;&quot;</span>
         <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">init_norm</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
         <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">proj</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
         <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">blocks</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
@@ -218,7 +225,7 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">out_act</span><span class="p">(</span><span class="n">x</span><span class="p">)</span></div></div>
     
 <span class="k">class</span> <span class="nc">ECA3D</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Efficient Channel Attention (ECA) for 3D feature maps.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Efficient channel attention for 3D feature maps.&quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">channels</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">k_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
         <span class="c1"># 1D conv on channel‐wise pooled features</span>
@@ -227,6 +234,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">sigmoid</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sigmoid</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Apply channel attention.&quot;&quot;&quot;</span>
         <span class="c1"># x: (B, C, H, W, D)</span>
         <span class="n">b</span><span class="p">,</span> <span class="n">c</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
         <span class="n">y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">avg_pool</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span>        <span class="c1"># (B,1,C)</span>
@@ -235,10 +243,7 @@
         <span class="k">return</span> <span class="n">x</span> <span class="o">*</span> <span class="n">y</span>                              <span class="c1"># reweight channels</span>
 
 <span class="k">class</span> <span class="nc">InvertedResidual3D</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    MobileNet-style inverted residual block for 3D.</span>
-<span class="sd">    Uses expand -&gt; depthwise conv -&gt; project</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;MobileNet-style inverted residual block for 3D features.&quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                  <span class="n">in_ch</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
                  <span class="n">out_ch</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
@@ -265,6 +270,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">conv</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">(</span><span class="o">*</span><span class="n">layers</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Apply inverted residual block.&quot;&quot;&quot;</span>
         <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conv</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_res_connect</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">x</span> <span class="o">+</span> <span class="n">out</span>

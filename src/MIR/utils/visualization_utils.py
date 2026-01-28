@@ -49,15 +49,15 @@ def get_cmap(n, name='nipy_spectral'):
     return plt.cm.get_cmap(name, n)
 
 def pca_reduce_channels_cpu(x: torch.Tensor, k: int = 3) -> torch.Tensor:
-        """Reduce channel dimension via PCA on CPU and project back to device.
+    """Reduce channel dimension via PCA on CPU and project back to device.
 
-        Args:
-                x: Feature maps (B, C, H, W, D).
-                k: Number of principal components to keep.
+    Args:
+            x: Feature maps (B, C, H, W, D).
+            k: Number of principal components to keep.
 
-        Returns:
-                Channel-reduced tensor (B, k, H, W, D).
-        """
+    Returns:
+            Channel-reduced tensor (B, k, H, W, D).
+    """
     B, C, H, W, D = x.shape
     assert k <= C, "k must be <= C"
     device = x.device

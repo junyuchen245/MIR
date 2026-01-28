@@ -69,7 +69,9 @@
            <div itemprop="articleBody">
              
   <h1>Source code for MIR.models.TransVFA</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">torch</span>
+<span></span><span class="sd">&quot;&quot;&quot;Transformer-based VFA variants and feature adapters.&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">torch</span>
 <span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
 <span class="kn">import</span> <span class="nn">torch.nn.functional</span> <span class="k">as</span> <span class="nn">nnf</span>
 <span class="kn">import</span> <span class="nn">MIR.models.Swin_Transformer</span> <span class="k">as</span> <span class="nn">swin</span>
@@ -79,20 +81,23 @@
 <span class="kn">from</span> <span class="nn">MIR.models.VFA</span> <span class="kn">import</span> <span class="n">Decoder</span><span class="p">,</span> <span class="n">DoubleConv3d</span><span class="p">,</span> <span class="n">grid_to_flow</span>
 
 <span class="k">class</span> <span class="nc">VoxelShuffle</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    3D voxel shuffle layer.</span>
-<span class="sd">    Upscales a (B, C, H, W, D) input by factor r in each spatial dim,</span>
-<span class="sd">    where C = C_out * (r ** 3).</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;3D voxel shuffle layer.</span>
+
+<span class="sd">    Upscales a tensor by factor `r` in each spatial dimension where</span>
+<span class="sd">    `C_in = C_out * r^3`.</span>
+
+<span class="sd">    Inputs:</span>
+<span class="sd">        x: Tensor of shape [B, C_in, H, W, D].</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Tensor of shape [B, C_out, H*r, W*r, D*r].</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">upscale_factor</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">r</span> <span class="o">=</span> <span class="n">upscale_factor</span>
 
     <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        x: (B, C_in, H, W, D)</span>
-<span class="sd">        returns: (B, C_out, H*r, W*r, D*r)</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Rearrange channels into spatial dimensions.&quot;&quot;&quot;</span>
         <span class="n">B</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span> <span class="n">H</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">D</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span>
         <span class="n">r</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">r</span>
         <span class="k">if</span> <span class="n">C</span> <span class="o">%</span> <span class="p">(</span><span class="n">r</span><span class="o">**</span><span class="mi">3</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
@@ -109,15 +114,21 @@
         <span class="k">return</span> <span class="n">x</span>
 
 <span class="k">class</span> <span class="nc">Feature2VFA</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    Feature converter module to convert Transformer features for VFA</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert transformer features into VFA multiscale features.</span>
+
 <span class="sd">    Args:</span>
-<span class="sd">        configs_sw: Swin Transformer configs</span>
-<span class="sd">        vfa_channels: Number of channels for VFA</span>
-<span class="sd">        embed_dim: Embedding dimension for Swin Transformer</span>
-<span class="sd">        swin_type: Type of Swin Transformer (&#39;swin&#39; or &#39;dswin&#39;)</span>
-<span class="sd">        in_norm: Whether to apply instance normalization to the input</span>
-<span class="sd">    &#39;&#39;&#39;</span>
+<span class="sd">        configs_sw: Swin Transformer config.</span>
+<span class="sd">        vfa_channels: Channel widths for VFA decoder stages.</span>
+<span class="sd">        embed_dim: Transformer embedding dimension.</span>
+<span class="sd">        swin_type: Transformer type (&#39;swin&#39;, &#39;dswin&#39;, &#39;dswinv2&#39;).</span>
+<span class="sd">        in_norm: If True, apply instance normalization to inputs.</span>
+
+<span class="sd">    Forward inputs:</span>
+<span class="sd">        x: Tensor [B, 1, D, H, W] or tuple of tensors for deformable variants.</span>
+
+<span class="sd">    Forward outputs:</span>
+<span class="sd">        List of multiscale feature maps or tuple of lists for dual inputs.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">configs_sw</span><span class="p">,</span> <span class="n">vfa_channels</span><span class="o">=</span><span class="p">[</span><span class="mi">8</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">64</span><span class="p">],</span> <span class="n">embed_dim</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span> <span class="n">swin_type</span><span class="o">=</span><span class="s1">&#39;swin&#39;</span><span class="p">,</span> <span class="n">in_norm</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
         <span class="k">if</span> <span class="n">swin_type</span> <span class="o">==</span> <span class="s1">&#39;swin&#39;</span><span class="p">:</span>
@@ -202,6 +213,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">swin_type</span> <span class="o">=</span> <span class="n">swin_type</span>
         
     <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Run feature extraction and conversion.&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">swin_type</span> <span class="o">==</span> <span class="s1">&#39;swin&#39;</span><span class="p">:</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_norm</span><span class="p">:</span>
                 <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">norm_first</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
@@ -254,16 +266,22 @@
         
 
 <div class="viewcode-block" id="TransVFA"><a class="viewcode-back" href="../../../api.html#MIR.models.TransVFA">[docs]</a><span class="k">class</span> <span class="nc">TransVFA</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    TransVFA model for image registration</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;TransVFA model for image registration.</span>
+
 <span class="sd">    Args:</span>
-<span class="sd">        configs_sw: Swin Transformer configs</span>
-<span class="sd">        configs: VFA configs</span>
-<span class="sd">        device: Device to run the model on</span>
-<span class="sd">        swin_type: Type of Swin Transformer (&#39;swin&#39; or &#39;dswin&#39;)</span>
-<span class="sd">        return_orginal: Whether to return the original deformation field used for original VFA, otherwise return the flow as displacement</span>
-<span class="sd">        return_all_flows: Whether to return all flows</span>
-<span class="sd">    &#39;&#39;&#39;</span>
+<span class="sd">        configs_sw: Swin Transformer config.</span>
+<span class="sd">        configs: VFA config.</span>
+<span class="sd">        device: Device to run the model on.</span>
+<span class="sd">        swin_type: Transformer type (&#39;swin&#39;, &#39;dswin&#39;, &#39;dswinv2&#39;).</span>
+<span class="sd">        return_orginal: If True, return composed grids and stats.</span>
+<span class="sd">        return_all_flows: If True, return flows for all decoder levels.</span>
+
+<span class="sd">    Forward inputs:</span>
+<span class="sd">        sample: Tuple `(mov, fix)` tensors of shape [B, 1, *spatial].</span>
+
+<span class="sd">    Forward outputs:</span>
+<span class="sd">        Flow(s) and optional auxiliary outputs depending on flags.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">configs_sw</span><span class="p">,</span> <span class="n">configs</span><span class="p">,</span> <span class="n">device</span><span class="p">,</span> <span class="n">swin_type</span><span class="o">=</span><span class="s1">&#39;swin&#39;</span><span class="p">,</span> <span class="n">return_orginal</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">return_all_flows</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">max_channels</span><span class="o">=</span><span class="mi">64</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
 
@@ -291,6 +309,14 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">return_all_flows</span> <span class="o">=</span> <span class="n">return_all_flows</span>
 
 <div class="viewcode-block" id="TransVFA.forward"><a class="viewcode-back" href="../../../api.html#MIR.models.TransVFA.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sample</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Run forward registration.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            sample: Tuple `(mov, fix)` tensors.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Output varies by flags (`return_orginal`, `return_all_flows`).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">mov</span><span class="p">,</span> <span class="n">fix</span> <span class="o">=</span> <span class="n">sample</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">swin_type</span> <span class="o">==</span> <span class="s1">&#39;swin&#39;</span><span class="p">:</span>
             <span class="n">F</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="p">(</span><span class="n">fix</span><span class="p">)</span>

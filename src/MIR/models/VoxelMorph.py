@@ -23,8 +23,13 @@ from torch.distributions.normal import Normal
 import MIR.models.registration_utils as utils
 
 class ConvBlock(nn.Module):
-    """
-    Specific convolutional block followed by leakyrelu for unet.
+    """Convolutional block with LeakyReLU for U-Net.
+
+    Inputs:
+        x: Tensor of shape [B, C, *spatial].
+
+    Returns:
+        Tensor with updated channels and spatial size.
     """
 
     def __init__(self, ndims, in_channels, out_channels, stride=1):
@@ -35,30 +40,34 @@ class ConvBlock(nn.Module):
         self.activation = nn.LeakyReLU(0.2)
 
     def forward(self, x):
+        """Apply convolution and activation."""
         out = self.main(x)
         out = self.activation(out)
         return out
 
 class Unet(nn.Module):
-    """
-    A unet architecture. Layer features can be specified directly as a list of encoder and decoder
-    features or as a single integer along with a number of unet levels. The default network features
-    per layer (when no options are specified) are:
-        encoder: [16, 32, 32, 32]
-        decoder: [32, 32, 32, 32, 32, 16, 16]
+    """U-Net backbone for VoxelMorph.
+
+    Layer features can be specified directly as lists or derived from
+    a base feature count and number of levels.
+
+    Inputs:
+        x: Tensor of shape [B, 2, *spatial] with concatenated images.
+
+    Returns:
+        Tensor of decoded features at full resolution.
     """
 
     def __init__(self, inshape, nb_features=None, nb_levels=None, feat_mult=1):
+        """Initialize the U-Net.
+
+        Args:
+            inshape: Spatial input shape, e.g. (192, 192, 192).
+            nb_features: Feature specification for encoder/decoder.
+            nb_levels: Number of U-Net levels when `nb_features` is int.
+            feat_mult: Per-level feature multiplier when `nb_features` is int.
+        """
         super().__init__()
-        """
-        Parameters:
-            inshape: Input shape. e.g. (192, 192, 192)
-            nb_features: Unet convolutional features. Can be specified via a list of lists with
-                the form [[encoder feats], [decoder feats]], or as a single integer. If None (default),
-                the unet features are defined by the default config described in the class documentation.
-            nb_levels: Number of levels in unet. Only used when nb_features is an integer. Default is None.
-            feat_mult: Per-level feature multiplier. Only used when nb_features is an integer. Default is 1.
-        """
 
         # ensure correct dimensionality
         ndims = len(inshape)
@@ -105,6 +114,7 @@ class Unet(nn.Module):
             prev_nf = nf
 
     def forward(self, x):
+        """Run U-Net forward pass."""
 
         # get encoder activations
         x_enc = [x]
@@ -125,25 +135,22 @@ class Unet(nn.Module):
         return x
 
 class VxmDense(nn.Module):
-    """
-    VoxelMorph network for (unsupervised) nonlinear registration between two images.
+    """VoxelMorph network for nonlinear image registration.
+
+    Inputs:
+        input_imgs: Tuple `(mov, fix)` of tensors [B, 1, *spatial].
+
+    Returns:
+        Flow tensor, and optionally warped image if `gen_output` is True.
     """
     def __init__(self,
         configs,
         gen_output=False,):
-        """
-        Parameters:
-            inshape: Input shape. e.g. (192, 192, 192)
-            nb_unet_features: Unet convolutional features. Can be specified via a list of lists with
-                the form [[encoder feats], [decoder feats]], or as a single integer. If None (default),
-                the unet features are defined by the default config described in the unet class documentation.
-            nb_unet_levels: Number of levels in unet. Only used when nb_features is an integer. Default is None.
-            unet_feat_mult: Per-level feature multiplier. Only used when nb_features is an integer. Default is 1.
-            int_steps: Number of flow integration steps. The warp is non-diffeomorphic when this value is 0.
-            int_downsize: Integer specifying the flow downsample factor for vector integration. The flow field
-                is not downsampled when this value is 1.
-            bidir: Enable bidirectional cost function. Default is False.
-            use_probs: Use probabilities in flow field. Default is False.
+        """Initialize VoxelMorph with config settings.
+
+        Args:
+            configs: Config object with VoxelMorph hyperparameters.
+            gen_output: If True, also return the warped moving image.
         """
         super().__init__()
 
@@ -186,12 +193,14 @@ class VxmDense(nn.Module):
             self.transformer = utils.SpatialTransformer(inshape)
 
     def forward(self, input_imgs):
-        '''
-        Parameters:
-            source: Source image tensor.
-            target: Target image tensor.
-            registration: Return transformed image and flow. Default is False.
-        '''
+        """Run VoxelMorph forward pass.
+
+        Args:
+            input_imgs: Tuple `(mov, fix)` tensors.
+
+        Returns:
+            Flow tensor, and optionally warped moving image.
+        """
 
         # concatenate inputs and propagate unet
         mov, fix = input_imgs

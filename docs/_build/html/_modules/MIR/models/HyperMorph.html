@@ -102,6 +102,7 @@
 <span class="kn">import</span> <span class="nn">MIR.models.registration_utils</span> <span class="k">as</span> <span class="nn">utils</span>
 
 <span class="k">class</span> <span class="nc">HyperBlocks</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;MLP that embeds hyperparameters for hypernetwork conditioning.&quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nb_hyp_params</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">nb_hyp_layers</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span> <span class="n">nb_hyp_units</span><span class="o">=</span><span class="mi">128</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">fcs</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">ModuleList</span><span class="p">()</span>
@@ -111,15 +112,14 @@
             <span class="n">hyp_last</span> <span class="o">=</span> <span class="n">nb_hyp_units</span>
 
     <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Project hyperparameters into conditioning features.&quot;&quot;&quot;</span>
         <span class="k">for</span> <span class="n">fc</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fcs</span><span class="p">:</span>
             <span class="n">x</span> <span class="o">=</span> <span class="n">fc</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
             <span class="n">x</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">relu</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">x</span>
 
 <span class="k">class</span> <span class="nc">ConvBlock_</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Specific convolutional block followed by leakyrelu for unet.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Convolutional block with hyperparameter-conditioned bias.&quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ndims</span><span class="p">,</span> <span class="n">in_channels</span><span class="p">,</span> <span class="n">out_channels</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">nb_hyp_units</span><span class="o">=</span><span class="mi">128</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
@@ -130,15 +130,22 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">linear</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">nb_hyp_units</span><span class="p">,</span> <span class="n">out_channels</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">hyp_feat</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Apply convolution with hypernetwork bias.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            x: Feature tensor.</span>
+<span class="sd">            hyp_feat: Hyperparameter embedding.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Tensor after conditioning and activation.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">main</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
         <span class="n">bias</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">linear</span><span class="p">(</span><span class="n">hyp_feat</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
         <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">activation</span><span class="p">(</span><span class="n">out</span><span class="o">+</span><span class="n">bias</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">out</span>
 
 <span class="k">class</span> <span class="nc">ConvBlock</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Specific convolutional block followed by leakyrelu for unet.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Convolutional block with hypernetwork-generated weights.&quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ndims</span><span class="p">,</span> <span class="n">in_channels</span><span class="p">,</span> <span class="n">out_channels</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">nb_hyp_units</span><span class="o">=</span><span class="mi">128</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
@@ -155,6 +162,15 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">in_channels</span> <span class="o">=</span> <span class="n">in_channels</span>
 
     <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">hyp_feat</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Apply hypernetwork-generated convolution.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            x: Feature tensor.</span>
+<span class="sd">            hyp_feat: Hyperparameter embedding.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Tensor after conditioning and activation.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1">#hyp_feat = self.linear(hyp_feat)</span>
         <span class="c1">#hyp_feat = torch.relu(hyp_feat)</span>
         <span class="n">kernel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">linear_conv</span><span class="p">(</span><span class="n">hyp_feat</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">out_channels</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_channels</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
@@ -166,9 +182,7 @@
         <span class="k">return</span> <span class="n">out</span>
 
 <span class="k">class</span> <span class="nc">CustomConv</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Specific convolutional block followed by leakyrelu for unet.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Convolution with weights predicted by a hypernetwork.&quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ndims</span><span class="p">,</span> <span class="n">in_channels</span><span class="p">,</span> <span class="n">out_channels</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">nb_hyp_units</span><span class="o">=</span><span class="mi">128</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
@@ -184,6 +198,15 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">in_channels</span> <span class="o">=</span> <span class="n">in_channels</span>
 
     <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">hyp_feat</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Apply hypernetwork-generated convolution.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            x: Feature tensor.</span>
+<span class="sd">            hyp_feat: Hyperparameter embedding.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Tensor after applying predicted weights and bias.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1">#out = self.main(x)</span>
         <span class="c1">#hyp_feat = self.linear(hyp_feat)</span>
         <span class="c1">#hyp_feat = torch.relu(hyp_feat)</span>
@@ -194,25 +217,26 @@
         <span class="k">return</span> <span class="n">out</span>
 
 <span class="k">class</span> <span class="nc">Unet</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    A unet architecture. Layer features can be specified directly as a list of encoder and decoder</span>
-<span class="sd">    features or as a single integer along with a number of unet levels. The default network features</span>
-<span class="sd">    per layer (when no options are specified) are:</span>
-<span class="sd">        encoder: [16, 32, 32, 32]</span>
-<span class="sd">        decoder: [32, 32, 32, 32, 32, 16, 16]</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;U-Net backbone with hyperparameter conditioning.</span>
+
+<span class="sd">    Inputs:</span>
+<span class="sd">        x: Tensor of shape [B, 2, *spatial] with concatenated images.</span>
+<span class="sd">        h: Hyperparameter embedding.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Tensor of decoded features at full resolution.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inshape</span><span class="p">,</span> <span class="n">nb_features</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nb_levels</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">feat_mult</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Parameters:</span>
-<span class="sd">            inshape: Input shape. e.g. (192, 192, 192)</span>
-<span class="sd">            nb_features: Unet convolutional features. Can be specified via a list of lists with</span>
-<span class="sd">                the form [[encoder feats], [decoder feats]], or as a single integer. If None (default),</span>
-<span class="sd">                the unet features are defined by the default config described in the class documentation.</span>
-<span class="sd">            nb_levels: Number of levels in unet. Only used when nb_features is an integer. Default is None.</span>
-<span class="sd">            feat_mult: Per-level feature multiplier. Only used when nb_features is an integer. Default is 1.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize the hyper-conditioned U-Net.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            inshape: Spatial input shape, e.g. (192, 192, 192).</span>
+<span class="sd">            nb_features: Feature specification for encoder/decoder.</span>
+<span class="sd">            nb_levels: Number of U-Net levels when `nb_features` is int.</span>
+<span class="sd">            feat_mult: Per-level feature multiplier when `nb_features` is int.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
 
         <span class="c1"># ensure correct dimensionality</span>
         <span class="n">ndims</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">inshape</span><span class="p">)</span>
@@ -259,6 +283,7 @@
             <span class="n">prev_nf</span> <span class="o">=</span> <span class="n">nf</span>
 
     <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">h</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Run U-Net forward pass with hyperparameter conditioning.&quot;&quot;&quot;</span>
 
         <span class="c1"># get encoder activations</span>
         <span class="n">x_enc</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="p">]</span>
@@ -279,25 +304,23 @@
         <span class="k">return</span> <span class="n">x</span>
         
 <div class="viewcode-block" id="HyperVxmDense"><a class="viewcode-back" href="../../../api.html#MIR.models.HyperVxmDense">[docs]</a><span class="k">class</span> <span class="nc">HyperVxmDense</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    VoxelMorph network for (unsupervised) nonlinear registration between two images.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;HyperMorph variant of VoxelMorph with hyperparameter conditioning.</span>
+
+<span class="sd">    Inputs:</span>
+<span class="sd">        input_imgs: Tuple `(mov, fix)` of tensors [B, 1, *spatial].</span>
+<span class="sd">        hyp_val: Tensor of hyperparameter values.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Flow tensor, and optionally warped image if `gen_output` is True.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
         <span class="n">configs</span><span class="p">,</span>
         <span class="n">gen_output</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Parameters:</span>
-<span class="sd">            inshape: Input shape. e.g. (192, 192, 192)</span>
-<span class="sd">            nb_unet_features: Unet convolutional features. Can be specified via a list of lists with</span>
-<span class="sd">                the form [[encoder feats], [decoder feats]], or as a single integer. If None (default),</span>
-<span class="sd">                the unet features are defined by the default config described in the unet class documentation.</span>
-<span class="sd">            nb_unet_levels: Number of levels in unet. Only used when nb_features is an integer. Default is None.</span>
-<span class="sd">            unet_feat_mult: Per-level feature multiplier. Only used when nb_features is an integer. Default is 1.</span>
-<span class="sd">            int_steps: Number of flow integration steps. The warp is non-diffeomorphic when this value is 0.</span>
-<span class="sd">            int_downsize: Integer specifying the flow downsample factor for vector integration. The flow field</span>
-<span class="sd">                is not downsampled when this value is 1.</span>
-<span class="sd">            bidir: Enable bidirectional cost function. Default is False.</span>
-<span class="sd">            use_probs: Use probabilities in flow field. Default is False.</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize HyperMorph with config settings.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            configs: Config object with VoxelMorph hyperparameters.</span>
+<span class="sd">            gen_output: If True, also return the warped moving image.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
         <span class="n">inshape</span> <span class="o">=</span> <span class="n">configs</span><span class="o">.</span><span class="n">img_size</span>
@@ -339,12 +362,15 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">spatial_trans</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">SpatialTransformer</span><span class="p">(</span><span class="n">inshape</span><span class="p">)</span>
 
 <div class="viewcode-block" id="HyperVxmDense.forward"><a class="viewcode-back" href="../../../api.html#MIR.models.HyperVxmDense.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_imgs</span><span class="p">,</span> <span class="n">hyp_val</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">        Parameters:</span>
-<span class="sd">            source: Source image tensor.</span>
-<span class="sd">            target: Target image tensor.</span>
-<span class="sd">            registration: Return transformed image and flow. Default is False.</span>
-<span class="sd">        &#39;&#39;&#39;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Run HyperMorph forward pass.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            input_imgs: Tuple `(mov, fix)` tensors.</span>
+<span class="sd">            hyp_val: Hyperparameter tensor.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Flow tensor, and optionally warped moving image.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">mov</span><span class="p">,</span> <span class="n">fix</span> <span class="o">=</span> <span class="n">input_imgs</span>
         <span class="n">x</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">mov</span><span class="p">,</span> <span class="n">fix</span><span class="p">),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
         <span class="n">h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">hyper_model</span><span class="p">(</span><span class="n">hyp_val</span><span class="p">)</span>

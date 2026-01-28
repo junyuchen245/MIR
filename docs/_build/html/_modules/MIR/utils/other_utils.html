@@ -69,7 +69,9 @@
            <div itemprop="articleBody">
              
   <h1>Source code for MIR.utils.other_utils</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">pickle</span>
+<span></span><span class="sd">&quot;&quot;&quot;Miscellaneous utility helpers for MIR.&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">pickle</span>
 <span class="kn">import</span> <span class="nn">re</span>
 <span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">import</span> <span class="nn">torch</span>
@@ -83,10 +85,24 @@
 <span class="n">text_path</span> <span class="o">=</span> <span class="n">HERE</span> <span class="o">/</span> <span class="s2">&quot;FreeSurfer_label_info.txt&quot;</span>
 
 <div class="viewcode-block" id="pkload"><a class="viewcode-back" href="../../../api.html#MIR.utils.pkload">[docs]</a><span class="k">def</span> <span class="nf">pkload</span><span class="p">(</span><span class="n">fname</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Load a pickled object from disk.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        fname: Path to pickle file.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Loaded object.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">fname</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="savepkl"><a class="viewcode-back" href="../../../api.html#MIR.utils.savepkl">[docs]</a><span class="k">def</span> <span class="nf">savepkl</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Save an object to a pickle file.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        data: Object to serialize.</span>
+<span class="sd">        path: Output pickle file path.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
         <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span></div>
         
@@ -121,6 +137,14 @@
     <span class="k">return</span> <span class="nb">dict</span>
 
 <div class="viewcode-block" id="SLANT_label_reassign"><a class="viewcode-back" href="../../../api.html#MIR.utils.SLANT_label_reassign">[docs]</a><span class="k">def</span> <span class="nf">SLANT_label_reassign</span><span class="p">(</span><span class="n">label_map</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Reassign SLANT label IDs to contiguous indices.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        label_map: Label map array.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Reassigned label map.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1">#process labeling information for SLANT</span>
     <span class="n">label_lookup</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.</span><span class="p">,</span>  <span class="mf">4.</span><span class="p">,</span> <span class="mf">11.</span><span class="p">,</span> <span class="mf">23.</span><span class="p">,</span> <span class="mf">30.</span><span class="p">,</span> <span class="mf">31.</span><span class="p">,</span> <span class="mf">32.</span><span class="p">,</span> <span class="mf">35.</span><span class="p">,</span> <span class="mf">36.</span><span class="p">,</span> <span class="mf">37.</span><span class="p">,</span> <span class="mf">38.</span><span class="p">,</span> <span class="mf">39.</span><span class="p">,</span> <span class="mf">40.</span><span class="p">,</span> <span class="mf">41.</span><span class="p">,</span>
             <span class="mf">44.</span><span class="p">,</span>  <span class="mf">45.</span><span class="p">,</span>  <span class="mf">47.</span><span class="p">,</span>  <span class="mf">48.</span><span class="p">,</span>  <span class="mf">49.</span><span class="p">,</span>  <span class="mf">50.</span><span class="p">,</span>  <span class="mf">51.</span><span class="p">,</span>  <span class="mf">52.</span><span class="p">,</span>  <span class="mf">55.</span><span class="p">,</span>  <span class="mf">56.</span><span class="p">,</span>  <span class="mf">57.</span><span class="p">,</span>  <span class="mf">58.</span><span class="p">,</span>  <span class="mf">59.</span><span class="p">,</span> <span class="mf">60.</span><span class="p">,</span>
@@ -266,15 +290,16 @@
 
     <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Loaded </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">loadable_state_dict</span><span class="p">)</span><span class="si">}</span><span class="s2"> / </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">model_state_dict</span><span class="p">)</span><span class="si">}</span><span class="s2"> layers from checkpoint.&quot;</span><span class="p">)</span></div>
     
-<div class="viewcode-block" id="zoom_img"><a class="viewcode-back" href="../../../api.html#MIR.utils.zoom_img">[docs]</a><span class="k">def</span> <span class="nf">zoom_img</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">pixel_dims</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">3</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Resize a 3D image tensor to match target pixel dimensions.</span>
+<div class="viewcode-block" id="zoom_img"><a class="viewcode-back" href="../../../api.html#MIR.utils.zoom_img">[docs]</a><span class="k">def</span> <span class="nf">zoom_img</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">pixel_dims</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="mi">3</span><span class="p">):</span>    
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Resize a 3D image to match target pixel dimensions.</span>
+
 <span class="sd">    Args:</span>
-<span class="sd">        img (np.ndarray): Input image tensor of shape (C, H, W, D).</span>
-<span class="sd">        pixel_dims (tuple): Target pixel dimensions as a tuple (img_pixdim, tar_pix).</span>
-<span class="sd">        order (int): Interpolation order for resizing. Default is 3 (cubic).</span>
+<span class="sd">        img: Input 3D image array.</span>
+<span class="sd">        pixel_dims: Target spacing.</span>
+<span class="sd">        order: Interpolation order.</span>
+
 <span class="sd">    Returns:</span>
-<span class="sd">        np.ndarray: Resized image tensor.</span>
+<span class="sd">        Resampled image array.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">img_pixdim</span><span class="p">,</span> <span class="n">tar_pix</span> <span class="o">=</span> <span class="n">pixel_dims</span>
     <span class="n">ratio</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">img_pixdim</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">tar_pix</span><span class="p">)</span>

@@ -1,10 +1,17 @@
+"""Segmentation heads and decoder blocks for volumetric models."""
+
 import torch.nn.functional as F
 import torch.nn as nn
 import torch
 
 class SCSEBlock3D(nn.Module):
-    """
-    Concurrent spatial and channel 'squeeze & excite'
+    """Concurrent spatial and channel squeeze-and-excite block.
+
+    Inputs:
+        x: Tensor of shape [B, C, D, H, W].
+
+    Returns:
+        Tensor of the same shape with attention gating applied.
     """
     def __init__(self, channels: int, reduction: int = 16):
         super().__init__()
@@ -23,6 +30,7 @@ class SCSEBlock3D(nn.Module):
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Apply spatial and channel excitation."""
         # channel gate
         xc = self.cSE(x)
         # spatial gate
@@ -32,9 +40,13 @@ class SCSEBlock3D(nn.Module):
 
 
 class ASPP3D(nn.Module):
-    """
-    Atrous Spatial Pyramid Pooling without any global pooling branch
-    (so it still works on small patches).
+    """3D atrous spatial pyramid pooling without global pooling.
+
+    Inputs:
+        x: Tensor of shape [B, C, D, H, W].
+
+    Returns:
+        Tensor with ASPP features.
     """
     def __init__(self, in_ch: int, out_ch: int, dilations=(1,6,12)):
         super().__init__()
@@ -56,19 +68,25 @@ class ASPP3D(nn.Module):
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Apply ASPP branches and projection."""
         res = [b(x) for b in self.branches]
         x   = torch.cat(res, dim=1)
         return self.project(x)
 
 
 class AdvancedDecoder3D(nn.Module):
-    """
-    Advanced 3D decoder for multi-resolution encoder features.
-    
+    """Advanced 3D decoder for multi-resolution encoder features.
+
     Args:
-      encoder_channels: list of channel counts for each x_feats[i]
-      aspp_out        : number of channels after ASPP
-      num_classes     : number of output classes (e.g. 133)
+        encoder_channels: List of channel counts for each feature level.
+        aspp_out: Number of channels after ASPP.
+        num_classes: Number of output classes.
+
+    Inputs:
+        x_feats: List of feature maps ordered from low to high resolution.
+
+    Returns:
+        Logits tensor of shape [B, num_classes, D0, H0, W0].
     """
     def __init__(
         self,
@@ -108,13 +126,7 @@ class AdvancedDecoder3D(nn.Module):
         self.classifier = nn.Conv3d(in_ch, num_classes, kernel_size=1)
 
     def forward(self, x_feats: list) -> torch.Tensor:
-        """
-        x_feats: list of length L with
-                 x_feats[i].shape == (B, encoder_channels[i], Di, Hi, Wi)
-        
-        returns:
-          logits (B, num_classes, D0, H0, W0)  at the highest resolution
-        """
+        """Run decoder forward pass."""
         # start from deepest feature
         x = x_feats[-1]
         x = self.aspp(x)

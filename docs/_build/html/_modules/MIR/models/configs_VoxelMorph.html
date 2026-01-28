@@ -69,14 +69,16 @@
            <div itemprop="articleBody">
              
   <h1>Source code for MIR.models.configs_VoxelMorph</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">ml_collections</span>
+<span></span><span class="sd">&quot;&quot;&quot;Configuration presets for VoxelMorph models.&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">ml_collections</span>
 
 <div class="viewcode-block" id="get_VXM_1_config"><a class="viewcode-back" href="../../../api.html#MIR.models.get_VXM_1_config">[docs]</a><span class="k">def</span> <span class="nf">get_VXM_1_config</span><span class="p">():</span>
-<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    VoxelMorph-1 config.</span>
-<span class="sd">    config.img_size: tuple, size of the input image.</span>
-<span class="sd">    config.nb_unet_features: tuple, number of features in the encoder and decoder.</span>
-<span class="sd">    &#39;&#39;&#39;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return VoxelMorph-1 config.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        ml_collections.ConfigDict with model hyperparameters.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">config</span> <span class="o">=</span> <span class="n">ml_collections</span><span class="o">.</span><span class="n">ConfigDict</span><span class="p">()</span>
     <span class="n">config</span><span class="o">.</span><span class="n">img_size</span> <span class="o">=</span> <span class="p">(</span><span class="mi">160</span><span class="p">,</span> <span class="mi">192</span><span class="p">,</span> <span class="mi">224</span><span class="p">)</span>
     <span class="n">config</span><span class="o">.</span><span class="n">nb_unet_features</span> <span class="o">=</span> <span class="p">((</span><span class="mi">8</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">32</span><span class="p">),</span> <span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">8</span><span class="p">))</span>
@@ -86,11 +88,11 @@
     <span class="k">return</span> <span class="n">config</span></div>
 
 <div class="viewcode-block" id="get_VXM_default_config"><a class="viewcode-back" href="../../../api.html#MIR.models.get_VXM_default_config">[docs]</a><span class="k">def</span> <span class="nf">get_VXM_default_config</span><span class="p">():</span>
-<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    VoxelMorph-2 config.</span>
-<span class="sd">    config.img_size: tuple, size of the input image.</span>
-<span class="sd">    config.nb_unet_features: tuple, number of features in the encoder and decoder.</span>
-<span class="sd">    &#39;&#39;&#39;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return default VoxelMorph-2 config.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        ml_collections.ConfigDict with model hyperparameters.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">config</span> <span class="o">=</span> <span class="n">ml_collections</span><span class="o">.</span><span class="n">ConfigDict</span><span class="p">()</span>
     <span class="n">config</span><span class="o">.</span><span class="n">img_size</span> <span class="o">=</span> <span class="p">(</span><span class="mi">160</span><span class="p">,</span> <span class="mi">192</span><span class="p">,</span> <span class="mi">224</span><span class="p">)</span>
     <span class="n">config</span><span class="o">.</span><span class="n">nb_unet_features</span> <span class="o">=</span> <span class="p">((</span><span class="mi">16</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">32</span><span class="p">),</span> <span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">16</span><span class="p">))</span>
@@ -100,11 +102,11 @@
     <span class="k">return</span> <span class="n">config</span></div>
 
 <div class="viewcode-block" id="get_VXM_BJ_config"><a class="viewcode-back" href="../../../api.html#MIR.models.get_VXM_BJ_config">[docs]</a><span class="k">def</span> <span class="nf">get_VXM_BJ_config</span><span class="p">():</span>
-<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    VoxelMorph_BJ config.</span>
-<span class="sd">    config.img_size: tuple, size of the input image.</span>
-<span class="sd">    config.nb_unet_features: tuple, number of features in the encoder and decoder.</span>
-<span class="sd">    &#39;&#39;&#39;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return VoxelMorph-BJ config.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        ml_collections.ConfigDict with model hyperparameters.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">config</span> <span class="o">=</span> <span class="n">ml_collections</span><span class="o">.</span><span class="n">ConfigDict</span><span class="p">()</span>
     <span class="n">config</span><span class="o">.</span><span class="n">img_size</span> <span class="o">=</span> <span class="p">(</span><span class="mi">160</span><span class="p">,</span> <span class="mi">192</span><span class="p">,</span> <span class="mi">224</span><span class="p">)</span>
     <span class="n">config</span><span class="o">.</span><span class="n">nb_unet_features</span> <span class="o">=</span> <span class="p">((</span><span class="mi">16</span><span class="p">,</span><span class="mi">32</span><span class="p">,</span><span class="mi">64</span><span class="p">,</span><span class="mi">96</span><span class="p">,</span><span class="mi">128</span><span class="p">),</span> <span class="p">(</span><span class="mi">128</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="mi">96</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">32</span><span class="p">))</span>
