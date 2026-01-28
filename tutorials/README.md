@@ -1,6 +1,38 @@
 ## Overview
 
-This directory provides basic tutorials on how to run various models using this package and replicate selected results. Below is an organized list of Google Drive file IDs for downloading pretrained model weights and related files.
+This directory provides tutorials on how to run various models in MIR, including training, inference, and evaluation workflows. It also includes references to pretrained weights and dataset resources for reproducing published results.
+
+## Tutorials at a glance
+
+- **LUMIR24/25**: Training/inference pipelines for TransMorph and VFA on the Learn2Reg challenges.
+- **IXI**: Brain registration pipelines for IXI (including SITReg-based training).
+- **AutoPET**: PET/CT registration workflows and evaluation utilities.
+- **PSMA atlas building**: Population analysis and statistical evaluation utilities.
+
+Each tutorial folder contains a runnable script and, when applicable, a README with dataset paths, outputs, and notes.
+
+## Tutorial summaries
+
+- [MIR/tutorials/IXI_SITReg](MIR/tutorials/IXI_SITReg): SITReg training and validation on IXI with NCC + diffusion regularization.
+- [MIR/tutorials/IXI_HyperTransMorph](MIR/tutorials/IXI_HyperTransMorph): HyperTransMorph-based IXI registration with hyperparameter conditioning.
+- [MIR/tutorials/IXI_HyperMorph](MIR/tutorials/IXI_HyperMorph): HyperMorph (VoxelMorph-style) IXI registration and evaluation.
+- [MIR/tutorials/IXI_TransMorphSPR](MIR/tutorials/IXI_TransMorphSPR): TransMorph with spatially varying regularization on IXI.
+- [MIR/tutorials/lumir24_TransMorph](MIR/tutorials/lumir24_TransMorph): TransMorph pipelines for Learn2Reg 2024.
+- [MIR/tutorials/lumir24_VFA](MIR/tutorials/lumir24_VFA): VFA pipelines for Learn2Reg 2024.
+- [MIR/tutorials/lumir24_ConvexAdam](MIR/tutorials/lumir24_ConvexAdam): ConvexAdam baselines for Learn2Reg 2024.
+- [MIR/tutorials/lumir25_VFA](MIR/tutorials/lumir25_VFA): VFA pipelines for Learn2Reg 2025.
+- [MIR/tutorials/lumir25_SITReg](MIR/tutorials/lumir25_SITReg): SITReg pipelines for Learn2Reg 2025.
+- [MIR/tutorials/lumir25_ConvexAdam](MIR/tutorials/lumir25_ConvexAdam): ConvexAdam baselines for Learn2Reg 2025.
+- [MIR/tutorials/autoPET_TransMorphSPR](MIR/tutorials/autoPET_TransMorphSPR): PET/CT registration with TransMorph SPR.
+- [MIR/tutorials/autoPET_ConvexAdamSPR](MIR/tutorials/autoPET_ConvexAdamSPR): PET/CT registration with ConvexAdam SPR.
+- [MIR/tutorials/autoPET_FireANTs_SPR](MIR/tutorials/autoPET_FireANTs_SPR): PET/CT registration with FireANTs SPR baselines.
+- [MIR/tutorials/PSMA_atlas_building](MIR/tutorials/PSMA_atlas_building): PSMA atlas building, population analysis, and statistical evaluation.
+- [MIR/tutorials/PSMA_atlas_building_MultiMorph](MIR/tutorials/PSMA_atlas_building_MultiMorph): MultiMorph-based PSMA atlas building pipeline.
+- [MIR/tutorials/VFA_image_seg](MIR/tutorials/VFA_image_seg): VFA-based feature extraction for segmentation tasks.
+- [MIR/tutorials/VFA_image_synthesis](MIR/tutorials/VFA_image_synthesis): VFA-based feature extraction for synthesis tasks.
+- [MIR/tutorials/brain_MRI_preprocessing](MIR/tutorials/brain_MRI_preprocessing): MRI preprocessing utilities (bias correction, normalization, masking).
+- [MIR/tutorials/IPEN_registration](MIR/tutorials/IPEN_registration): Registration workflows for the IPEN dataset.
+- [MIR/tutorials/pretraining_registration_DNNs](MIR/tutorials/pretraining_registration_DNNs): Random-image pretraining pipelines for registration networks.
 
 |Model/File|Google Drive ID |Dict Key|
 |---|---|---|
@@ -12,10 +44,30 @@ This directory provides basic tutorials on how to run various models using this 
 |LUMIR_dataset.json|`1b0hyH7ggjCysJG-VGvo38XVE8bFVRMxb`|-|
 |LUMIR25_dataset.json|`164Flc1C6oufONGimvpKlrNtq5t3obXEo`|-|
 
-## Dataset
+## Datasets
 
 |Dataset|Link|
 |---|---|
 |IXI| https://github.com/junyuchen245/Preprocessed_IXI_Dataset|
 |LUMIR24|https://learn2reg.grand-challenge.org/learn2reg-2024/|
 |LUMIR25|https://learn2reg.grand-challenge.org/learn2reg-2025/|
+
+## How to run a tutorial
+
+1. **Locate the folder** for the target tutorial (e.g., `IXI_SITReg`, `lumir25_VFA`).
+2. **Open the script** and set dataset paths at the top of the file.
+3. **Run the script** from inside the tutorial directory.
+4. **Check outputs** in the `experiments/` and `logs/` folders created by the script.
+
+## Outputs
+
+Most training scripts write:
+- **Checkpoints**: under `experiments/`.
+- **Logs**: under `logs/`, often compatible with TensorBoard.
+- **Figures**: optional visualizations saved per epoch.
+
+## Notes
+
+- Some tutorials rely on external datasets and large pretrained models.
+- GPU is recommended for training-based scripts.
+- If you add a new tutorial, include a short README in its folder.
