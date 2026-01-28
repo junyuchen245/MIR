@@ -2,10 +2,24 @@
 
 import os
 import sys
+import types
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 SRC_ROOT = os.path.join(PROJECT_ROOT, "src")
 sys.path.insert(0, SRC_ROOT)
+
+# Provide lightweight stubs for optional bundled modules that may be absent
+# from the repository (e.g., due to license restrictions).
+def _register_stub(mod_name: str) -> None:
+    if mod_name not in sys.modules:
+        sys.modules[mod_name] = types.ModuleType(mod_name)
+
+_register_stub("MIR.models.fireants")
+_register_stub("MIR.models.fireants.io")
+_register_stub("MIR.models.fireants.registration")
+_register_stub("MIR.models.fireants.utils")
+_register_stub("MIR.models.fireants.losses")
+_register_stub("MIR.models.fireants.interpolator")
 
 project = "MIR"
 author = "Junyu Chen"
@@ -25,6 +39,12 @@ autodoc_mock_imports = [
     "ants",
     "antspyx",
     "einops",
+    "MIR.models.fireants",
+    "MIR.models.fireants.io",
+    "MIR.models.fireants.registration",
+    "MIR.models.fireants.utils",
+    "MIR.models.fireants.losses",
+    "MIR.models.fireants.interpolator",
     "matplotlib",
     "ml_collections",
     "nibabel",
