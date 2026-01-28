@@ -13,18 +13,23 @@ release = "0.0.1"
 
 extensions = [
     "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
     "sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
 ]
 
+autosummary_generate = True
+
 # Avoid importing heavy dependencies when building docs on CI.
 autodoc_mock_imports = [
+    "ants",
     "antspyx",
     "einops",
     "matplotlib",
     "ml_collections",
     "nibabel",
     "numpy",
+    "pandas",
     "pymedio",
     "scipy",
     "seaborn",

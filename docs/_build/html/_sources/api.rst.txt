@@ -1,6 +1,17 @@
 API Reference
 =============
 
+.. autosummary::
+   :toctree: api
+   :recursive:
+
+   MIR
+   MIR.models
+   MIR.utils
+   MIR.image_similarity
+   MIR.deformation_regularizer
+   MIR.accuracy_measures
+
 .. automodule:: MIR
    :members:
    :undoc-members:
