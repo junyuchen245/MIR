@@ -17,6 +17,23 @@ extensions = [
     "sphinx.ext.viewcode",
 ]
 
+# Avoid importing heavy dependencies when building docs on CI.
+autodoc_mock_imports = [
+    "antspyx",
+    "einops",
+    "matplotlib",
+    "ml_collections",
+    "nibabel",
+    "numpy",
+    "pymedio",
+    "scipy",
+    "seaborn",
+    "SimpleITK",
+    "statsmodels",
+    "timm",
+    "torch",
+]
+
 templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
