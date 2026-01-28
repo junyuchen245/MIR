@@ -2,6 +2,15 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from .registration_utils import SpatialTransformer
+
+try:
+    from .SITReg.composable_mapping import DataFormat
+    _HAS_SITREG = True
+except Exception:  # pragma: no cover - optional dependency
+    DataFormat = None
+    _HAS_SITREG = False
+
 
 class TemplateCreation(nn.Module):
     '''
@@ -10,14 +19,28 @@ class TemplateCreation(nn.Module):
         reg_model: Registration model
         img_size: Image size
         mean_cap: Mean cap for the MeanStream
+        use_sitreg: Use SITReg-style mapping outputs when True; VFA, TransMorph, VoxelMorph-style otherwise
+        mode: SpatialTransformer interpolation mode (SITReg path)
     '''
-    def __init__(self, reg_model, img_size, mean_cap=100):
+    def __init__(self, reg_model, img_size, mean_cap=100, use_sitreg=False, mode='bilinear'):
         super().__init__()
         self.reg_model = reg_model
         self.mean_stream = MeanStream(mean_cap, img_size)
+        self.use_sitreg = use_sitreg
+        self.spatial_trans = SpatialTransformer(img_size, mode=mode) if use_sitreg else None
+        if self.use_sitreg and not _HAS_SITREG:
+            raise ImportError("SITReg is not available; cannot use SITReg mode.")
 
     def forward(self, inputs):
-        def_atlas, def_image, pos_flow, neg_flow = self.reg_model(inputs)
+        if self.use_sitreg:
+            atlas, image = inputs
+            mapping_pair = self.reg_model(atlas, image, mappings_for_levels=((0, False),))[0]
+            pos_flow = mapping_pair.forward_mapping.sample(DataFormat.voxel_displacements()).generate_values()
+            neg_flow = mapping_pair.inverse_mapping.sample(DataFormat.voxel_displacements()).generate_values()
+            def_atlas = self.spatial_trans(atlas, pos_flow)
+            def_image = self.spatial_trans(image, neg_flow)
+        else:
+            def_atlas, def_image, pos_flow, neg_flow = self.reg_model(inputs)
         mean_stream = self.mean_stream(pos_flow)
         return def_atlas, def_image, pos_flow, neg_flow, mean_stream
 
@@ -66,3 +89,5 @@ class MeanStream(nn.Module):
 
         # the first few 1000 should not matter that much towards this cost
         return torch.minimum(torch.tensor(1.), new_count / self.cap) * (z * new_mean)
+
+

@@ -1,0 +1,131 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MIR.models.configs_VFA &mdash; MIR 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js?v=f6245a2f"></script>
+      <script src="../../../_static/doctools.js?v=888ff710"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            MIR
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">MIR</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">MIR.models.configs_VFA</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for MIR.models.configs_VFA</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">ml_collections</span>
+
+<div class="viewcode-block" id="get_VFA_default_config"><a class="viewcode-back" href="../../../api.html#MIR.models.get_VFA_default_config">[docs]</a><span class="k">def</span> <span class="nf">get_VFA_default_config</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    VFA default config.</span>
+<span class="sd">    config.name: str, name of the model.</span>
+<span class="sd">    config.skip: int, skip certain displacement fields in the decoder.</span>
+<span class="sd">    config.initialize: float, initialize beta in the decoder.</span>
+<span class="sd">    config.downsamples: int, number of downsampling layers in the encoder.</span>
+<span class="sd">    config.start_channels: int, number of channels in the first layer of the encoder.</span>
+<span class="sd">    config.matching_channels: int, number of channels in the matching layer of the encoder.</span>
+<span class="sd">    config.int_steps: int, number of integration steps in the decoder.</span>
+<span class="sd">    config.affine: int, whether to use affine transformation in the decoder.</span>
+<span class="sd">    config.img_size: tuple, size of the input image.</span>
+<span class="sd">    config.in_channels: int, number of input channels.</span>
+<span class="sd">    config.max_channels: int, maximum number of channels in the encoder.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">ml_collections</span><span class="o">.</span><span class="n">ConfigDict</span><span class="p">()</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span><span class="s2">&quot;VFA&quot;</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">skip</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">initialize</span> <span class="o">=</span> <span class="mf">0.1</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">downsamples</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">start_channels</span> <span class="o">=</span> <span class="mi">8</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">matching_channels</span> <span class="o">=</span> <span class="mi">8</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">int_steps</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">affine</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">img_size</span> <span class="o">=</span> <span class="p">(</span><span class="mi">160</span><span class="p">,</span> <span class="mi">192</span><span class="p">,</span> <span class="mi">224</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">in_channels</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">max_channels</span> <span class="o">=</span> <span class="mi">64</span>
+    <span class="k">return</span> <span class="n">config</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
