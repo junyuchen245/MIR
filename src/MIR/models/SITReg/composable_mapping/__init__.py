@@ -1,4 +1,4 @@
-"""Library for handling spatial coordinate transformations in PyTorch.
+"""Composable mapping library for spatial coordinate transformations in PyTorch.
 
 Developed originally for medical imaging, this library provides a set of classes
 and functions for handling spatial coordinate transformations.

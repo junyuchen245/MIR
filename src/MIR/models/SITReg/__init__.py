@@ -1,4 +1,4 @@
-"""Symmetric registration architecture"""
+"""SITReg symmetric registration architecture and core factories."""
 
 from .sitreg import SITReg, MappingPair, EncoderFeatureExtractor
 from .activation import ReLUFactory

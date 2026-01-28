@@ -1,4 +1,4 @@
-"""Coordinate system defining locations on voxel grid in world coordinates."""
+"""Coordinate system helpers for voxel and world coordinates."""
 
 from .coordinate_system import CoordinateSystem
 from .reformatting_reference import Center, End, ReformattingReference, Start

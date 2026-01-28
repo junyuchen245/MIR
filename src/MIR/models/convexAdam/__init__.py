@@ -1,3 +1,5 @@
+"""ConvexAdam registration wrappers and configuration presets."""
+
 from .convex_adam_MIND import convex_adam_MIND
 from .convex_adam_MIND_SPR import convex_adam_MIND_SPR
 from .convex_adam_nnUNet import convex_adam_seg_features

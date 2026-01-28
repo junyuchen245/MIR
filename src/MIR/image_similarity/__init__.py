@@ -1,4 +1,4 @@
-"""Auto-generated on 2025-05-01 – edit as needed."""
+"""Image similarity losses and metrics used in MIR registration."""
 from .Dice import DiceLoss, sample_label_indices, build_k_hot_from_int, sparse_dice_from_int_labels
 from .MIND_SSC import MIND_loss
 from .Mutual_Information import MutualInformation, localMutualInformation

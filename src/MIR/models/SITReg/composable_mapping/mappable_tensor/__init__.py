@@ -1,4 +1,4 @@
-"""Tensor wrapper on which composable mappings can be applied."""
+"""Mappable tensor wrappers for applying composable mappings."""
 
 from .mappable_tensor import MappableTensor, mappable, voxel_grid
 from .util import concatenate_mappable_tensors, stack_mappable_tensors
