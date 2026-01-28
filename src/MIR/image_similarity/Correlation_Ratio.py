@@ -1,3 +1,5 @@
+"""Correlation ratio similarity losses."""
+
 import torch
 import torch.nn.functional as F
 from torch.autograd import Variable
@@ -30,6 +32,15 @@ class CorrRatio(torch.nn.Module):
         return torch.exp(- preterm * torch.square(diff))#torch.exp(-0.5 * (diff ** 2) / (sigma ** 2))
 
     def correlation_ratio(self, X, Y):
+        """Compute correlation ratio between two images.
+
+        Args:
+            X: Image tensor (B, C, H, W, D).
+            Y: Image tensor (B, C, H, W, D).
+
+        Returns:
+            Scalar correlation ratio.
+        """
         B, C, H, W, D = Y.shape
         y_flat = Y.reshape(B, C, -1)  # Flatten spatial dimensions
         x_flat = X.reshape(B, C, -1)
@@ -65,6 +76,15 @@ class CorrRatio(torch.nn.Module):
         return eta_square.mean()/3
 
     def forward(self, y_true, y_pred):
+        """Return negative symmetric correlation ratio as a loss.
+
+        Args:
+            y_true: Fixed image tensor (B, 1, ...).
+            y_pred: Moving image tensor (B, 1, ...).
+
+        Returns:
+            Scalar loss.
+        """
         CR = self.correlation_ratio(y_true, y_pred) + self.correlation_ratio(y_pred, y_true)
         return -CR/2
 
@@ -96,6 +116,15 @@ class LocalCorrRatio(torch.nn.Module):
         return torch.exp(- preterm * torch.square(diff))
 
     def correlation_ratio(self, X, Y):
+        """Compute local correlation ratio between two images.
+
+        Args:
+            X: Image tensor (B, C, H, W, D).
+            Y: Image tensor (B, C, H, W, D).
+
+        Returns:
+            Scalar correlation ratio.
+        """
         B, C, H, W, D = Y.shape
 
         h_r = -H % self.win
@@ -144,6 +173,15 @@ class LocalCorrRatio(torch.nn.Module):
         return eta_square.mean() / 3
 
     def forward(self, y_true, y_pred):
+        """Return negative symmetric local correlation ratio as a loss.
+
+        Args:
+            y_true: Fixed image tensor (B, 1, ...).
+            y_pred: Moving image tensor (B, 1, ...).
+
+        Returns:
+            Scalar loss.
+        """
         CR = self.correlation_ratio(y_true, y_pred) + self.correlation_ratio(y_pred, y_true) #make it symmetric
 
         shift_size = self.win//2

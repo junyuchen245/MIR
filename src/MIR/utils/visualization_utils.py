@@ -1,8 +1,21 @@
+"""Visualization helpers for grids and colormaps."""
+
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
 
 def mk_grid_img(grid_step=8, line_thickness=1, grid_sz=(160, 192, 224), dim=0):
+    """Create a grid image tensor for visualization.
+
+    Args:
+        grid_step: Spacing between grid lines.
+        line_thickness: Grid line thickness.
+        grid_sz: Grid size (H, W, D).
+        dim: Axis along which to draw the grid.
+
+    Returns:
+        Grid tensor with shape (1, 1, H, W, D).
+    """
     grid_img = np.zeros(grid_sz)
     if dim==0:
         for j in range(0, grid_img.shape[1], grid_step):
@@ -24,21 +37,27 @@ def mk_grid_img(grid_step=8, line_thickness=1, grid_sz=(160, 192, 224), dim=0):
     return grid_img
 
 def get_cmap(n, name='nipy_spectral'):
-    '''Returns a function that maps each index in 0, 1, ..., n-1 to a distinct
-    RGB color; the keyword argument name must be a standard mpl colormap name.'''
+    """Return a matplotlib colormap with n distinct colors.
+
+    Args:
+        n: Number of discrete colors.
+        name: Matplotlib colormap name.
+
+    Returns:
+        Colormap instance.
+    """
     return plt.cm.get_cmap(name, n)
 
 def pca_reduce_channels_cpu(x: torch.Tensor, k: int = 3) -> torch.Tensor:
-    """
-    PCA on the channel dimension via CPU SVD, then project on the original device.
+        """Reduce channel dimension via PCA on CPU and project back to device.
 
-    Args:
-      x (B, C, H, W, D): feature maps, float32 or float64
-      k               : number of principal components to keep
+        Args:
+                x: Feature maps (B, C, H, W, D).
+                k: Number of principal components to keep.
 
-    Returns:
-      y (B, k, H, W, D): channel‐reduced volumes
-    """
+        Returns:
+                Channel-reduced tensor (B, k, H, W, D).
+        """
     B, C, H, W, D = x.shape
     assert k <= C, "k must be <= C"
     device = x.device

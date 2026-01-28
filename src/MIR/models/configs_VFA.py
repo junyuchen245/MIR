@@ -1,3 +1,5 @@
+"""Configuration presets for VFA models."""
+
 import ml_collections
 
 def get_VFA_default_config():

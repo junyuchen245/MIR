@@ -1,3 +1,5 @@
+"""Configuration presets for TransMorph models."""
+
 import ml_collections
 '''
 ********************************************************
@@ -28,9 +30,11 @@ img_size (int | tuple(int)): Input image size, e.g., (160, 192, 224)
 '''
 
 def get_3DTransMorphDWin3Lvl_config():
-    '''
-    Trainable params: 15,201,579
-    '''
+    """Return TransMorph 3-level config with dual-window attention.
+
+    Returns:
+        ml_collections.ConfigDict with model hyperparameters.
+    """
     config = ml_collections.ConfigDict()
     config.if_transskip = True
     config.if_convskip = True
@@ -57,9 +61,11 @@ def get_3DTransMorphDWin3Lvl_config():
     return config
 
 def get_3DTransMorph3Lvl_config():
-    '''
-    Trainable params: 15,201,579
-    '''
+    """Return TransMorph 3-level config.
+
+    Returns:
+        ml_collections.ConfigDict with model hyperparameters.
+    """
     config = ml_collections.ConfigDict()
     config.if_transskip = True
     config.if_convskip = True
@@ -85,9 +91,11 @@ def get_3DTransMorph3Lvl_config():
     return config
 
 def get_3DTransMorphAutoPET3Lvl_config():
-    '''
-    Trainable params: 15,201,579
-    '''
+    """Return TransMorph 3-level config for AutoPET settings.
+
+    Returns:
+        ml_collections.ConfigDict with model hyperparameters.
+    """
     config = ml_collections.ConfigDict()
     config.if_transskip = True
     config.if_convskip = True
@@ -114,9 +122,11 @@ def get_3DTransMorphAutoPET3Lvl_config():
     return config
 
 def get_3DTransMorph_config():
-    '''
-    Trainable params: 15,201,579
-    '''
+    """Return base TransMorph 4-level config.
+
+    Returns:
+        ml_collections.ConfigDict with model hyperparameters.
+    """
     config = ml_collections.ConfigDict()
     config.if_transskip = True
     config.if_convskip = True
@@ -142,9 +152,11 @@ def get_3DTransMorph_config():
     return config
 
 def get_3DTransMorphNoRelativePosEmbd_config():
-    '''
-    Trainable params: 15,201,579
-    '''
+    """Return TransMorph config without relative positional embeddings.
+
+    Returns:
+        ml_collections.ConfigDict with model hyperparameters.
+    """
     config = ml_collections.ConfigDict()
     config.if_transskip = True
     config.if_convskip = True
@@ -170,9 +182,11 @@ def get_3DTransMorphNoRelativePosEmbd_config():
     return config
 
 def get_3DTransMorphSin_config():
-    '''
-    TransMorph with Sinusoidal Positional Embedding
-    '''
+    """Return TransMorph config with sinusoidal positional embeddings.
+
+    Returns:
+        ml_collections.ConfigDict with model hyperparameters.
+    """
     config = ml_collections.ConfigDict()
     config.if_transskip = True
     config.if_convskip = True

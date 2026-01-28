@@ -1,3 +1,5 @@
+"""Composite reconstruction loss for image synthesis."""
+
 import torch
 import torch.nn as nn
 
@@ -33,10 +35,28 @@ class CompRecon(nn.Module):
         self.beta         = beta
 
     def _charbonnier(self, pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+        """Compute Charbonnier (smooth L1) loss.
+
+        Args:
+            pred: Predicted image tensor.
+            target: Target image tensor.
+
+        Returns:
+            Scalar loss.
+        """
         diff = pred - target
         return torch.mean(torch.sqrt(diff*diff + self.eps**2) - self.eps)
 
     def _grad_diff(self, pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+        """Compute gradient-difference loss.
+
+        Args:
+            pred: Predicted image tensor (B, C, H, W, D).
+            target: Target image tensor (B, C, H, W, D).
+
+        Returns:
+            Scalar loss.
+        """
         # assume pred/target shape (B, C, H, W, D) or (B, 1, H, W, D)
         dx_pred = torch.abs(pred[:,:,1:,:,:] - pred[:,:,:-1,:,:])
         dx_tgt  = torch.abs(target[:,:,1:,:,:] - target[:,:,:-1,:,:])
@@ -53,6 +73,15 @@ class CompRecon(nn.Module):
         return (dx + dy + dz) / 3.0
 
     def _focal_freq(self, pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+        """Compute focal-frequency loss.
+
+        Args:
+            pred: Predicted image tensor.
+            target: Target image tensor.
+
+        Returns:
+            Scalar loss.
+        """
         # FFT over the last three dims
         Fp = torch.fft.fftn(pred,   dim=(-3, -2, -1))
         Ft = torch.fft.fftn(target, dim=(-3, -2, -1))
@@ -62,6 +91,15 @@ class CompRecon(nn.Module):
         return torch.mean(w * mag.pow(self.beta))
 
     def forward(self, pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+        """Compute composite reconstruction loss.
+
+        Args:
+            pred: Predicted image tensor.
+            target: Target image tensor.
+
+        Returns:
+            Scalar loss.
+        """
         l_char = self._charbonnier(pred, target)
         l_grad = self._grad_diff(pred, target)
         l_ff   = self._focal_freq(pred, target)

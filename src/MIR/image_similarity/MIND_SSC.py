@@ -1,10 +1,4 @@
-'''
-MIND SSC.
-Modified and tested by:
-Junyu Chen
-jchen245@jhmi.edu
-Johns Hopkins University
-'''
+"""MIND-SSC descriptor and loss for image similarity."""
 
 import torch
 import torch.nn.functional as F
@@ -21,6 +15,14 @@ class MIND_loss(torch.nn.Module):
         self.win = win
 
     def pdist_squared(self, x):
+        """Compute pairwise squared distances.
+
+        Args:
+            x: Tensor (B, N, D).
+
+        Returns:
+            Pairwise squared distances (B, N, N).
+        """
         xx = (x ** 2).sum(dim=1).unsqueeze(2)
         yy = xx.permute(0, 2, 1)
         dist = xx + yy - 2.0 * torch.bmm(x.permute(0, 2, 1), x)
@@ -29,6 +31,16 @@ class MIND_loss(torch.nn.Module):
         return dist
 
     def MINDSSC(self, img, radius=2, dilation=2):
+        """Compute the MIND-SSC descriptor.
+
+        Args:
+            img: Image tensor (B, 1, H, W, D).
+            radius: Patch radius.
+            dilation: Neighborhood dilation.
+
+        Returns:
+            MIND-SSC descriptor tensor.
+        """
         # see http://mpheinrich.de/pub/miccai2013_943_mheinrich.pdf for details on the MIND-SSC descriptor
 
         # kernel size
@@ -77,4 +89,13 @@ class MIND_loss(torch.nn.Module):
         return mind
 
     def forward(self, y_pred, y_true):
+        """Compute MIND-SSC L2 loss between two images.
+
+        Args:
+            y_pred: Moving image tensor (B, 1, H, W, D).
+            y_true: Fixed image tensor (B, 1, H, W, D).
+
+        Returns:
+            Scalar loss.
+        """
         return torch.mean((self.MINDSSC(y_pred) - self.MINDSSC(y_true)) ** 2)

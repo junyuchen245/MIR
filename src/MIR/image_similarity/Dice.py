@@ -1,10 +1,4 @@
-'''
-Dice loss function
-Modified and tested by:
-Junyu Chen
-jchen245@jhmi.edu
-Johns Hopkins University
-'''
+"""Dice loss and helper utilities for segmentation evaluation."""
 
 import torch
 import torch.nn as nn
@@ -18,6 +12,15 @@ class DiceLoss(nn.Module):
         self.one_hot = one_hot
 
     def forward(self, y_pred, y_true):
+        """Compute Dice loss.
+
+        Args:
+            y_pred: Predicted probabilities (B, C, H, W, D).
+            y_true: Integer labels (B, 1, H, W, D) or (B, H, W, D).
+
+        Returns:
+            Scalar Dice loss.
+        """
         #y_pred = torch.round(y_pred)
         #y_pred = nn.functional.one_hot(torch.round(y_pred).long(), num_classes=7)
         #y_pred = torch.squeeze(y_pred, 1)
@@ -43,9 +46,18 @@ def sample_label_indices(num_classes: int,
                          present_only: bool,
                          y_true_int: torch.Tensor,
                          include_bg: bool) -> torch.Tensor:
-    """
-    Return K class indices to evaluate. No grad needed for indices.
-    y_true_int: [B,1,D,H,W] or [B,D,H,W]
+    """Sample K class indices to evaluate.
+
+    Args:
+        num_classes: Total number of classes.
+        K: Number of class indices to sample.
+        device: Torch device for the returned tensor.
+        present_only: If True, sample from labels present in y_true.
+        y_true_int: Integer label map (B, 1, D, H, W) or (B, D, H, W).
+        include_bg: If False, excludes background class 0.
+
+    Returns:
+        Tensor of sampled class indices (K,).
     """
     if present_only:
         lbl = y_true_int if y_true_int.dim() == 4 else y_true_int.squeeze(1)
@@ -68,11 +80,14 @@ def sample_label_indices(num_classes: int,
 
 
 def build_k_hot_from_int(y_int: torch.Tensor, idx: torch.Tensor) -> torch.Tensor:
-    """
-    Vectorized K-hot from integer label map.
-    y_int: [B,1,D,H,W] or [B,D,H,W] ints
-    idx:   [K] class ids
-    Returns: [B,K,D,H,W] float in {0,1}
+    """Build a K-hot tensor for selected class indices.
+
+    Args:
+        y_int: Integer label map (B, 1, D, H, W) or (B, D, H, W).
+        idx: Class indices (K,).
+
+    Returns:
+        K-hot tensor (B, K, D, H, W) with values in {0,1}.
     """
     if y_int.dim() == 5 and y_int.size(1) == 1:
         lbl = y_int.squeeze(1).long()   # [B,D,H,W]

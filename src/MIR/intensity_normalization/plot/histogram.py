@@ -17,10 +17,10 @@ import warnings
 import matplotlib.pyplot as plt
 import numpy as np
 
-import intensity_normalization as intnorm
-import intensity_normalization.base_cli as intnormcli
-import intensity_normalization.typing as intnormt
-import intensity_normalization.util.io as intnormio
+import MIR.intensity_normalization as intnorm
+import MIR.intensity_normalization.base_cli as intnormcli
+import MIR.intensity_normalization.typing as intnormt
+import MIR.intensity_normalization.util.io as intnormio
 
 logger = logging.getLogger(__name__)
 

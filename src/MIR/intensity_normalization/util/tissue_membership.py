@@ -16,9 +16,9 @@ import numpy.typing as npt
 import pymedio.image as mioi
 from skfuzzy import cmeans
 
-import intensity_normalization as intnorm
-import intensity_normalization.base_cli as intnormcli
-import intensity_normalization.typing as intnormt
+import MIR.intensity_normalization as intnorm
+import MIR.intensity_normalization.base_cli as intnormcli
+import MIR.intensity_normalization.typing as intnormt
 
 
 def find_tissue_memberships(

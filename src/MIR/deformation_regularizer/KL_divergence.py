@@ -1,10 +1,22 @@
+"""KL divergence losses for Gaussian parameter fields."""
+
 import torch
 import torch.nn as nn
 
 class KL_divergence(nn.Module):
+    """KL divergence between factorized Gaussian fields."""
     def __init__(self,):
         super().__init__()
     def forward(self, P, Q):
+        """Compute KL divergence between two Gaussian fields.
+
+        Args:
+            P: Tuple (mean_p, log_sigma_p) tensors.
+            Q: Tuple (mean_q, log_sigma_q) tensors.
+
+        Returns:
+            Scalar KL divergence.
+        """
         mean_p, log_sigma_p = P
         mean_q, log_sigma_q = Q
         b, d, _, _, _ = mean_p.shape
@@ -24,9 +36,19 @@ class KL_divergence(nn.Module):
         return kl_loss
 
 class MultiVariateKL_divergence(nn.Module):
+    """KL divergence between multivariate Gaussian fields."""
     def __init__(self,):
         super().__init__()
     def forward(self, P, Q):
+        """Compute multivariate KL divergence between Gaussian fields.
+
+        Args:
+            P: Tuple (mean_p, log_sigma_p) tensors.
+            Q: Tuple (mean_q, log_sigma_q) tensors.
+
+        Returns:
+            Scalar KL divergence.
+        """
         mean_p, log_sigma_p = P
         mean_q, log_sigma_q = Q
         b, d, _, _, _ = mean_p.shape

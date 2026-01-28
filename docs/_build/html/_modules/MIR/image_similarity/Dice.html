@@ -1,0 +1,229 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MIR.image_similarity.Dice &mdash; MIR 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js?v=f6245a2f"></script>
+      <script src="../../../_static/doctools.js?v=888ff710"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            MIR
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">MIR</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">MIR.image_similarity.Dice</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for MIR.image_similarity.Dice</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Dice loss and helper utilities for segmentation evaluation.&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
+<span class="kn">import</span> <span class="nn">random</span>
+
+<div class="viewcode-block" id="DiceLoss"><a class="viewcode-back" href="../../../api.html#MIR.image_similarity.DiceLoss">[docs]</a><span class="k">class</span> <span class="nc">DiceLoss</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Dice loss&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num_class</span><span class="o">=</span><span class="mi">36</span><span class="p">,</span> <span class="n">one_hot</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_class</span> <span class="o">=</span> <span class="n">num_class</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">one_hot</span> <span class="o">=</span> <span class="n">one_hot</span>
+
+<div class="viewcode-block" id="DiceLoss.forward"><a class="viewcode-back" href="../../../api.html#MIR.image_similarity.DiceLoss.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">,</span> <span class="n">y_true</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute Dice loss.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            y_pred: Predicted probabilities (B, C, H, W, D).</span>
+<span class="sd">            y_true: Integer labels (B, 1, H, W, D) or (B, H, W, D).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Scalar Dice loss.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1">#y_pred = torch.round(y_pred)</span>
+        <span class="c1">#y_pred = nn.functional.one_hot(torch.round(y_pred).long(), num_classes=7)</span>
+        <span class="c1">#y_pred = torch.squeeze(y_pred, 1)</span>
+        <span class="c1">#y_pred = y_pred.permute(0, 4, 1, 2, 3).contiguous()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">one_hot</span><span class="p">:</span>
+            <span class="n">y_true</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">functional</span><span class="o">.</span><span class="n">one_hot</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">num_classes</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">num_class</span><span class="p">)</span>
+            <span class="n">y_true</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">y_true</span> <span class="o">=</span> <span class="n">y_true</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span><span class="o">.</span><span class="n">contiguous</span><span class="p">()</span>
+        <span class="c1">#y_true = nn.functional.one_hot(y_true, num_classes=self.num_class)</span>
+        <span class="c1">#y_true = torch.squeeze(y_true, 1)</span>
+        <span class="c1">#y_true = y_true.permute(0, 4, 1, 2, 3).contiguous()</span>
+        <span class="n">intersection</span> <span class="o">=</span> <span class="n">y_pred</span> <span class="o">*</span> <span class="n">y_true</span>
+        <span class="n">intersection</span> <span class="o">=</span> <span class="n">intersection</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">])</span>
+        <span class="n">union</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="n">y_pred</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">])</span> <span class="o">+</span> <span class="n">torch</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">])</span>
+        <span class="n">dsc</span> <span class="o">=</span> <span class="p">(</span><span class="mf">2.</span><span class="o">*</span><span class="n">intersection</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">union</span> <span class="o">+</span> <span class="mf">1e-5</span><span class="p">)</span>
+        <span class="n">dsc</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">torch</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">dsc</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">dsc</span></div></div>
+
+<span class="nd">@torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">()</span>
+<span class="k">def</span> <span class="nf">sample_label_indices</span><span class="p">(</span><span class="n">num_classes</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                         <span class="n">K</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                         <span class="n">device</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">,</span>
+                         <span class="n">present_only</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+                         <span class="n">y_true_int</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                         <span class="n">include_bg</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Sample K class indices to evaluate.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        num_classes: Total number of classes.</span>
+<span class="sd">        K: Number of class indices to sample.</span>
+<span class="sd">        device: Torch device for the returned tensor.</span>
+<span class="sd">        present_only: If True, sample from labels present in y_true.</span>
+<span class="sd">        y_true_int: Integer label map (B, 1, D, H, W) or (B, D, H, W).</span>
+<span class="sd">        include_bg: If False, excludes background class 0.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Tensor of sampled class indices (K,).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">present_only</span><span class="p">:</span>
+        <span class="n">lbl</span> <span class="o">=</span> <span class="n">y_true_int</span> <span class="k">if</span> <span class="n">y_true_int</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span> <span class="o">==</span> <span class="mi">4</span> <span class="k">else</span> <span class="n">y_true_int</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">present</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">lbl</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">include_bg</span> <span class="ow">and</span> <span class="mi">0</span> <span class="ow">in</span> <span class="n">present</span><span class="p">:</span>
+            <span class="n">present</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">pool</span> <span class="o">=</span> <span class="n">present</span> <span class="k">if</span> <span class="n">present</span> <span class="k">else</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">num_classes</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">pool</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">num_classes</span><span class="p">))</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">include_bg</span> <span class="ow">and</span> <span class="mi">0</span> <span class="ow">in</span> <span class="n">pool</span><span class="p">:</span>
+            <span class="n">pool</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="c1"># sample without replacement; if pool &lt; K, pad arbitrarily</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">pool</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">K</span><span class="p">:</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">pool</span><span class="p">,</span> <span class="n">K</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">extra</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_classes</span><span class="p">)</span> <span class="k">if</span> <span class="p">(</span><span class="n">include_bg</span> <span class="ow">or</span> <span class="n">c</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">and</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">pool</span><span class="p">]</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="n">pool</span> <span class="o">+</span> <span class="n">extra</span><span class="p">[:</span><span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">K</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">pool</span><span class="p">))]</span>
+    <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">long</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">build_k_hot_from_int</span><span class="p">(</span><span class="n">y_int</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">idx</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Build a K-hot tensor for selected class indices.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        y_int: Integer label map (B, 1, D, H, W) or (B, D, H, W).</span>
+<span class="sd">        idx: Class indices (K,).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        K-hot tensor (B, K, D, H, W) with values in {0,1}.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">y_int</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span> <span class="o">==</span> <span class="mi">5</span> <span class="ow">and</span> <span class="n">y_int</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">lbl</span> <span class="o">=</span> <span class="n">y_int</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">long</span><span class="p">()</span>   <span class="c1"># [B,D,H,W]</span>
+    <span class="k">elif</span> <span class="n">y_int</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>
+        <span class="n">lbl</span> <span class="o">=</span> <span class="n">y_int</span><span class="o">.</span><span class="n">long</span><span class="p">()</span>              <span class="c1"># [B,D,H,W]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;y_int must be [B,1,D,H,W] or [B,D,H,W].&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">lbl</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="o">==</span> <span class="n">idx</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">float</span><span class="p">()</span>  <span class="c1"># [B,K,D,H,W]</span>
+
+
+<span class="k">def</span> <span class="nf">sparse_dice_from_int_labels</span><span class="p">(</span><span class="n">src_lbl_int</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                                <span class="n">tgt_lbl_int</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                                <span class="n">flow_src2tgt</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                                <span class="n">warp_fn</span><span class="p">,</span>            <span class="c1"># e.g., model.spatial_trans(tensor, flow)</span>
+                                <span class="n">num_classes</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                                <span class="n">K</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">16</span><span class="p">,</span>
+                                <span class="n">include_bg</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                                <span class="n">present_only</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+                                <span class="n">dice_loss</span><span class="p">:</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compute Dice on K sampled classes without full one-hot.</span>
+<span class="sd">    src_lbl_int, tgt_lbl_int: integer maps [B,1,D,H,W] or [B,D,H,W]</span>
+<span class="sd">    flow_src2tgt: flow that warps source -&gt; target space</span>
+<span class="sd">    warp_fn: callable(tensor[B,K,D,H,W], flow) -&gt; warped tensor</span>
+<span class="sd">    Returns scalar loss.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">device</span> <span class="o">=</span> <span class="n">src_lbl_int</span><span class="o">.</span><span class="n">device</span>
+    <span class="n">idx</span> <span class="o">=</span> <span class="n">sample_label_indices</span><span class="p">(</span><span class="n">num_classes</span><span class="p">,</span> <span class="n">K</span><span class="p">,</span> <span class="n">device</span><span class="p">,</span> <span class="n">present_only</span><span class="p">,</span> <span class="n">tgt_lbl_int</span><span class="p">,</span> <span class="n">include_bg</span><span class="p">)</span>
+    <span class="c1"># Build K binary masks BEFORE warp for differentiability w.r.t. flow</span>
+    <span class="n">src_K</span> <span class="o">=</span> <span class="n">build_k_hot_from_int</span><span class="p">(</span><span class="n">src_lbl_int</span><span class="p">,</span> <span class="n">idx</span><span class="p">)</span>     <span class="c1"># [B,K,D,H,W]</span>
+    <span class="n">tgt_K</span> <span class="o">=</span> <span class="n">build_k_hot_from_int</span><span class="p">(</span><span class="n">tgt_lbl_int</span><span class="p">,</span> <span class="n">idx</span><span class="p">)</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span>  <span class="c1"># target can be treated as constant</span>
+
+    <span class="c1"># Warp source masks with trilinear grid_sample inside warp_fn</span>
+    <span class="n">src_K_warped</span> <span class="o">=</span> <span class="n">warp_fn</span><span class="p">(</span><span class="n">src_K</span><span class="p">,</span> <span class="n">flow_src2tgt</span><span class="p">)</span><span class="o">.</span><span class="n">clamp_</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>  <span class="c1"># [B,K,D,H,W], soft masks in [0,1]</span>
+
+    <span class="k">if</span> <span class="n">dice_loss</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">dice_loss</span> <span class="o">=</span> <span class="n">DiceLoss</span><span class="p">(</span><span class="n">one_hot</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>  <span class="c1"># we already have K channels</span>
+    <span class="k">return</span> <span class="n">dice_loss</span><span class="p">(</span><span class="n">src_K_warped</span><span class="p">,</span> <span class="n">tgt_K</span><span class="p">)</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

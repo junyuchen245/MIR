@@ -15,11 +15,10 @@ import numpy as np
 import numpy.typing as npt
 from scipy.interpolate import interp1d
 
-import intensity_normalization.errors as intnorme
-import intensity_normalization.normalize.base as intnormb
-import intensity_normalization.typing as intnormt
-import intensity_normalization.util.io as intnormio
-
+import MIR.intensity_normalization.errors as intnorme
+import MIR.intensity_normalization.normalize.base as intnormb
+import MIR.intensity_normalization.typing as intnormt
+import MIR.intensity_normalization.util.io as intnormio
 
 class NyulNormalize(intnormb.DirectoryNormalizeCLI):
     def __init__(

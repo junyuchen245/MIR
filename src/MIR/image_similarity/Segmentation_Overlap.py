@@ -1,3 +1,5 @@
+"""Segmentation overlap losses for multi-class outputs."""
+
 import torch
 import torch.nn.functional as F
 from torch.autograd import Variable

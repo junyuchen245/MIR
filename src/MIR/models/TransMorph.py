@@ -26,6 +26,7 @@ import MIR.models.Deformable_Swin_Transformer_v2 as dswin_v2
 import numpy as np
 
 class Conv3dReLU(nn.Sequential):
+    """3D convolution + normalization + LeakyReLU block."""
     def __init__(
             self,
             in_channels,
@@ -53,6 +54,7 @@ class Conv3dReLU(nn.Sequential):
 
 
 class DecoderBlock(nn.Module):
+    """Decoder block with upsampling and optional skip connection."""
     def __init__(
             self,
             in_channels,
@@ -78,6 +80,15 @@ class DecoderBlock(nn.Module):
         self.up = nn.Upsample(scale_factor=2, mode='trilinear', align_corners=False)
 
     def forward(self, x, skip=None):
+        """Forward pass.
+
+        Args:
+            x: Tensor of shape [B, C, D, H, W].
+            skip: Optional skip tensor concatenated on channel axis.
+
+        Returns:
+            Tensor after upsampling and convolutions.
+        """
         x = self.up(x)
         if skip is not None:
             x = torch.cat([x, skip], dim=1)
@@ -86,6 +97,7 @@ class DecoderBlock(nn.Module):
         return x
 
 class RegistrationHead(nn.Sequential):
+    """Predict a dense displacement field from decoder features."""
     def __init__(self, in_channels, out_channels, kernel_size=3, upsampling=1):
         conv3d = nn.Conv3d(in_channels, out_channels, kernel_size=kernel_size, padding=kernel_size // 2)
         conv3d.weight = nn.Parameter(Normal(0, 1e-5).sample(conv3d.weight.shape))
@@ -93,14 +105,20 @@ class RegistrationHead(nn.Sequential):
         super().__init__(conv3d)
 
 class TransMorph(nn.Module):
-    '''
-    TransMorph model
+    """TransMorph model.
+
     Args:
-        config: Configuration object containing model parameters
-        SVF: Boolean indicating whether to use SVF (Time Stationary Velocity Field) integration
-        SVF_steps: Number of steps for SVF integration
-        swin_type: Type of Swin Transformer to use ('swin' or 'dswin')
-    '''
+        config: Configuration object containing model parameters.
+        SVF: Whether to integrate a stationary velocity field.
+        SVF_steps: Number of scaling-and-squaring steps.
+        swin_type: Transformer type ('swin', 'dswin', 'dswinv2').
+
+    Forward inputs:
+        inputs: Tuple `(mov, fix)` tensors of shape [B, 1, D, H, W].
+
+    Forward outputs:
+        Dense flow tensor of shape [B, 3, D, H, W].
+    """
     def __init__(self, config, SVF=True, SVF_steps=7, swin_type='swin'):
         '''
         Original TransMorph Model
@@ -194,13 +212,14 @@ class TransMorph(nn.Module):
             self.vec_int = utils.VecInt(config.img_size, SVF_steps)
 
     def forward(self, inputs):
-        '''
-        Forward pass for the TransMorph model.
+        """Forward pass for the TransMorph model.
+
         Args:
-            inputs: Tuple of moving and fixed images (mov, fix).
+            inputs: Tuple of moving and fixed images `(mov, fix)`.
+
         Returns:
-            flow: The computed flow field for image registration.
-        '''
+            Predicted dense flow field.
+        """
         mov, fix = inputs
         x = torch.cat((mov, fix), dim=1)
         if self.if_convskip:

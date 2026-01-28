@@ -1,3 +1,5 @@
+"""Pretrained weight and dataset ID registry for MIR."""
+
 import numpy as np
 
 ModelWeights = {

@@ -1,10 +1,4 @@
-'''
-Different implementations of Normalized Cross Correlation (NCC) loss function.
-Modified and tested by:
-Junyu Chen
-jchen245@jhmi.edu
-Johns Hopkins University
-'''
+"""Normalized cross-correlation (NCC) loss implementations."""
 
 import torch
 import torch.nn.functional as F
@@ -17,11 +11,29 @@ import torch.nn as nn
 
 
 def gaussian(window_size, sigma):
+    """Create a 1D Gaussian kernel.
+
+    Args:
+        window_size: Kernel size.
+        sigma: Standard deviation.
+
+    Returns:
+        1D normalized Gaussian kernel tensor.
+    """
     gauss = torch.Tensor([exp(-(x - window_size // 2) ** 2 / float(2 * sigma ** 2)) for x in range(window_size)])
     return gauss / gauss.sum()
 
 
 def create_window(window_size, channel):
+    """Create a 2D Gaussian window tensor.
+
+    Args:
+        window_size: Kernel size.
+        channel: Number of channels.
+
+    Returns:
+        2D window tensor of shape (C,1,H,W).
+    """
     _1D_window = gaussian(window_size, 1.5).unsqueeze(1)
     _2D_window = _1D_window.mm(_1D_window.t()).float().unsqueeze(0).unsqueeze(0)
     window = Variable(_2D_window.expand(channel, 1, window_size, window_size).contiguous())
@@ -29,6 +41,15 @@ def create_window(window_size, channel):
 
 
 def create_window_3D(window_size, channel):
+    """Create a 3D Gaussian window tensor.
+
+    Args:
+        window_size: Kernel size.
+        channel: Number of channels.
+
+    Returns:
+        3D window tensor of shape (C,1,H,W,D).
+    """
     _1D_window = gaussian(window_size, 1.5).unsqueeze(1)
     _2D_window = _1D_window.mm(_1D_window.t())
     _3D_window = _1D_window.mm(_2D_window.reshape(1, -1)).reshape(window_size, window_size,
@@ -60,6 +81,15 @@ class NCC_gauss(torch.nn.Module):
         return window
 
     def forward(self, y_true, y_pred):
+        """Compute Gaussian-windowed NCC loss.
+
+        Args:
+            y_true: Fixed image tensor (B, 1, ...).
+            y_pred: Moving image tensor (B, 1, ...).
+
+        Returns:
+            Scalar NCC loss (negative mean NCC).
+        """
 
         Ii = y_true
         Ji = y_pred
@@ -100,6 +130,15 @@ class NCC(torch.nn.Module):
         self.win = win
 
     def forward(self, y_true, y_pred):
+        """Compute NCC loss over a local window.
+
+        Args:
+            y_true: Fixed image tensor (B, 1, ...).
+            y_pred: Moving image tensor (B, 1, ...).
+
+        Returns:
+            Scalar NCC loss (negative mean NCC).
+        """
         Ii = y_true
         Ji = y_pred
 

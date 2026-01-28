@@ -1,3 +1,5 @@
+"""Digital diffeomorphism metrics and Jacobian determinant utilities."""
+
 import nibabel as nib
 import numpy as np
 import os
@@ -5,6 +7,15 @@ import scipy.ndimage
 import argparse
 
 def calc_J_i(trans, grad_args):
+    """Compute Jacobian determinant using a specific finite-difference stencil.
+
+    Args:
+        trans: Displacement field (3, H, W, D).
+        grad_args: Gradient stencil spec (e.g., '0x0y0z', '+x-y+z').
+
+    Returns:
+        Jacobian determinant volume (H-2, W-2, D-2).
+    """
     kernel = {}
     grad_args = list(grad_args)
     grad_args = [(grad_args[i] + grad_args[i+1]) for i in range(0, len(grad_args), 2)]
@@ -45,6 +56,14 @@ def calc_J_i(trans, grad_args):
     return jac_det
 
 def calc_Jstar_1(trans):
+    """Compute Jacobian determinant with forward-difference stencil.
+
+    Args:
+        trans: Displacement field (3, H, W, D).
+
+    Returns:
+        Jacobian determinant volume (H-2, W-2, D-2).
+    """
     kernel = {}
     kernel['x']  = np.array([[1, 0, 0],[0, -1, 0],[0, 0, 0]]).reshape(1, 3, 3, 1)
     kernel['y']  = np.array([[1, 0, 0],[0, -1, 0],[0, 0, 0]]).reshape(1, 3, 1, 3)
@@ -74,6 +93,14 @@ def calc_Jstar_1(trans):
     return jac_det
 
 def calc_Jstar_2(trans):
+    """Compute Jacobian determinant with backward-difference stencil.
+
+    Args:
+        trans: Displacement field (3, H, W, D).
+
+    Returns:
+        Jacobian determinant volume (H-2, W-2, D-2).
+    """
     kernel = {}
     kernel['x']  = np.array([[0, 0, 0],[0, -1, 0],[0, 0, 1]]).reshape(1, 3, 3, 1)
     kernel['y']  = np.array([[0, 0, 0],[0, -1, 0],[0, 0, 1]]).reshape(1, 1, 3, 3)
@@ -103,6 +130,14 @@ def calc_Jstar_2(trans):
     return jac_det
 
 def calc_jac_dets(trans):
+    """Compute multiple Jacobian determinant variants and consistency mask.
+
+    Args:
+        trans: Displacement field (3, H, W, D).
+
+    Returns:
+        Dict of Jacobian determinant volumes keyed by stencil string.
+    """
     jac_det = {}
     # calculate all finite difference based |J|'s
     for grad_args in ['0x0y0z', '+x+y+z', '+x+y-z', '+x-y+z', '+x-y-z',

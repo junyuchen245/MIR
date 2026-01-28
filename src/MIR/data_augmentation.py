@@ -1,3 +1,5 @@
+"""Data augmentation utilities for MIR training and preprocessing."""
+
 import math, random
 import numpy as np
 import torch.nn.functional as F

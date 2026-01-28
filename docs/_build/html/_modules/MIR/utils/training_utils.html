@@ -1,0 +1,277 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MIR.utils.training_utils &mdash; MIR 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js?v=f6245a2f"></script>
+      <script src="../../../_static/doctools.js?v=888ff710"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            MIR
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">MIR</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">MIR.utils.training_utils</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for MIR.utils.training_utils</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">math</span><span class="o">,</span> <span class="nn">random</span><span class="o">,</span> <span class="nn">pickle</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">torch.nn.functional</span> <span class="k">as</span> <span class="nn">F</span>
+<span class="kn">import</span> <span class="nn">torch</span><span class="o">,</span> <span class="nn">sys</span>
+<span class="kn">from</span> <span class="nn">torch</span> <span class="kn">import</span> <span class="n">nn</span>
+
+<div class="viewcode-block" id="Logger"><a class="viewcode-back" href="../../../api.html#MIR.utils.Logger">[docs]</a><span class="k">class</span> <span class="nc">Logger</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">save_dir</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">terminal</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">save_dir</span><span class="o">+</span><span class="s2">&quot;logfile.log&quot;</span><span class="p">,</span> <span class="s2">&quot;a&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Logger.write"><a class="viewcode-back" href="../../../api.html#MIR.utils.Logger.write">[docs]</a>    <span class="k">def</span> <span class="nf">write</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">terminal</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">message</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Logger.flush"><a class="viewcode-back" href="../../../api.html#MIR.utils.Logger.flush">[docs]</a>    <span class="k">def</span> <span class="nf">flush</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">pass</span></div></div>
+    
+<div class="viewcode-block" id="AverageMeter"><a class="viewcode-back" href="../../../api.html#MIR.utils.AverageMeter">[docs]</a><span class="k">class</span> <span class="nc">AverageMeter</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Computes and stores the average and current value&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+
+<div class="viewcode-block" id="AverageMeter.reset"><a class="viewcode-back" href="../../../api.html#MIR.utils.AverageMeter.reset">[docs]</a>    <span class="k">def</span> <span class="nf">reset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">val</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">avg</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sum</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vals</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">std</span> <span class="o">=</span> <span class="mi">0</span></div>
+
+<div class="viewcode-block" id="AverageMeter.update"><a class="viewcode-back" href="../../../api.html#MIR.utils.AverageMeter.update">[docs]</a>    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">val</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">val</span> <span class="o">=</span> <span class="n">val</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sum</span> <span class="o">+=</span> <span class="n">val</span> <span class="o">*</span> <span class="n">n</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">count</span> <span class="o">+=</span> <span class="n">n</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">avg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sum</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">count</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vals</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">std</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vals</span><span class="p">)</span></div></div>
+
+<div class="viewcode-block" id="pad_image"><a class="viewcode-back" href="../../../api.html#MIR.utils.pad_image">[docs]</a><span class="k">def</span> <span class="nf">pad_image</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">target_size</span><span class="p">):</span>
+    <span class="n">rows_to_pad</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">target_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">img</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">cols_to_pad</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">target_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">img</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">slcs_to_pad</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">target_size</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="n">img</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">4</span><span class="p">],</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">padded_img</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">slcs_to_pad</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">cols_to_pad</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">rows_to_pad</span><span class="p">),</span> <span class="s2">&quot;constant&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">padded_img</span></div>
+
+<span class="k">def</span> <span class="nf">normalize_01</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;minmax&#39;</span><span class="p">,</span> <span class="n">percentile</span><span class="o">=</span><span class="mf">0.05</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Normalize a tensor to the range [0, 1].</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;minmax&#39;</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">x</span> <span class="o">-</span> <span class="n">x</span><span class="o">.</span><span class="n">min</span><span class="p">()</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">x</span> <span class="o">/</span> <span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="o">-</span> <span class="n">x</span><span class="o">.</span><span class="n">min</span><span class="p">())</span>
+        <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;percentile&#39;</span><span class="p">:</span>
+            <span class="n">p_min</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">quantile</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">percentile</span><span class="p">)</span>
+            <span class="n">p_max</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">quantile</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">percentile</span><span class="p">)</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">x</span> <span class="o">-</span> <span class="n">p_min</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">x</span> <span class="o">/</span> <span class="p">(</span><span class="n">p_max</span> <span class="o">-</span> <span class="n">p_min</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Unknown normalization method: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">method</span><span class="p">))</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">clamp</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;minmax&#39;</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">x</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">x</span> <span class="o">/</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s1">&#39;percentile&#39;</span><span class="p">:</span>
+            <span class="n">p_min</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">percentile</span> <span class="o">*</span> <span class="mi">100</span><span class="p">)</span>
+            <span class="n">p_max</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">percentile</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">)</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">x</span> <span class="o">-</span> <span class="n">p_min</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">x</span> <span class="o">/</span> <span class="p">(</span><span class="n">p_max</span> <span class="o">-</span> <span class="n">p_min</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Unknown normalization method: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">method</span><span class="p">))</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    
+    <span class="k">return</span> <span class="n">x</span>
+
+<div class="viewcode-block" id="RandomPatchSampler3D"><a class="viewcode-back" href="../../../api.html#MIR.utils.RandomPatchSampler3D">[docs]</a><span class="k">class</span> <span class="nc">RandomPatchSampler3D</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">patch_size</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        patch_size: tuple of (ph, pw, pd)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ph</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">pw</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">pd</span> <span class="o">=</span> <span class="n">patch_size</span>
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">feat</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        feat:   (B, C,  H,  W,  D)</span>
+<span class="sd">        target: (B,    H,  W,  D)   or   (B, 1, H, W, D)</span>
+<span class="sd">        </span>
+<span class="sd">        returns:</span>
+<span class="sd">          feat_patch:   (B, C, ph, pw, pd)</span>
+<span class="sd">          target_patch: (B,   ph, pw, pd)  or  (B, 1, ph, pw, pd)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">B</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span> <span class="n">H</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">D</span> <span class="o">=</span> <span class="n">feat</span><span class="o">.</span><span class="n">shape</span>
+        <span class="n">ph</span><span class="p">,</span> <span class="n">pw</span><span class="p">,</span> <span class="n">pd</span>    <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ph</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">pw</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">pd</span>
+
+        <span class="c1"># pick random start indices so patch fits inside</span>
+        <span class="n">sh</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">H</span> <span class="o">-</span> <span class="n">ph</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,))</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+        <span class="n">sw</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">W</span> <span class="o">-</span> <span class="n">pw</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,))</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+        <span class="n">sd</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">D</span> <span class="o">-</span> <span class="n">pd</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,))</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+
+        <span class="c1"># slice out the patch</span>
+        <span class="n">feat_patch</span> <span class="o">=</span> <span class="n">feat</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">sh</span><span class="p">:</span><span class="n">sh</span><span class="o">+</span><span class="n">ph</span><span class="p">,</span> <span class="n">sw</span><span class="p">:</span><span class="n">sw</span><span class="o">+</span><span class="n">pw</span><span class="p">,</span> <span class="n">sd</span><span class="p">:</span><span class="n">sd</span><span class="o">+</span><span class="n">pd</span><span class="p">]</span>
+        
+        <span class="k">if</span> <span class="n">target</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">5</span><span class="p">:</span>
+            <span class="n">target_patch</span> <span class="o">=</span> <span class="n">target</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">sh</span><span class="p">:</span><span class="n">sh</span><span class="o">+</span><span class="n">ph</span><span class="p">,</span> <span class="n">sw</span><span class="p">:</span><span class="n">sw</span><span class="o">+</span><span class="n">pw</span><span class="p">,</span> <span class="n">sd</span><span class="p">:</span><span class="n">sd</span><span class="o">+</span><span class="n">pd</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">target_patch</span> <span class="o">=</span> <span class="n">target</span><span class="p">[:,</span>    <span class="n">sh</span><span class="p">:</span><span class="n">sh</span><span class="o">+</span><span class="n">ph</span><span class="p">,</span> <span class="n">sw</span><span class="p">:</span><span class="n">sw</span><span class="o">+</span><span class="n">pw</span><span class="p">,</span> <span class="n">sd</span><span class="p">:</span><span class="n">sd</span><span class="o">+</span><span class="n">pd</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">feat_patch</span><span class="p">,</span> <span class="n">target_patch</span></div>
+    
+<div class="viewcode-block" id="MultiResPatchSampler3D"><a class="viewcode-back" href="../../../api.html#MIR.utils.MultiResPatchSampler3D">[docs]</a><span class="k">class</span> <span class="nc">MultiResPatchSampler3D</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">patch_size</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        patch_size: tuple (ph, pw, pd) at full resolution, must be divisible by 2**i</span>
+<span class="sd">                    for all i=0..N so that lower‐res patch sizes are integral.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ph</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">pw</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">pd</span> <span class="o">=</span> <span class="n">patch_size</span>
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">feats</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Args:</span>
+<span class="sd">          feats : list of length N+1 of tensors</span>
+<span class="sd">                  feats[i].shape == (B, C_i, H/(2**i), W/(2**i), D/(2**i))</span>
+<span class="sd">          target: (B, H, W, D)     or   (B,1,H,W,D)</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">          feat_patches  : list of tensors [ (B,C_i,ph_i,pw_i,pd_i) ... ]</span>
+<span class="sd">          target_patch  : (B,ph,pw,pd) or (B,1,ph,pw,pd)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">B</span> <span class="o">=</span> <span class="n">feats</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">H0</span><span class="p">,</span> <span class="n">W0</span><span class="p">,</span> <span class="n">D0</span> <span class="o">=</span> <span class="n">feats</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">:]</span>
+        <span class="n">ph</span><span class="p">,</span> <span class="n">pw</span><span class="p">,</span> <span class="n">pd</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ph</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">pw</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">pd</span>
+
+        <span class="c1"># pick a random fully‐contained patch at full res</span>
+        <span class="n">sh</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">H0</span> <span class="o">-</span> <span class="n">ph</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,))</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+        <span class="n">sw</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">W0</span> <span class="o">-</span> <span class="n">pw</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,))</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+        <span class="n">sd</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">D0</span> <span class="o">-</span> <span class="n">pd</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="p">(</span><span class="mi">1</span><span class="p">,))</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+
+        <span class="n">feat_patches</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">f</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">feats</span><span class="p">):</span>
+            <span class="c1"># downsampling factor</span>
+            <span class="n">fH</span><span class="p">,</span> <span class="n">fW</span><span class="p">,</span> <span class="n">fD</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">:]</span>
+            <span class="n">factor_h</span> <span class="o">=</span> <span class="n">H0</span> <span class="o">//</span> <span class="n">fH</span>
+            <span class="n">factor_w</span> <span class="o">=</span> <span class="n">W0</span> <span class="o">//</span> <span class="n">fW</span>
+            <span class="n">factor_d</span> <span class="o">=</span> <span class="n">D0</span> <span class="o">//</span> <span class="n">fD</span>
+
+            <span class="c1"># corresponding patch in this feature map</span>
+            <span class="n">ph_i</span> <span class="o">=</span> <span class="n">ph</span> <span class="o">//</span> <span class="n">factor_h</span>
+            <span class="n">pw_i</span> <span class="o">=</span> <span class="n">pw</span> <span class="o">//</span> <span class="n">factor_w</span>
+            <span class="n">pd_i</span> <span class="o">=</span> <span class="n">pd</span> <span class="o">//</span> <span class="n">factor_d</span>
+            <span class="n">sh_i</span> <span class="o">=</span> <span class="n">sh</span> <span class="o">//</span> <span class="n">factor_h</span>
+            <span class="n">sw_i</span> <span class="o">=</span> <span class="n">sw</span> <span class="o">//</span> <span class="n">factor_w</span>
+            <span class="n">sd_i</span> <span class="o">=</span> <span class="n">sd</span> <span class="o">//</span> <span class="n">factor_d</span>
+
+            <span class="n">feat_patches</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="n">f</span><span class="p">[:,</span> <span class="p">:,</span>
+                  <span class="n">sh_i</span> <span class="p">:</span> <span class="n">sh_i</span> <span class="o">+</span> <span class="n">ph_i</span><span class="p">,</span>
+                  <span class="n">sw_i</span> <span class="p">:</span> <span class="n">sw_i</span> <span class="o">+</span> <span class="n">pw_i</span><span class="p">,</span>
+                  <span class="n">sd_i</span> <span class="p">:</span> <span class="n">sd_i</span> <span class="o">+</span> <span class="n">pd_i</span><span class="p">]</span>
+            <span class="p">)</span>
+
+        <span class="c1"># crop target</span>
+        <span class="k">if</span> <span class="n">target</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">5</span><span class="p">:</span>  <span class="c1"># (B,1,H,W,D)</span>
+            <span class="n">tgt</span> <span class="o">=</span> <span class="n">target</span><span class="p">[:,</span> <span class="p">:,</span>
+                         <span class="n">sh</span><span class="p">:</span><span class="n">sh</span><span class="o">+</span><span class="n">ph</span><span class="p">,</span>
+                         <span class="n">sw</span><span class="p">:</span><span class="n">sw</span><span class="o">+</span><span class="n">pw</span><span class="p">,</span>
+                         <span class="n">sd</span><span class="p">:</span><span class="n">sd</span><span class="o">+</span><span class="n">pd</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>                 <span class="c1"># (B,H,W,D)</span>
+            <span class="n">tgt</span> <span class="o">=</span> <span class="n">target</span><span class="p">[:,</span>
+                         <span class="n">sh</span><span class="p">:</span><span class="n">sh</span><span class="o">+</span><span class="n">ph</span><span class="p">,</span>
+                         <span class="n">sw</span><span class="p">:</span><span class="n">sw</span><span class="o">+</span><span class="n">pw</span><span class="p">,</span>
+                         <span class="n">sd</span><span class="p">:</span><span class="n">sd</span><span class="o">+</span><span class="n">pd</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">feat_patches</span><span class="p">,</span> <span class="n">tgt</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

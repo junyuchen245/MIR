@@ -1,10 +1,4 @@
-'''
-Structural Similarity Index (SSIM)
-Modified and tested by:
-Junyu Chen
-jchen245@jhmi.edu
-Johns Hopkins University
-'''
+"""Structural Similarity Index (SSIM) utilities."""
 import torch
 import torch.nn.functional as F
 from torch.autograd import Variable
@@ -14,11 +8,13 @@ import math
 import torch.nn as nn
 
 def gaussian(window_size, sigma):
+    """Create a 1D Gaussian kernel for SSIM windows."""
     gauss = torch.Tensor([exp(-(x - window_size // 2) ** 2 / float(2 * sigma ** 2)) for x in range(window_size)])
     return gauss / gauss.sum()
 
 
 def create_window(window_size, channel):
+    """Create a 2D SSIM window tensor."""
     _1D_window = gaussian(window_size, 1.5).unsqueeze(1)
     _2D_window = _1D_window.mm(_1D_window.t()).float().unsqueeze(0).unsqueeze(0)
     window = Variable(_2D_window.expand(channel, 1, window_size, window_size).contiguous())
@@ -26,6 +22,7 @@ def create_window(window_size, channel):
 
 
 def create_window_3D(window_size, channel):
+    """Create a 3D SSIM window tensor."""
     _1D_window = gaussian(window_size, 1.5).unsqueeze(1)
     _2D_window = _1D_window.mm(_1D_window.t())
     _3D_window = _1D_window.mm(_2D_window.reshape(1, -1)).reshape(window_size, window_size,
@@ -35,6 +32,19 @@ def create_window_3D(window_size, channel):
 
 
 def _ssim(img1, img2, window, window_size, channel, size_average=True):
+    """Compute 2D SSIM for a pair of images.
+
+    Args:
+        img1: Tensor (B, C, H, W).
+        img2: Tensor (B, C, H, W).
+        window: SSIM window tensor.
+        window_size: Window size.
+        channel: Number of channels.
+        size_average: If True, returns scalar mean.
+
+    Returns:
+        SSIM value (scalar or per-image).
+    """
     mu1 = F.conv2d(img1, window, padding=window_size // 2, groups=channel)
     mu2 = F.conv2d(img2, window, padding=window_size // 2, groups=channel)
 
@@ -58,6 +68,19 @@ def _ssim(img1, img2, window, window_size, channel, size_average=True):
 
 
 def _ssim_3D(img1, img2, window, window_size, channel, size_average=True):
+    """Compute 3D SSIM for a pair of volumes.
+
+    Args:
+        img1: Tensor (B, C, H, W, D).
+        img2: Tensor (B, C, H, W, D).
+        window: SSIM window tensor.
+        window_size: Window size.
+        channel: Number of channels.
+        size_average: If True, returns scalar mean.
+
+    Returns:
+        SSIM value (scalar or per-image).
+    """
     mu1 = F.conv3d(img1, window, padding=window_size // 2, groups=channel)
     mu2 = F.conv3d(img2, window, padding=window_size // 2, groups=channel)
 
@@ -90,6 +113,15 @@ class SSIM2D(torch.nn.Module):
         self.window = create_window(window_size, self.channel)
 
     def forward(self, img1, img2):
+        """Compute 2D SSIM between two images.
+
+        Args:
+            img1: Tensor (B, C, H, W).
+            img2: Tensor (B, C, H, W).
+
+        Returns:
+            SSIM score.
+        """
         (_, channel, _, _) = img1.size()
 
         if channel == self.channel and self.window.data.type() == img1.data.type():
@@ -116,6 +148,15 @@ class SSIM3D(torch.nn.Module):
         self.window = create_window_3D(window_size, self.channel)
 
     def forward(self, img1, img2):
+        """Compute 3D SSIM between two volumes.
+
+        Args:
+            img1: Tensor (B, C, H, W, D).
+            img2: Tensor (B, C, H, W, D).
+
+        Returns:
+            SSIM score.
+        """
         (_, channel, _, _, _) = img1.size()
 
         if channel == self.channel and self.window.data.type() == img1.data.type():

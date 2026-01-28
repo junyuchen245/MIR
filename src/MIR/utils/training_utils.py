@@ -1,3 +1,5 @@
+"""Training utilities (logging, metrics, and patch sampling)."""
+
 import math, random, pickle
 import numpy as np
 import torch.nn.functional as F
@@ -6,14 +8,21 @@ from torch import nn
 
 class Logger(object):
     def __init__(self, save_dir):
+        """Initialize a stdout logger that also writes to a file.
+
+        Args:
+            save_dir: Directory path for log file.
+        """
         self.terminal = sys.stdout
         self.log = open(save_dir+"logfile.log", "a")
 
     def write(self, message):
+        """Write a message to both stdout and the log file."""
         self.terminal.write(message)
         self.log.write(message)
 
     def flush(self):
+        """No-op flush for compatibility with file-like interfaces."""
         pass
     
 class AverageMeter(object):
@@ -22,6 +31,7 @@ class AverageMeter(object):
         self.reset()
 
     def reset(self):
+        """Reset stored statistics."""
         self.val = 0
         self.avg = 0
         self.sum = 0
@@ -30,6 +40,12 @@ class AverageMeter(object):
         self.std = 0
 
     def update(self, val, n=1):
+        """Update running statistics.
+
+        Args:
+            val: New value.
+            n: Weight/count for the value.
+        """
         self.val = val
         self.sum += val * n
         self.count += n
@@ -38,6 +54,15 @@ class AverageMeter(object):
         self.std = np.std(self.vals)
 
 def pad_image(img, target_size):
+    """Pad a 3D tensor to a target size.
+
+    Args:
+        img: Input tensor (B, C, H, W, D).
+        target_size: Target spatial size (H, W, D).
+
+    Returns:
+        Padded tensor.
+    """
     rows_to_pad = max(target_size[0] - img.shape[2], 0)
     cols_to_pad = max(target_size[1] - img.shape[3], 0)
     slcs_to_pad = max(target_size[2] - img.shape[4], 0)
@@ -45,8 +70,15 @@ def pad_image(img, target_size):
     return padded_img
 
 def normalize_01(x, method='minmax', percentile=0.05):
-    """
-    Normalize a tensor to the range [0, 1].
+    """Normalize a tensor/array to the range [0, 1].
+
+    Args:
+        x: Torch tensor or NumPy array.
+        method: 'minmax' or 'percentile'.
+        percentile: Percentile for percentile normalization.
+
+    Returns:
+        Normalized tensor/array.
     """
     if isinstance(x, torch.Tensor):
         if method == 'minmax':
@@ -88,7 +120,7 @@ class RandomPatchSampler3D:
         feat:   (B, C,  H,  W,  D)
         target: (B,    H,  W,  D)   or   (B, 1, H, W, D)
         
-        returns:
+                Returns:
           feat_patch:   (B, C, ph, pw, pd)
           target_patch: (B,   ph, pw, pd)  or  (B, 1, ph, pw, pd)
         """
@@ -125,7 +157,7 @@ class MultiResPatchSampler3D:
                   feats[i].shape == (B, C_i, H/(2**i), W/(2**i), D/(2**i))
           target: (B, H, W, D)     or   (B,1,H,W,D)
 
-        Returns:
+                Returns:
           feat_patches  : list of tensors [ (B,C_i,ph_i,pw_i,pd_i) ... ]
           target_patch  : (B,ph,pw,pd) or (B,1,ph,pw,pd)
         """

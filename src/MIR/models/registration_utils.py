@@ -1,3 +1,5 @@
+"""Model-level registration utilities (transformers and geometry)."""
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as nnf
@@ -12,6 +14,12 @@ class SpatialTransformer(nn.Module):
     """
 
     def __init__(self, size, mode='bilinear'):
+        """Initialize a spatial transformer.
+
+        Args:
+            size: Spatial size tuple (H, W[, D]).
+            mode: Interpolation mode ('bilinear' or 'nearest').
+        """
         super().__init__()
 
         self.mode = mode
@@ -31,6 +39,15 @@ class SpatialTransformer(nn.Module):
         self.register_buffer('grid', grid)
 
     def forward(self, src, flow):
+        """Warp a source tensor with a displacement field.
+
+        Args:
+            src: Source tensor (B, C, ...).
+            flow: Displacement field (B, ndim, ...).
+
+        Returns:
+            Warped tensor.
+        """
         # new locations
         new_locs = self.grid + flow
         shape = flow.shape[2:]
@@ -59,6 +76,12 @@ class VecInt(nn.Module):
     """
 
     def __init__(self, inshape, nsteps):
+        """Initialize vector field integrator.
+
+        Args:
+            inshape: Spatial shape of the field.
+            nsteps: Number of scaling-and-squaring steps.
+        """
         super().__init__()
 
         assert nsteps >= 0, 'nsteps should be >= 0, found: %d' % nsteps
@@ -67,6 +90,14 @@ class VecInt(nn.Module):
         self.transformer = SpatialTransformer(inshape)
 
     def forward(self, vec):
+        """Integrate a vector field via scaling and squaring.
+
+        Args:
+            vec: Velocity field tensor (B, ndim, ...).
+
+        Returns:
+            Integrated displacement field.
+        """
         vec = vec * self.scale
         for _ in range(self.nsteps):
             vec = vec + self.transformer(vec, vec)
@@ -80,14 +111,40 @@ class AffineTransformer(nn.Module):
     """
 
     def __init__(self, mode='bilinear'):
+        """Initialize affine transformer.
+
+        Args:
+            mode: Interpolation mode ('bilinear' or 'nearest').
+        """
         super().__init__()
         self.mode = mode
 
     def apply_affine(self, src, mat):
+        """Apply an affine matrix to a source volume.
+
+        Args:
+            src: Source tensor (B, C, H, W, D).
+            mat: Affine matrix (B, 3, 4).
+
+        Returns:
+            Warped tensor.
+        """
         grid = nnf.affine_grid(mat, [src.shape[0], 3, src.shape[2], src.shape[3], src.shape[4]], align_corners=False)
         return nnf.grid_sample(src, grid, align_corners=False, mode=self.mode)
 
     def forward(self, src, affine, scale, translate, shear):
+        """Apply composed affine parameters to a volume.
+
+        Args:
+            src: Source tensor (B, C, H, W, D).
+            affine: Rotation parameters (B, 3).
+            scale: Scale parameters (B, 3).
+            translate: Translation parameters (B, 3).
+            shear: Shear parameters (B, 6).
+
+        Returns:
+            Tuple of (warped, affine_matrix, inverse_affine_matrix).
+        """
 
         theta_x = affine[:, 0]
         theta_y = affine[:, 1]
@@ -126,6 +183,15 @@ class AffineTransformer(nn.Module):
         return nnf.grid_sample(src, grid, align_corners=False, mode=self.mode), mat, inv_mat
 
 def _to_tensor(arr, device):
+    """Convert array to float tensor on a device.
+
+    Args:
+        arr: NumPy array or tensor.
+        device: Target torch device.
+
+    Returns:
+        Tensor on device.
+    """
     if isinstance(arr, torch.Tensor):
         return arr.to(device).float()
     return torch.from_numpy(arr).to(device).float()
@@ -156,6 +222,15 @@ def jacobian_determinant(disp):
  
  
 def _torch_gradient(x, spacing=1):
+    """Fallback torch gradient for older PyTorch versions.
+
+    Args:
+        x: Tensor to differentiate.
+        spacing: Grid spacing.
+
+    Returns:
+        List of gradients per spatial dimension.
+    """
     # minimal torch‑gradient fallback for < 2.1
     grads = []
     for dim in range(x.ndim - 2):
