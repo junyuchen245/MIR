@@ -13,9 +13,9 @@ import typing
 import numpy as np
 import numpy.typing as npt
 
-import intensity_normalization.normalize.base as intnormb
-import intensity_normalization.typing as intnormt
-import intensity_normalization.util.histogram_tools as intnormhisttool
+import MIR.intensity_normalization.normalize.base as intnormb
+import MIR.intensity_normalization.typing as intnormt
+import MIR.intensity_normalization.util.histogram_tools as intnormhisttool
 
 
 class WhiteStripeNormalize(

@@ -1,3 +1,5 @@
+"""Segmentation inference helpers (sliding-window)."""
+
 import math, random, pickle
 import numpy as np
 import torch.nn.functional as F
@@ -5,6 +7,16 @@ import torch, sys
 from torch import nn
 
 def get_patch_starts(dim_size, patch_size, stride):
+    """Compute patch start indices for sliding-window inference.
+
+    Args:
+        dim_size: Size of the dimension.
+        patch_size: Patch size along the dimension.
+        stride: Stride between patches.
+
+    Returns:
+        List of start indices.
+    """
     starts = list(range(0, dim_size - patch_size + 1, stride))
     if not starts or starts[-1] + patch_size < dim_size:
         starts.append(dim_size - patch_size)
@@ -18,6 +30,19 @@ def sliding_window_inference(
     num_classes: int = 133,
     mode: str = 'argmax'   # we'll focus on improved 'argmax'
 ) -> torch.Tensor:
+    """Run sliding-window inference on a full-resolution feature volume.
+
+    Args:
+        feat: Feature tensor (B, C, H, W, D).
+        head: Segmentation head that outputs logits.
+        patch_size: Patch size (ph, pw, pd).
+        overlap: Overlap ratio between patches.
+        num_classes: Number of output classes.
+        mode: Output mode (currently 'argmax').
+
+    Returns:
+        Segmentation prediction (B, 1, H, W, D).
+    """
     B, C, H, W, D = feat.shape
     ph, pw, pd = patch_size
 
@@ -103,16 +128,18 @@ def sliding_window_inference_multires(
     num_classes: int = 133,
     mode: str = 'argmax'
 ) -> torch.Tensor:
-    """
-    x_feats     : list of (B, C_i, H_i, W_i, D_i), with H_i = H0/2**i etc.
-    decoder     : nn.Module taking list of feature‐patches → (B,C,ph,pw,pd)
-    patch_size  : (ph, pw, pd) at full resolution H0×W0×D0
-    overlap     : fraction in [0..1)
-    num_classes : number of output classes
-    
-    returns:
-    --------
-    seg_pred    : (B, H0, W0, D0) LongTensor of labels
+    """Run multiresolution sliding-window inference.
+
+    Args:
+        x_feats: List of feature tensors at multiple resolutions.
+        decoder: Decoder module mapping patches to logits.
+        patch_size: Full-resolution patch size (ph, pw, pd).
+        overlap: Overlap ratio between patches.
+        num_classes: Number of output classes.
+        mode: Output mode (currently 'argmax').
+
+    Returns:
+        Segmentation prediction (B, 1, H0, W0, D0).
     """
     B = x_feats[0].shape[0]
     H0, W0, D0 = x_feats[0].shape[2:]

@@ -21,9 +21,9 @@ import nibabel as nib
 import numpy as np
 import pymedio.image as mioi
 
-import intensity_normalization as intnorm
-import intensity_normalization.base_cli as intnormcli
-import intensity_normalization.typing as intnormt
+import MIR.intensity_normalization as intnorm
+import MIR.intensity_normalization.base_cli as intnormcli
+import MIR.intensity_normalization.typing as intnormt
 
 logger = logging.getLogger(__name__)
 

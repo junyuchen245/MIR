@@ -1,3 +1,5 @@
+"""Accuracy and overlap metrics for MIR evaluations."""
+
 import math, random
 import numpy as np
 import torch.nn.functional as F
@@ -5,6 +7,17 @@ import torch, sys
 from torch import nn
 
 def dice_val_VOI(y_pred, y_true, num_clus=4, eval_labels=None):
+    """Compute mean Dice over a set of labels of interest.
+
+    Args:
+        y_pred: Predicted label tensor (B, 1, H, W, D).
+        y_true: Ground-truth label tensor (B, 1, H, W, D).
+        num_clus: Number of classes (used when eval_labels is None).
+        eval_labels: Optional list/array of label IDs to evaluate.
+
+    Returns:
+        Mean Dice score across the selected labels.
+    """
     if eval_labels is not None:
         VOI_lbls = eval_labels
     else:
@@ -25,6 +38,17 @@ def dice_val_VOI(y_pred, y_true, num_clus=4, eval_labels=None):
     return np.mean(DSCs)
 
 def dice_val_substruct(y_pred, y_true, std_idx, num_classes=46):
+    """Compute per-class Dice scores and return as a CSV line string.
+
+    Args:
+        y_pred: Predicted label tensor (B, 1, H, W, D).
+        y_true: Ground-truth label tensor (B, 1, H, W, D).
+        std_idx: Case identifier used in the output line.
+        num_classes: Total number of classes.
+
+    Returns:
+        CSV line string with per-class Dice values.
+    """
     with torch.no_grad():
         y_pred = nn.functional.one_hot(y_pred, num_classes=num_classes)
         y_pred = torch.squeeze(y_pred, 1)
@@ -47,6 +71,16 @@ def dice_val_substruct(y_pred, y_true, std_idx, num_classes=46):
     return line
 
 def dice_val_all(y_pred, y_true, num_clus):
+    """Compute mean Dice across all classes.
+
+    Args:
+        y_pred: Predicted label tensor (B, 1, H, W, D).
+        y_true: Ground-truth label tensor (B, 1, H, W, D).
+        num_clus: Number of classes.
+
+    Returns:
+        Scalar mean Dice across classes.
+    """
     y_pred = nn.functional.one_hot(y_pred, num_classes=num_clus)
     y_pred = torch.squeeze(y_pred, 1)
     y_pred = y_pred.permute(0, 4, 1, 2, 3).contiguous()

@@ -1,0 +1,307 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MIR.utils.registration_utils &mdash; MIR 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js?v=f6245a2f"></script>
+      <script src="../../../_static/doctools.js?v=888ff710"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            MIR
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">MIR</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">MIR.utils.registration_utils</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for MIR.utils.registration_utils</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
+<span class="kn">import</span> <span class="nn">torch.nn.functional</span> <span class="k">as</span> <span class="nn">nnf</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">ants</span>
+<span class="kn">import</span> <span class="nn">nibabel</span> <span class="k">as</span> <span class="nn">nib</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">scipy.ndimage</span> <span class="kn">import</span> <span class="n">zoom</span>
+
+<div class="viewcode-block" id="SpatialTransformer"><a class="viewcode-back" href="../../../api.html#MIR.utils.SpatialTransformer">[docs]</a><span class="k">class</span> <span class="nc">SpatialTransformer</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    N-D Spatial Transformer</span>
+<span class="sd">    Obtained from https://github.com/voxelmorph/voxelmorph</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;bilinear&#39;</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">=</span> <span class="n">mode</span>
+
+        <span class="c1"># create sampling grid</span>
+        <span class="n">vectors</span> <span class="o">=</span> <span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">s</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">size</span><span class="p">]</span>
+        <span class="n">grids</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">vectors</span><span class="p">)</span>
+        <span class="n">grid</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">grids</span><span class="p">)</span>
+        <span class="n">grid</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="n">grid</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">grid</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">type</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span><span class="p">)</span>
+
+        <span class="c1"># registering the grid as a buffer cleanly moves it to the GPU, but it also</span>
+        <span class="c1"># adds it to the state dict. this is annoying since everything in the state dict</span>
+        <span class="c1"># is included when saving weights to disk, so the model files are way bigger</span>
+        <span class="c1"># than they need to be. so far, there does not appear to be an elegant solution.</span>
+        <span class="c1"># see: https://discuss.pytorch.org/t/how-to-register-buffer-without-polluting-state-dict</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">register_buffer</span><span class="p">(</span><span class="s1">&#39;grid&#39;</span><span class="p">,</span> <span class="n">grid</span><span class="p">)</span>
+
+<div class="viewcode-block" id="SpatialTransformer.forward"><a class="viewcode-back" href="../../../api.html#MIR.utils.SpatialTransformer.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">src</span><span class="p">,</span> <span class="n">flow</span><span class="p">):</span>
+        <span class="c1"># new locations</span>
+        <span class="n">new_locs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">grid</span> <span class="o">+</span> <span class="n">flow</span>
+        <span class="n">shape</span> <span class="o">=</span> <span class="n">flow</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">:]</span>
+
+        <span class="c1"># need to normalize grid values to [-1, 1] for resampler</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">shape</span><span class="p">)):</span>
+            <span class="n">new_locs</span><span class="p">[:,</span> <span class="n">i</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="n">new_locs</span><span class="p">[:,</span> <span class="n">i</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">/</span> <span class="p">(</span><span class="n">shape</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="mf">0.5</span><span class="p">)</span>
+
+        <span class="c1"># move channels dim to last position</span>
+        <span class="c1"># also not sure why, but the channels need to be reversed</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">new_locs</span> <span class="o">=</span> <span class="n">new_locs</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">new_locs</span> <span class="o">=</span> <span class="n">new_locs</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]]</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="n">new_locs</span> <span class="o">=</span> <span class="n">new_locs</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">new_locs</span> <span class="o">=</span> <span class="n">new_locs</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]]</span>
+
+        <span class="k">return</span> <span class="n">nnf</span><span class="o">.</span><span class="n">grid_sample</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="n">new_locs</span><span class="p">,</span> <span class="n">align_corners</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">)</span></div></div>
+    
+<div class="viewcode-block" id="VecInt"><a class="viewcode-back" href="../../../api.html#MIR.utils.VecInt">[docs]</a><span class="k">class</span> <span class="nc">VecInt</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Integrates a vector field via scaling and squaring.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inshape</span><span class="p">,</span> <span class="n">nsteps</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+        <span class="k">assert</span> <span class="n">nsteps</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;nsteps should be &gt;= 0, found: </span><span class="si">%d</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">nsteps</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nsteps</span> <span class="o">=</span> <span class="n">nsteps</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scale</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">**</span> <span class="bp">self</span><span class="o">.</span><span class="n">nsteps</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">transformer</span> <span class="o">=</span> <span class="n">SpatialTransformer</span><span class="p">(</span><span class="n">inshape</span><span class="p">)</span>
+
+<div class="viewcode-block" id="VecInt.forward"><a class="viewcode-back" href="../../../api.html#MIR.utils.VecInt.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vec</span><span class="p">):</span>
+        <span class="n">vec</span> <span class="o">=</span> <span class="n">vec</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale</span>
+        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nsteps</span><span class="p">):</span>
+            <span class="n">vec</span> <span class="o">=</span> <span class="n">vec</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">transformer</span><span class="p">(</span><span class="n">vec</span><span class="p">,</span> <span class="n">vec</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">vec</span></div></div>
+
+<div class="viewcode-block" id="make_affine_from_pixdim"><a class="viewcode-back" href="../../../api.html#MIR.utils.make_affine_from_pixdim">[docs]</a><span class="k">def</span> <span class="nf">make_affine_from_pixdim</span><span class="p">(</span><span class="n">pixdim</span><span class="p">):</span>
+    <span class="c1"># Create a 4x4 affine with spacing along the diagonal</span>
+    <span class="n">affine</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+    <span class="n">affine</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">pixdim</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">affine</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">pixdim</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">affine</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">pixdim</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">affine</span></div>
+
+<span class="k">def</span> <span class="nf">get_pixdim</span><span class="p">(</span><span class="n">nib_img</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">nib_img</span><span class="o">.</span><span class="n">header</span><span class="p">[</span><span class="s1">&#39;pixdim&#39;</span><span class="p">][</span><span class="mi">1</span><span class="p">:</span><span class="mi">4</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">resample_by_pixdim</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="n">from_pixdim</span><span class="p">,</span> <span class="n">to_pixdim</span><span class="p">,</span> <span class="n">order</span><span class="p">):</span>
+    <span class="n">ratio</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">from_pixdim</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">to_pixdim</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">zoom</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="n">ratio</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="n">order</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">crop_or_pad</span><span class="p">(</span><span class="n">volume</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+                <span class="n">target_shape</span><span class="p">,</span>
+                <span class="n">pad_value</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Center-crop or center-pad a NumPy array to exactly match target_shape.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        volume: Input array of shape (d0, d1, ..., dN).</span>
+<span class="sd">        target_shape: Desired shape (t0, t1, ..., tN).</span>
+<span class="sd">        pad_value: Constant value to use for padding.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        A new array of shape target_shape.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">output</span> <span class="o">=</span> <span class="n">volume</span>
+    <span class="n">ndim</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">ndim</span>
+
+    <span class="k">if</span> <span class="n">ndim</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">target_shape</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;volume.ndim=</span><span class="si">{</span><span class="n">ndim</span><span class="si">}</span><span class="s2"> but target_shape has length </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">target_shape</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">axis</span><span class="p">,</span> <span class="n">tgt</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">target_shape</span><span class="p">):</span>
+        <span class="n">cur</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">cur</span> <span class="o">&lt;</span> <span class="n">tgt</span><span class="p">:</span>
+            <span class="c1"># need to pad</span>
+            <span class="n">total_pad</span> <span class="o">=</span> <span class="n">tgt</span> <span class="o">-</span> <span class="n">cur</span>
+            <span class="n">pad_before</span> <span class="o">=</span> <span class="n">total_pad</span> <span class="o">//</span> <span class="mi">2</span>
+            <span class="n">pad_after</span> <span class="o">=</span> <span class="n">total_pad</span> <span class="o">-</span> <span class="n">pad_before</span>
+            <span class="n">pad_width</span> <span class="o">=</span> <span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)]</span> <span class="o">*</span> <span class="n">ndim</span>
+            <span class="n">pad_width</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">pad_before</span><span class="p">,</span> <span class="n">pad_after</span><span class="p">)</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">output</span><span class="p">,</span>
+                            <span class="n">pad_width</span><span class="o">=</span><span class="n">pad_width</span><span class="p">,</span>
+                            <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;constant&quot;</span><span class="p">,</span>
+                            <span class="n">constant_values</span><span class="o">=</span><span class="n">pad_value</span><span class="p">)</span>
+
+        <span class="k">elif</span> <span class="n">cur</span> <span class="o">&gt;</span> <span class="n">tgt</span><span class="p">:</span>
+            <span class="c1"># need to crop</span>
+            <span class="n">start</span> <span class="o">=</span> <span class="p">(</span><span class="n">cur</span> <span class="o">-</span> <span class="n">tgt</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span>
+            <span class="n">end</span> <span class="o">=</span> <span class="n">start</span> <span class="o">+</span> <span class="n">tgt</span>
+            <span class="n">slicer</span> <span class="o">=</span> <span class="p">[</span><span class="nb">slice</span><span class="p">(</span><span class="kc">None</span><span class="p">)]</span> <span class="o">*</span> <span class="n">ndim</span>
+            <span class="n">slicer</span><span class="p">[</span><span class="n">axis</span><span class="p">]</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">)</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="n">output</span><span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="n">slicer</span><span class="p">)]</span>
+
+        <span class="c1"># if cur == tgt, nothing to do on this axis</span>
+
+    <span class="k">return</span> <span class="n">output</span>
+
+<div class="viewcode-block" id="resample_to_orginal_space_and_save"><a class="viewcode-back" href="../../../api.html#MIR.utils.resample_to_orginal_space_and_save">[docs]</a><span class="k">def</span> <span class="nf">resample_to_orginal_space_and_save</span><span class="p">(</span><span class="n">deformed_img</span><span class="p">,</span> <span class="n">ants_affine_mat_path</span><span class="p">,</span> <span class="n">img_orig_path</span><span class="p">,</span> <span class="n">out_back_dir</span><span class="p">,</span> <span class="n">img_pixdim</span><span class="p">,</span> <span class="n">if_flip</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">flip_axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">interpolater</span><span class="o">=</span><span class="s1">&#39;nearestNeighbor&#39;</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Resample a deformed image to the original image space and save it.</span>
+<span class="sd">    Args:</span>
+<span class="sd">        deformed_img: The deformed image tensor.</span>
+<span class="sd">        ants_affine_mat_path: Path to the ANTs affine matrix.</span>
+<span class="sd">        img_orig_path: Path to the original image in .nii.gz.</span>
+<span class="sd">        out_back_dir: Output directory to save the resampled image.</span>
+<span class="sd">        img_pixdim: Pixel dimensions of the deformed image.</span>
+<span class="sd">        if_flip: Whether to flip the image along the specified axis.</span>
+<span class="sd">        flip_axis: Axis along which to flip the image if if_flip is True.</span>
+<span class="sd">        interpolater: Interpolator type for ANTs resampling. Options are &#39;linear&#39;, &#39;nearestNeighbor&#39;, &#39;bSpline&#39; etc.</span>
+<span class="sd">    Returns:</span>
+<span class="sd">        img_final: The final resampled image in the original space.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">if</span> <span class="n">interpolater</span> <span class="o">==</span> <span class="s1">&#39;nearestNeighbor&#39;</span><span class="p">:</span>
+        <span class="n">order</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">elif</span> <span class="n">interpolater</span> <span class="o">==</span> <span class="s1">&#39;linear&#39;</span><span class="p">:</span>
+        <span class="n">order</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="k">elif</span> <span class="n">interpolater</span> <span class="o">==</span> <span class="s1">&#39;bSpline&#39;</span><span class="p">:</span>
+        <span class="n">order</span> <span class="o">=</span> <span class="mi">3</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported interpolater: </span><span class="si">{</span><span class="n">interpolater</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="c1"># deformed_img is on the atlas grid at this point</span>
+    <span class="n">deformed_img_np</span> <span class="o">=</span> <span class="n">deformed_img</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>  <span class="c1"># [H,W,D] labels</span>
+    
+    <span class="c1"># Paths to original Image and inverse affine</span>
+    <span class="n">orig_img_nib</span>  <span class="o">=</span> <span class="n">nib</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">img_orig_path</span><span class="p">)</span>
+    <span class="n">orig_affine</span>  <span class="o">=</span> <span class="n">orig_img_nib</span><span class="o">.</span><span class="n">affine</span>
+    <span class="n">orig_shape</span>   <span class="o">=</span> <span class="n">orig_img_nib</span><span class="o">.</span><span class="n">shape</span>
+    <span class="n">orig_pixdim</span>  <span class="o">=</span> <span class="n">get_pixdim</span><span class="p">(</span><span class="n">orig_img_nib</span><span class="p">)</span>
+
+    <span class="c1"># Match the spacing you used in preprocessing</span>
+    <span class="n">target_pixdim</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">img_pixdim</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+
+    <span class="c1"># Reconstruct the pre-affine Image grid used in preprocessing:</span>
+    <span class="c1">#   resample original Image to target spacing, then flip along axis 1</span>
+    <span class="n">img_pre</span> <span class="o">=</span> <span class="n">resample_by_pixdim</span><span class="p">(</span>
+        <span class="n">orig_img_nib</span><span class="o">.</span><span class="n">get_fdata</span><span class="p">(),</span> <span class="n">from_pixdim</span><span class="o">=</span><span class="n">orig_pixdim</span><span class="p">,</span> <span class="n">to_pixdim</span><span class="o">=</span><span class="n">target_pixdim</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="n">order</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">if_flip</span><span class="p">:</span>
+        <span class="n">img_pre</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">flip</span><span class="p">(</span><span class="n">img_pre</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># Atlas → pre-affine Image grid via inverse ANTs affine (nearest for labels)</span>
+    <span class="n">mov_img_im</span> <span class="o">=</span> <span class="n">ants</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">deformed_img_np</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">))</span>
+    <span class="n">img_pre_im</span>    <span class="o">=</span> <span class="n">ants</span><span class="o">.</span><span class="n">from_numpy</span><span class="p">(</span><span class="n">img_pre</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">))</span>
+    <span class="n">img_on_ctpre</span> <span class="o">=</span> <span class="n">ants</span><span class="o">.</span><span class="n">apply_transforms</span><span class="p">(</span>
+        <span class="n">fixed</span><span class="o">=</span><span class="n">img_pre_im</span><span class="p">,</span>
+        <span class="n">moving</span><span class="o">=</span><span class="n">mov_img_im</span><span class="p">,</span>
+        <span class="n">transformlist</span><span class="o">=</span><span class="p">[</span><span class="n">ants_affine_mat_path</span><span class="p">],</span>
+        <span class="n">interpolator</span><span class="o">=</span><span class="n">interpolater</span><span class="p">,</span>
+        <span class="n">whichtoinvert</span><span class="o">=</span><span class="p">[</span><span class="kc">True</span><span class="p">]</span>  <span class="c1"># forward transform</span>
+    <span class="p">)</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+
+    <span class="c1"># Undo preprocessing to original Image space:</span>
+    <span class="c1">#   unflip, resample spacing back, center crop or pad, save with original affine</span>
+    <span class="k">if</span> <span class="n">if_flip</span><span class="p">:</span>
+        <span class="c1"># Flip back to original orientation</span>
+        <span class="n">img_unflipped</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">flip</span><span class="p">(</span><span class="n">img_on_ctpre</span><span class="p">,</span> <span class="n">flip_axis</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">img_unflipped</span> <span class="o">=</span> <span class="n">img_on_ctpre</span>
+    <span class="n">img_orig_sp</span>   <span class="o">=</span> <span class="n">resample_by_pixdim</span><span class="p">(</span>
+        <span class="n">img_unflipped</span><span class="p">,</span> <span class="n">from_pixdim</span><span class="o">=</span><span class="n">target_pixdim</span><span class="p">,</span> <span class="n">to_pixdim</span><span class="o">=</span><span class="n">orig_pixdim</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="n">order</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">order</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">img_final</span> <span class="o">=</span> <span class="n">crop_or_pad</span><span class="p">(</span><span class="n">img_orig_sp</span><span class="p">,</span> <span class="n">orig_shape</span><span class="p">,</span> <span class="n">pad_value</span><span class="o">=</span><span class="n">img_orig_sp</span><span class="o">.</span><span class="n">min</span><span class="p">())</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int16</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">img_final</span> <span class="o">=</span> <span class="n">crop_or_pad</span><span class="p">(</span><span class="n">img_orig_sp</span><span class="p">,</span> <span class="n">orig_shape</span><span class="p">,</span> <span class="n">pad_value</span><span class="o">=</span><span class="n">img_orig_sp</span><span class="o">.</span><span class="n">min</span><span class="p">())</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+
+    <span class="n">nib</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">nib</span><span class="o">.</span><span class="n">Nifti1Image</span><span class="p">(</span><span class="n">img_final</span><span class="p">,</span> <span class="n">orig_affine</span><span class="p">),</span> <span class="n">out_back_dir</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">img_final</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

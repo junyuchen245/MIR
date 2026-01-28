@@ -1,3 +1,5 @@
+"""Miscellaneous utility helpers for MIR."""
+
 import pickle
 import re
 from pathlib import Path
@@ -12,10 +14,24 @@ HERE = Path(__file__).resolve().parent
 text_path = HERE / "FreeSurfer_label_info.txt"
 
 def pkload(fname):
+    """Load a pickled object from disk.
+
+    Args:
+        fname: Path to pickle file.
+
+    Returns:
+        Loaded object.
+    """
     with open(fname, 'rb') as f:
         return pickle.load(f)
 
 def savepkl(data, path):
+    """Save an object to a pickle file.
+
+    Args:
+        data: Object to serialize.
+        path: Output pickle file path.
+    """
     with open(path, 'wb') as f:
         pickle.dump(data, f)
         
@@ -50,6 +66,14 @@ def process_label():
     return dict
 
 def SLANT_label_reassign(label_map):
+    """Reassign SLANT label IDs to contiguous indices.
+
+    Args:
+        label_map: Label map array.
+
+    Returns:
+        Reassigned label map.
+    """
     #process labeling information for SLANT
     label_lookup = [0.,  4., 11., 23., 30., 31., 32., 35., 36., 37., 38., 39., 40., 41.,
             44.,  45.,  47.,  48.,  49.,  50.,  51.,  52.,  55.,  56.,  57.,  58.,  59., 60.,
@@ -195,15 +219,16 @@ def load_partial_weights(model, checkpoint_path, weights_key='state_dict', stric
 
     print(f"Loaded {len(loadable_state_dict)} / {len(model_state_dict)} layers from checkpoint.")
     
-def zoom_img(img, pixel_dims, order=3):
-    """
-    Resize a 3D image tensor to match target pixel dimensions.
+def zoom_img(img, pixel_dims, order=3):    
+    """Resize a 3D image to match target pixel dimensions.
+
     Args:
-        img (np.ndarray): Input image tensor of shape (C, H, W, D).
-        pixel_dims (tuple): Target pixel dimensions as a tuple (img_pixdim, tar_pix).
-        order (int): Interpolation order for resizing. Default is 3 (cubic).
+        img: Input 3D image array.
+        pixel_dims: Target spacing.
+        order: Interpolation order.
+
     Returns:
-        np.ndarray: Resized image tensor.
+        Resampled image array.
     """
     img_pixdim, tar_pix = pixel_dims
     ratio = np.array(img_pixdim) / np.array(tar_pix)

@@ -9,24 +9,44 @@ Johns Hopkins University
 import torch
 
 class logBeta(torch.nn.Module):
+    """Negative log-likelihood term for Beta prior on weights."""
     def __init__(self, eps=1e-6):
         super(logBeta, self).__init__()
         self.eps = eps
         self.beta = 1.
 
     def forward(self, weights, alpha):
+        """Compute Beta prior regularization.
+
+        Args:
+            weights: Tensor of weights.
+            alpha: Beta distribution alpha parameter.
+
+        Returns:
+            Scalar regularization loss.
+        """
         lambdas = torch.clamp(weights, self.eps, 1.0)
         #beta = torch.log(lambdas**(alpha-1)*(1-lambdas)**(self.beta-1))
         beta = torch.log(lambdas)
         return (1.-alpha)*beta.mean()
 
 class logGaussian(torch.nn.Module):
+    """Gaussian prior regularizer for weights."""
     def __init__(self, gaus_bond=5., eps=1e-6):
         super(logGaussian, self).__init__()
         self.eps = eps
         self.gaus_bond = gaus_bond
 
     def forward(self, weights, inv_sigma2):
+        """Compute Gaussian prior regularization.
+
+        Args:
+            weights: Tensor of weights.
+            inv_sigma2: Inverse variance scalar/tensor.
+
+        Returns:
+            Scalar regularization loss.
+        """
         weights = torch.clamp(weights, self.eps, self.gaus_bond)
         return inv_sigma2*torch.mean((weights-1.)**2)
 
@@ -41,6 +61,15 @@ class LocalGrad3d(torch.nn.Module):
         self.loss_mult = loss_mult
 
     def forward(self, y_pred, weight):
+        """Compute weighted 3D gradient regularization.
+
+        Args:
+            y_pred: Predicted displacement/field tensor (B, C, H, W, D).
+            weight: Spatial weight tensor (B, 1, H, W, D).
+
+        Returns:
+            Scalar weighted gradient penalty.
+        """
         dy = torch.abs(y_pred[:, :, 1:, :, :] - y_pred[:, :, :-1, :, :])
         dx = torch.abs(y_pred[:, :, :, 1:, :] - y_pred[:, :, :, :-1, :])
         dz = torch.abs(y_pred[:, :, :, :, 1:] - y_pred[:, :, :, :, :-1])

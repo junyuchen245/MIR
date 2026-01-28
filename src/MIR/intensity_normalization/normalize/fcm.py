@@ -16,11 +16,11 @@ import numpy as np
 import numpy.typing as npt
 import pymedio.image as mioi
 
-import intensity_normalization as intnorm
-import intensity_normalization.normalize.base as intnormb
-import intensity_normalization.typing as intnormt
-import intensity_normalization.util.io as intnormio
-import intensity_normalization.util.tissue_membership as intnormtm
+import MIR.intensity_normalization as intnorm
+import MIR.intensity_normalization.normalize.base as intnormb
+import MIR.intensity_normalization.typing as intnormt
+import MIR.intensity_normalization.util.io as intnormio
+import MIR.intensity_normalization.util.tissue_membership as intnormtm
 
 logger = logging.getLogger(__name__)
 

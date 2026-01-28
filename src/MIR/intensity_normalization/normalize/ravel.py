@@ -21,12 +21,12 @@ import pymedio.image as mioi
 import scipy.sparse
 import scipy.sparse.linalg
 
-import intensity_normalization.errors as intnorme
-import intensity_normalization.normalize.base as intnormb
-import intensity_normalization.normalize.whitestripe as intnormws
-import intensity_normalization.typing as intnormt
-import intensity_normalization.util.io as intnormio
-import intensity_normalization.util.tissue_membership as intnormtm
+import MIR.intensity_normalization.errors as intnorme
+import MIR.intensity_normalization.normalize.base as intnormb
+import MIR.intensity_normalization.normalize.whitestripe as intnormws
+import MIR.intensity_normalization.typing as intnormt
+import MIR.intensity_normalization.util.io as intnormio
+import MIR.intensity_normalization.util.tissue_membership as intnormtm
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +36,7 @@ except ImportError as ants_imp_exn:
     msg = "ANTsPy not installed. Install antspyx to use RAVEL."
     raise RuntimeError(msg) from ants_imp_exn
 else:
-    from intensity_normalization.util.coregister import register, to_ants
+    from MIR.intensity_normalization.util.coregister import register, to_ants
 
 
 class RavelNormalize(intnormb.DirectoryNormalizeCLI):

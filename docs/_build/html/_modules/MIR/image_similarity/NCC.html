@@ -1,0 +1,714 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MIR.image_similarity.NCC &mdash; MIR 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js?v=f6245a2f"></script>
+      <script src="../../../_static/doctools.js?v=888ff710"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            MIR
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">MIR</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">MIR.image_similarity.NCC</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for MIR.image_similarity.NCC</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Normalized cross-correlation (NCC) loss implementations.&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torch.nn.functional</span> <span class="k">as</span> <span class="nn">F</span>
+<span class="kn">from</span> <span class="nn">torch.autograd</span> <span class="kn">import</span> <span class="n">Variable</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">math</span> <span class="kn">import</span> <span class="n">exp</span>
+<span class="kn">import</span> <span class="nn">math</span>
+<span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
+
+
+
+<span class="k">def</span> <span class="nf">gaussian</span><span class="p">(</span><span class="n">window_size</span><span class="p">,</span> <span class="n">sigma</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a 1D Gaussian kernel.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        window_size: Kernel size.</span>
+<span class="sd">        sigma: Standard deviation.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        1D normalized Gaussian kernel tensor.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">gauss</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">([</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">window_size</span> <span class="o">//</span> <span class="mi">2</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">sigma</span> <span class="o">**</span> <span class="mi">2</span><span class="p">))</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">window_size</span><span class="p">)])</span>
+    <span class="k">return</span> <span class="n">gauss</span> <span class="o">/</span> <span class="n">gauss</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+
+
+<span class="k">def</span> <span class="nf">create_window</span><span class="p">(</span><span class="n">window_size</span><span class="p">,</span> <span class="n">channel</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a 2D Gaussian window tensor.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        window_size: Kernel size.</span>
+<span class="sd">        channel: Number of channels.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        2D window tensor of shape (C,1,H,W).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">_1D_window</span> <span class="o">=</span> <span class="n">gaussian</span><span class="p">(</span><span class="n">window_size</span><span class="p">,</span> <span class="mf">1.5</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">_2D_window</span> <span class="o">=</span> <span class="n">_1D_window</span><span class="o">.</span><span class="n">mm</span><span class="p">(</span><span class="n">_1D_window</span><span class="o">.</span><span class="n">t</span><span class="p">())</span><span class="o">.</span><span class="n">float</span><span class="p">()</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">window</span> <span class="o">=</span> <span class="n">Variable</span><span class="p">(</span><span class="n">_2D_window</span><span class="o">.</span><span class="n">expand</span><span class="p">(</span><span class="n">channel</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">window_size</span><span class="p">,</span> <span class="n">window_size</span><span class="p">)</span><span class="o">.</span><span class="n">contiguous</span><span class="p">())</span>
+    <span class="k">return</span> <span class="n">window</span>
+
+
+<span class="k">def</span> <span class="nf">create_window_3D</span><span class="p">(</span><span class="n">window_size</span><span class="p">,</span> <span class="n">channel</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a 3D Gaussian window tensor.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        window_size: Kernel size.</span>
+<span class="sd">        channel: Number of channels.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        3D window tensor of shape (C,1,H,W,D).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">_1D_window</span> <span class="o">=</span> <span class="n">gaussian</span><span class="p">(</span><span class="n">window_size</span><span class="p">,</span> <span class="mf">1.5</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">_2D_window</span> <span class="o">=</span> <span class="n">_1D_window</span><span class="o">.</span><span class="n">mm</span><span class="p">(</span><span class="n">_1D_window</span><span class="o">.</span><span class="n">t</span><span class="p">())</span>
+    <span class="n">_3D_window</span> <span class="o">=</span> <span class="n">_1D_window</span><span class="o">.</span><span class="n">mm</span><span class="p">(</span><span class="n">_2D_window</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">window_size</span><span class="p">,</span> <span class="n">window_size</span><span class="p">,</span>
+                                                                  <span class="n">window_size</span><span class="p">)</span><span class="o">.</span><span class="n">float</span><span class="p">()</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">window</span> <span class="o">=</span> <span class="n">Variable</span><span class="p">(</span><span class="n">_3D_window</span><span class="o">.</span><span class="n">expand</span><span class="p">(</span><span class="n">channel</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">window_size</span><span class="p">,</span> <span class="n">window_size</span><span class="p">,</span> <span class="n">window_size</span><span class="p">)</span><span class="o">.</span><span class="n">contiguous</span><span class="p">())</span>
+    <span class="k">return</span> <span class="n">window</span>
+
+<div class="viewcode-block" id="NCC_gauss"><a class="viewcode-back" href="../../../api.html#MIR.image_similarity.NCC_gauss">[docs]</a><span class="k">class</span> <span class="nc">NCC_gauss</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Local (over window) normalized cross correlation loss via Gaussian</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">win</span><span class="o">=</span><span class="mi">9</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">NCC_gauss</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">win</span> <span class="o">=</span> <span class="p">[</span><span class="n">win</span><span class="p">]</span><span class="o">*</span><span class="mi">3</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">filt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_window_3D</span><span class="p">(</span><span class="n">win</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="s2">&quot;cuda&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="NCC_gauss.gaussian"><a class="viewcode-back" href="../../../api.html#MIR.image_similarity.NCC_gauss.gaussian">[docs]</a>    <span class="k">def</span> <span class="nf">gaussian</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">window_size</span><span class="p">,</span> <span class="n">sigma</span><span class="p">):</span>
+        <span class="n">gauss</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">([</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">window_size</span> <span class="o">//</span> <span class="mi">2</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">sigma</span> <span class="o">**</span> <span class="mi">2</span><span class="p">))</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">window_size</span><span class="p">)])</span>
+        <span class="k">return</span> <span class="n">gauss</span> <span class="o">/</span> <span class="n">gauss</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="NCC_gauss.create_window_3D"><a class="viewcode-back" href="../../../api.html#MIR.image_similarity.NCC_gauss.create_window_3D">[docs]</a>    <span class="k">def</span> <span class="nf">create_window_3D</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">window_size</span><span class="p">,</span> <span class="n">channel</span><span class="p">):</span>
+        <span class="n">_1D_window</span> <span class="o">=</span> <span class="n">gaussian</span><span class="p">(</span><span class="n">window_size</span><span class="p">,</span> <span class="mf">2.</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">_2D_window</span> <span class="o">=</span> <span class="n">_1D_window</span><span class="o">.</span><span class="n">mm</span><span class="p">(</span><span class="n">_1D_window</span><span class="o">.</span><span class="n">t</span><span class="p">())</span>
+        <span class="n">_3D_window</span> <span class="o">=</span> <span class="n">_1D_window</span><span class="o">.</span><span class="n">mm</span><span class="p">(</span><span class="n">_2D_window</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">window_size</span><span class="p">,</span> <span class="n">window_size</span><span class="p">,</span>
+                                                                      <span class="n">window_size</span><span class="p">)</span><span class="o">.</span><span class="n">float</span><span class="p">()</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">window</span> <span class="o">=</span> <span class="n">Variable</span><span class="p">(</span><span class="n">_3D_window</span><span class="o">.</span><span class="n">expand</span><span class="p">(</span><span class="n">channel</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">window_size</span><span class="p">,</span> <span class="n">window_size</span><span class="p">,</span> <span class="n">window_size</span><span class="p">)</span><span class="o">.</span><span class="n">contiguous</span><span class="p">())</span>
+        <span class="c1">#print(_2D_window)</span>
+        <span class="k">return</span> <span class="n">window</span></div>
+
+<div class="viewcode-block" id="NCC_gauss.forward"><a class="viewcode-back" href="../../../api.html#MIR.image_similarity.NCC_gauss.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute Gaussian-windowed NCC loss.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            y_true: Fixed image tensor (B, 1, ...).</span>
+<span class="sd">            y_pred: Moving image tensor (B, 1, ...).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Scalar NCC loss (negative mean NCC).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">Ii</span> <span class="o">=</span> <span class="n">y_true</span>
+        <span class="n">Ji</span> <span class="o">=</span> <span class="n">y_pred</span>
+
+        <span class="c1"># get dimension of volume</span>
+        <span class="c1"># assumes Ii, Ji are sized [batch_size, *vol_shape, nb_feats]</span>
+        <span class="n">ndims</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">Ii</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span> <span class="o">-</span> <span class="mi">2</span>
+        <span class="k">assert</span> <span class="n">ndims</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="s2">&quot;volumes should be 1 to 3 dimensions. found: </span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">ndims</span>
+
+        <span class="c1"># compute filters</span>
+        <span class="n">pad_no</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">win</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+
+        <span class="c1"># get convolution function</span>
+        <span class="n">conv_fn</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">F</span><span class="p">,</span> <span class="s1">&#39;conv</span><span class="si">%d</span><span class="s1">d&#39;</span> <span class="o">%</span> <span class="n">ndims</span><span class="p">)</span>
+
+        <span class="c1"># compute CC squares</span>
+        <span class="n">mu1</span> <span class="o">=</span> <span class="n">conv_fn</span><span class="p">(</span><span class="n">Ii</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">filt</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="n">pad_no</span><span class="p">)</span>
+        <span class="n">mu2</span> <span class="o">=</span> <span class="n">conv_fn</span><span class="p">(</span><span class="n">Ji</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">filt</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="n">pad_no</span><span class="p">)</span>
+
+        <span class="n">mu1_sq</span> <span class="o">=</span> <span class="n">mu1</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">mu2_sq</span> <span class="o">=</span> <span class="n">mu2</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">mu1_mu2</span> <span class="o">=</span> <span class="n">mu1</span> <span class="o">*</span> <span class="n">mu2</span>
+
+        <span class="n">sigma1_sq</span> <span class="o">=</span> <span class="n">conv_fn</span><span class="p">(</span><span class="n">Ii</span> <span class="o">*</span> <span class="n">Ii</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">filt</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="n">pad_no</span><span class="p">)</span> <span class="o">-</span> <span class="n">mu1_sq</span>
+        <span class="n">sigma2_sq</span> <span class="o">=</span> <span class="n">conv_fn</span><span class="p">(</span><span class="n">Ji</span> <span class="o">*</span> <span class="n">Ji</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">filt</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="n">pad_no</span><span class="p">)</span> <span class="o">-</span> <span class="n">mu2_sq</span>
+        <span class="n">sigma12</span> <span class="o">=</span> <span class="n">conv_fn</span><span class="p">(</span><span class="n">Ii</span> <span class="o">*</span> <span class="n">Ji</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">filt</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="n">pad_no</span><span class="p">)</span> <span class="o">-</span> <span class="n">mu1_mu2</span>
+
+        <span class="n">cc</span> <span class="o">=</span> <span class="p">(</span><span class="n">sigma12</span> <span class="o">*</span> <span class="n">sigma12</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="n">sigma1_sq</span> <span class="o">*</span> <span class="n">sigma2_sq</span> <span class="o">+</span> <span class="mf">1e-5</span><span class="p">)</span>
+        <span class="k">return</span> <span class="o">-</span><span class="n">torch</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">cc</span><span class="p">)</span></div></div>
+
+<div class="viewcode-block" id="NCC"><a class="viewcode-back" href="../../../api.html#MIR.image_similarity.NCC">[docs]</a><span class="k">class</span> <span class="nc">NCC</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Local (over window) normalized cross correlation loss.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">win</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">NCC</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">win</span> <span class="o">=</span> <span class="n">win</span>
+
+<div class="viewcode-block" id="NCC.forward"><a class="viewcode-back" href="../../../api.html#MIR.image_similarity.NCC.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute NCC loss over a local window.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            y_true: Fixed image tensor (B, 1, ...).</span>
+<span class="sd">            y_pred: Moving image tensor (B, 1, ...).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Scalar NCC loss (negative mean NCC).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">Ii</span> <span class="o">=</span> <span class="n">y_true</span>
+        <span class="n">Ji</span> <span class="o">=</span> <span class="n">y_pred</span>
+
+        <span class="c1"># get dimension of volume</span>
+        <span class="c1"># assumes Ii, Ji are sized [batch_size, *vol_shape, nb_feats]</span>
+        <span class="n">ndims</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">Ii</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span> <span class="o">-</span> <span class="mi">2</span>
+        <span class="k">assert</span> <span class="n">ndims</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="s2">&quot;volumes should be 1 to 3 dimensions. found: </span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">ndims</span>
+
+        <span class="c1"># set window size</span>
+        <span class="n">win</span> <span class="o">=</span> <span class="p">[</span><span class="mi">9</span><span class="p">]</span> <span class="o">*</span> <span class="n">ndims</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">win</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">win</span><span class="p">]</span> <span class="o">*</span> <span class="n">ndims</span>
+
+        <span class="c1"># compute filters</span>
+        <span class="n">sum_filt</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="o">*</span><span class="n">win</span><span class="p">])</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="s2">&quot;cuda&quot;</span><span class="p">)</span><span class="o">/</span><span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">win</span><span class="p">))</span>
+
+        <span class="n">pad_no</span> <span class="o">=</span> <span class="n">win</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">//</span> <span class="mi">2</span>
+
+        <span class="k">if</span> <span class="n">ndims</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">stride</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">padding</span> <span class="o">=</span> <span class="p">(</span><span class="n">pad_no</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">ndims</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">stride</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">padding</span> <span class="o">=</span> <span class="p">(</span><span class="n">pad_no</span><span class="p">,</span> <span class="n">pad_no</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">stride</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">padding</span> <span class="o">=</span> <span class="p">(</span><span class="n">pad_no</span><span class="p">,</span> <span class="n">pad_no</span><span class="p">,</span> <span class="n">pad_no</span><span class="p">)</span>
+
+        <span class="c1"># get convolution function</span>
+        <span class="n">conv_fn</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">F</span><span class="p">,</span> <span class="s1">&#39;conv</span><span class="si">%d</span><span class="s1">d&#39;</span> <span class="o">%</span> <span class="n">ndims</span><span class="p">)</span>
+
+        <span class="c1"># compute CC squares</span>
+        <span class="n">mu1</span> <span class="o">=</span> <span class="n">conv_fn</span><span class="p">(</span><span class="n">Ii</span><span class="p">,</span> <span class="n">sum_filt</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="n">padding</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="n">stride</span><span class="p">)</span>
+        <span class="n">mu2</span> <span class="o">=</span> <span class="n">conv_fn</span><span class="p">(</span><span class="n">Ji</span><span class="p">,</span> <span class="n">sum_filt</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="n">padding</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="n">stride</span><span class="p">)</span>
+
+        <span class="n">mu1_sq</span> <span class="o">=</span> <span class="n">mu1</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">mu2_sq</span> <span class="o">=</span> <span class="n">mu2</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">mu1_mu2</span> <span class="o">=</span> <span class="n">mu1</span> <span class="o">*</span> <span class="n">mu2</span>
+
+        <span class="n">sigma1_sq</span> <span class="o">=</span> <span class="n">conv_fn</span><span class="p">(</span><span class="n">Ii</span> <span class="o">*</span> <span class="n">Ii</span><span class="p">,</span> <span class="n">sum_filt</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="n">padding</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="n">stride</span><span class="p">)</span> <span class="o">-</span> <span class="n">mu1_sq</span>
+        <span class="n">sigma2_sq</span> <span class="o">=</span> <span class="n">conv_fn</span><span class="p">(</span><span class="n">Ji</span> <span class="o">*</span> <span class="n">Ji</span><span class="p">,</span> <span class="n">sum_filt</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="n">padding</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="n">stride</span><span class="p">)</span> <span class="o">-</span> <span class="n">mu2_sq</span>
+        <span class="n">sigma12</span> <span class="o">=</span> <span class="n">conv_fn</span><span class="p">(</span><span class="n">Ii</span> <span class="o">*</span> <span class="n">Ji</span><span class="p">,</span> <span class="n">sum_filt</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="n">padding</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="n">stride</span><span class="p">)</span> <span class="o">-</span> <span class="n">mu1_mu2</span>
+
+        <span class="n">cc</span> <span class="o">=</span> <span class="p">(</span><span class="n">sigma12</span> <span class="o">*</span> <span class="n">sigma12</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">sigma1_sq</span> <span class="o">*</span> <span class="n">sigma2_sq</span> <span class="o">+</span> <span class="mf">1e-5</span><span class="p">)</span>
+        <span class="k">return</span> <span class="o">-</span> <span class="n">torch</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">cc</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="NCC_mok"><a class="viewcode-back" href="../../../api.html#MIR.image_similarity.NCC_mok">[docs]</a><span class="k">class</span> <span class="nc">NCC_mok</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    local (over window) normalized cross correlation</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">win</span><span class="o">=</span><span class="mi">9</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">NCC_mok</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">win</span> <span class="o">=</span> <span class="n">win</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eps</span> <span class="o">=</span> <span class="n">eps</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">w_temp</span> <span class="o">=</span> <span class="n">win</span>
+
+<div class="viewcode-block" id="NCC_mok.forward"><a class="viewcode-back" href="../../../api.html#MIR.image_similarity.NCC_mok.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">I</span><span class="p">,</span> <span class="n">J</span><span class="p">):</span>
+        <span class="n">ndims</span> <span class="o">=</span> <span class="mi">3</span>
+        <span class="n">win_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">w_temp</span>
+
+        <span class="c1"># set window size</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">win</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">win</span> <span class="o">=</span> <span class="p">[</span><span class="mi">5</span><span class="p">]</span> <span class="o">*</span> <span class="n">ndims</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">win</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">w_temp</span><span class="p">]</span> <span class="o">*</span> <span class="n">ndims</span>
+
+        <span class="n">weight_win_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">w_temp</span>
+        <span class="n">weight</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">weight_win_size</span><span class="p">,</span> <span class="n">weight_win_size</span><span class="p">,</span> <span class="n">weight_win_size</span><span class="p">),</span> <span class="n">device</span><span class="o">=</span><span class="n">I</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">requires_grad</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">conv_fn</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">conv3d</span>
+
+        <span class="c1"># compute CC squares</span>
+        <span class="n">I2</span> <span class="o">=</span> <span class="n">I</span><span class="o">*</span><span class="n">I</span>
+        <span class="n">J2</span> <span class="o">=</span> <span class="n">J</span><span class="o">*</span><span class="n">J</span>
+        <span class="n">IJ</span> <span class="o">=</span> <span class="n">I</span><span class="o">*</span><span class="n">J</span>
+
+        <span class="c1"># compute filters</span>
+        <span class="c1"># compute local sums via convolution</span>
+        <span class="n">I_sum</span> <span class="o">=</span> <span class="n">conv_fn</span><span class="p">(</span><span class="n">I</span><span class="p">,</span> <span class="n">weight</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">win_size</span><span class="o">/</span><span class="mi">2</span><span class="p">))</span>
+        <span class="n">J_sum</span> <span class="o">=</span> <span class="n">conv_fn</span><span class="p">(</span><span class="n">J</span><span class="p">,</span> <span class="n">weight</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">win_size</span><span class="o">/</span><span class="mi">2</span><span class="p">))</span>
+        <span class="n">I2_sum</span> <span class="o">=</span> <span class="n">conv_fn</span><span class="p">(</span><span class="n">I2</span><span class="p">,</span> <span class="n">weight</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">win_size</span><span class="o">/</span><span class="mi">2</span><span class="p">))</span>
+        <span class="n">J2_sum</span> <span class="o">=</span> <span class="n">conv_fn</span><span class="p">(</span><span class="n">J2</span><span class="p">,</span> <span class="n">weight</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">win_size</span><span class="o">/</span><span class="mi">2</span><span class="p">))</span>
+        <span class="n">IJ_sum</span> <span class="o">=</span> <span class="n">conv_fn</span><span class="p">(</span><span class="n">IJ</span><span class="p">,</span> <span class="n">weight</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">win_size</span><span class="o">/</span><span class="mi">2</span><span class="p">))</span>
+
+        <span class="c1"># compute cross correlation</span>
+        <span class="n">win_size</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">win</span><span class="p">)</span>
+        <span class="n">u_I</span> <span class="o">=</span> <span class="n">I_sum</span><span class="o">/</span><span class="n">win_size</span>
+        <span class="n">u_J</span> <span class="o">=</span> <span class="n">J_sum</span><span class="o">/</span><span class="n">win_size</span>
+
+        <span class="n">cross</span> <span class="o">=</span> <span class="n">IJ_sum</span> <span class="o">-</span> <span class="n">u_J</span><span class="o">*</span><span class="n">I_sum</span> <span class="o">-</span> <span class="n">u_I</span><span class="o">*</span><span class="n">J_sum</span> <span class="o">+</span> <span class="n">u_I</span><span class="o">*</span><span class="n">u_J</span><span class="o">*</span><span class="n">win_size</span>
+        <span class="n">I_var</span> <span class="o">=</span> <span class="n">I2_sum</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">u_I</span> <span class="o">*</span> <span class="n">I_sum</span> <span class="o">+</span> <span class="n">u_I</span><span class="o">*</span><span class="n">u_I</span><span class="o">*</span><span class="n">win_size</span>
+        <span class="n">J_var</span> <span class="o">=</span> <span class="n">J2_sum</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">u_J</span> <span class="o">*</span> <span class="n">J_sum</span> <span class="o">+</span> <span class="n">u_J</span><span class="o">*</span><span class="n">u_J</span><span class="o">*</span><span class="n">win_size</span>
+
+        <span class="n">cc</span> <span class="o">=</span> <span class="n">cross</span> <span class="o">*</span> <span class="n">cross</span> <span class="o">/</span> <span class="p">(</span><span class="n">I_var</span> <span class="o">*</span> <span class="n">J_var</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">eps</span><span class="p">)</span>
+
+        <span class="c1"># return negative cc.</span>
+        <span class="k">return</span> <span class="o">-</span><span class="mf">1.0</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">cc</span><span class="p">)</span></div></div>
+
+<div class="viewcode-block" id="NCC_mok2"><a class="viewcode-back" href="../../../api.html#MIR.image_similarity.NCC_mok2">[docs]</a><span class="k">class</span> <span class="nc">NCC_mok2</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    local (over window) normalized cross correlation</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">win</span><span class="o">=</span><span class="mi">9</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">,</span> <span class="n">channel</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">NCC_mok2</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">win</span> <span class="o">=</span> <span class="n">win</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eps</span> <span class="o">=</span> <span class="n">eps</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">w_temp</span> <span class="o">=</span> <span class="n">win</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">channel</span> <span class="o">=</span> <span class="n">channel</span>
+
+<div class="viewcode-block" id="NCC_mok2.forward"><a class="viewcode-back" href="../../../api.html#MIR.image_similarity.NCC_mok2.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">I</span><span class="p">,</span> <span class="n">J</span><span class="p">):</span>
+        <span class="n">ndims</span> <span class="o">=</span> <span class="mi">3</span>
+        <span class="n">win_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">w_temp</span>
+
+        <span class="c1"># set window size</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">win</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">win</span> <span class="o">=</span> <span class="p">[</span><span class="mi">5</span><span class="p">]</span> <span class="o">*</span> <span class="n">ndims</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">win</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">w_temp</span><span class="p">]</span> <span class="o">*</span> <span class="n">ndims</span>
+
+        <span class="n">weight_win_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">w_temp</span>
+        <span class="n">weight</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">channel</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">weight_win_size</span><span class="p">,</span> <span class="n">weight_win_size</span><span class="p">,</span> <span class="n">weight_win_size</span><span class="p">),</span> <span class="n">device</span><span class="o">=</span><span class="n">I</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">requires_grad</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">conv_fn</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">conv3d</span>
+
+        <span class="c1"># compute CC squares</span>
+        <span class="n">I2</span> <span class="o">=</span> <span class="n">I</span><span class="o">*</span><span class="n">I</span>
+        <span class="n">J2</span> <span class="o">=</span> <span class="n">J</span><span class="o">*</span><span class="n">J</span>
+        <span class="n">IJ</span> <span class="o">=</span> <span class="n">I</span><span class="o">*</span><span class="n">J</span>
+
+        <span class="c1"># compute filters</span>
+        <span class="c1"># compute local sums via convolution</span>
+        <span class="n">I_sum</span> <span class="o">=</span> <span class="n">conv_fn</span><span class="p">(</span><span class="n">I</span><span class="p">,</span> <span class="n">weight</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">win_size</span><span class="o">/</span><span class="mi">2</span><span class="p">),</span> <span class="n">groups</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">channel</span><span class="p">)</span>
+        <span class="n">J_sum</span> <span class="o">=</span> <span class="n">conv_fn</span><span class="p">(</span><span class="n">J</span><span class="p">,</span> <span class="n">weight</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">win_size</span><span class="o">/</span><span class="mi">2</span><span class="p">),</span> <span class="n">groups</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">channel</span><span class="p">)</span>
+        <span class="n">I2_sum</span> <span class="o">=</span> <span class="n">conv_fn</span><span class="p">(</span><span class="n">I2</span><span class="p">,</span> <span class="n">weight</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">win_size</span><span class="o">/</span><span class="mi">2</span><span class="p">),</span> <span class="n">groups</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">channel</span><span class="p">)</span>
+        <span class="n">J2_sum</span> <span class="o">=</span> <span class="n">conv_fn</span><span class="p">(</span><span class="n">J2</span><span class="p">,</span> <span class="n">weight</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">win_size</span><span class="o">/</span><span class="mi">2</span><span class="p">),</span> <span class="n">groups</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">channel</span><span class="p">)</span>
+        <span class="n">IJ_sum</span> <span class="o">=</span> <span class="n">conv_fn</span><span class="p">(</span><span class="n">IJ</span><span class="p">,</span> <span class="n">weight</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">win_size</span><span class="o">/</span><span class="mi">2</span><span class="p">),</span> <span class="n">groups</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">channel</span><span class="p">)</span>
+
+        <span class="c1"># compute cross correlation</span>
+        <span class="n">win_size</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">win</span><span class="p">)</span>
+        <span class="n">u_I</span> <span class="o">=</span> <span class="n">I_sum</span><span class="o">/</span><span class="n">win_size</span>
+        <span class="n">u_J</span> <span class="o">=</span> <span class="n">J_sum</span><span class="o">/</span><span class="n">win_size</span>
+
+        <span class="n">cross</span> <span class="o">=</span> <span class="n">IJ_sum</span> <span class="o">-</span> <span class="n">u_J</span><span class="o">*</span><span class="n">I_sum</span> <span class="o">-</span> <span class="n">u_I</span><span class="o">*</span><span class="n">J_sum</span> <span class="o">+</span> <span class="n">u_I</span><span class="o">*</span><span class="n">u_J</span><span class="o">*</span><span class="n">win_size</span>
+        <span class="n">I_var</span> <span class="o">=</span> <span class="n">I2_sum</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">u_I</span> <span class="o">*</span> <span class="n">I_sum</span> <span class="o">+</span> <span class="n">u_I</span><span class="o">*</span><span class="n">u_I</span><span class="o">*</span><span class="n">win_size</span>
+        <span class="n">J_var</span> <span class="o">=</span> <span class="n">J2_sum</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">u_J</span> <span class="o">*</span> <span class="n">J_sum</span> <span class="o">+</span> <span class="n">u_J</span><span class="o">*</span><span class="n">u_J</span><span class="o">*</span><span class="n">win_size</span>
+
+        <span class="n">cc</span> <span class="o">=</span> <span class="n">cross</span> <span class="o">*</span> <span class="n">cross</span> <span class="o">/</span> <span class="p">(</span><span class="n">I_var</span> <span class="o">*</span> <span class="n">J_var</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">eps</span><span class="p">)</span>
+        <span class="c1"># print(I_var.min(), I_var.max())</span>
+        <span class="c1"># print(cc.min(), cc.max())</span>
+
+        <span class="c1"># return negative cc.</span>
+        <span class="k">return</span> <span class="o">-</span><span class="mf">1.0</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">cc</span><span class="p">)</span></div></div>
+
+<div class="viewcode-block" id="NCC_vxm"><a class="viewcode-back" href="../../../api.html#MIR.image_similarity.NCC_vxm">[docs]</a><span class="k">class</span> <span class="nc">NCC_vxm</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Local (over window) normalized cross correlation loss.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">win</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ndims</span><span class="o">=</span><span class="mi">3</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">NCC_vxm</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">win</span> <span class="o">=</span> <span class="n">win</span>
+
+        <span class="k">assert</span> <span class="n">ndims</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="s2">&quot;volumes should be 1 to 3 dimensions. found: </span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">ndims</span>
+
+        <span class="c1"># set window size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">win</span> <span class="o">=</span> <span class="p">[</span><span class="mi">9</span><span class="p">]</span> <span class="o">*</span> <span class="n">ndims</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">win</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">win</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">win_size</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">win</span><span class="p">))</span><span class="o">.</span><span class="n">float</span><span class="p">()</span><span class="o">.</span><span class="n">cuda</span><span class="p">()</span>
+
+        <span class="c1"># compute filters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sum_filt</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">win</span><span class="p">])</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="s2">&quot;cuda&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">float</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sum_filt</span><span class="o">.</span><span class="n">requires_grad</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">pad_no</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">win</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">ndims</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stride</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">padding</span> <span class="o">=</span> <span class="p">(</span><span class="n">pad_no</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">ndims</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stride</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">padding</span> <span class="o">=</span> <span class="p">(</span><span class="n">pad_no</span><span class="p">,</span> <span class="n">pad_no</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stride</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">padding</span> <span class="o">=</span> <span class="p">(</span><span class="n">pad_no</span><span class="p">,</span> <span class="n">pad_no</span><span class="p">,</span> <span class="n">pad_no</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ndims</span> <span class="o">=</span> <span class="n">ndims</span>
+
+<div class="viewcode-block" id="NCC_vxm.forward"><a class="viewcode-back" href="../../../api.html#MIR.image_similarity.NCC_vxm.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">):</span>
+
+        <span class="n">Ii</span> <span class="o">=</span> <span class="n">y_true</span>
+        <span class="n">Ji</span> <span class="o">=</span> <span class="n">y_pred</span>
+
+        <span class="c1"># get dimension of volume</span>
+        <span class="c1"># assumes Ii, Ji are sized [batch_size, *vol_shape, nb_feats]</span>
+
+        <span class="c1"># get convolution function</span>
+        <span class="n">conv_fn</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">F</span><span class="p">,</span> <span class="s1">&#39;conv</span><span class="si">%d</span><span class="s1">d&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndims</span><span class="p">)</span>
+
+        <span class="c1"># compute CC squares</span>
+        <span class="n">I2</span> <span class="o">=</span> <span class="n">Ii</span> <span class="o">*</span> <span class="n">Ii</span>
+        <span class="n">J2</span> <span class="o">=</span> <span class="n">Ji</span> <span class="o">*</span> <span class="n">Ji</span>
+        <span class="n">IJ</span> <span class="o">=</span> <span class="n">Ii</span> <span class="o">*</span> <span class="n">Ji</span>
+
+        <span class="n">I_sum</span> <span class="o">=</span> <span class="n">conv_fn</span><span class="p">(</span><span class="n">Ii</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sum_filt</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stride</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">padding</span><span class="p">)</span>
+        <span class="n">J_sum</span> <span class="o">=</span> <span class="n">conv_fn</span><span class="p">(</span><span class="n">Ji</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sum_filt</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stride</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">padding</span><span class="p">)</span>
+        <span class="n">I2_sum</span> <span class="o">=</span> <span class="n">conv_fn</span><span class="p">(</span><span class="n">I2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sum_filt</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stride</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">padding</span><span class="p">)</span>
+        <span class="n">J2_sum</span> <span class="o">=</span> <span class="n">conv_fn</span><span class="p">(</span><span class="n">J2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sum_filt</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stride</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">padding</span><span class="p">)</span>
+        <span class="n">IJ_sum</span> <span class="o">=</span> <span class="n">conv_fn</span><span class="p">(</span><span class="n">IJ</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sum_filt</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stride</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">padding</span><span class="p">)</span>
+
+
+        <span class="n">u_I</span> <span class="o">=</span> <span class="n">I_sum</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">win_size</span>
+        <span class="n">u_J</span> <span class="o">=</span> <span class="n">J_sum</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">win_size</span>
+        <span class="c1">#print(u_I.max(), J2_sum.max())</span>
+        <span class="n">cross</span> <span class="o">=</span> <span class="n">IJ_sum</span> <span class="o">-</span> <span class="n">u_J</span> <span class="o">*</span> <span class="n">I_sum</span> <span class="o">-</span> <span class="n">u_I</span> <span class="o">*</span> <span class="n">J_sum</span> <span class="o">+</span> <span class="n">u_I</span> <span class="o">*</span> <span class="n">u_J</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">win_size</span>
+        <span class="n">I_var</span> <span class="o">=</span> <span class="n">I2_sum</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">u_I</span> <span class="o">*</span> <span class="n">I_sum</span> <span class="o">+</span> <span class="n">u_I</span> <span class="o">*</span> <span class="n">u_I</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">win_size</span>
+        <span class="n">J_var</span> <span class="o">=</span> <span class="n">J2_sum</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">u_J</span> <span class="o">*</span> <span class="n">J_sum</span> <span class="o">+</span> <span class="n">u_J</span> <span class="o">*</span> <span class="n">u_J</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">win_size</span>
+
+        <span class="n">cc</span> <span class="o">=</span> <span class="p">(</span><span class="n">cross</span> <span class="o">*</span> <span class="n">cross</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">I_var</span> <span class="o">*</span> <span class="n">J_var</span> <span class="o">+</span> <span class="mf">1e-5</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="o">-</span><span class="n">torch</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">cc</span><span class="p">)</span></div></div>
+    
+<span class="k">class</span> <span class="nc">SingleScaleNCC</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">window_size</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">window_size</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">window_size</span> <span class="o">=</span> <span class="p">[</span><span class="n">window_size</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">window_size</span> <span class="o">=</span> <span class="n">window_size</span>
+
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pred</span><span class="p">,</span> <span class="n">target</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; LNCC loss</span>
+<span class="sd">            modified based on https://github.com/junyuchen245/TransMorph_Transformer_for_Medical_Image_Registration/blob/main/TransMorph/losses.py</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">Ii</span> <span class="o">=</span> <span class="n">target</span>
+        <span class="n">Ji</span> <span class="o">=</span> <span class="n">pred</span>
+
+        <span class="c1"># get dimension of volume</span>
+        <span class="c1"># assumes Ii, Ji are sized [batch_size, *vol_shape, nb_feats]</span>
+        <span class="n">ndims</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">Ii</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span> <span class="o">-</span> <span class="mi">2</span>
+        <span class="k">assert</span> <span class="n">ndims</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="s2">&quot;volumes should be 1 to 3 dimensions. found: </span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">ndims</span>
+
+        <span class="c1"># set window size</span>
+        <span class="n">win</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">window_size</span> <span class="o">*</span> <span class="n">ndims</span>
+
+        <span class="c1"># compute filters</span>
+        <span class="n">sum_filt</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="o">*</span><span class="n">win</span><span class="p">])</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">pred</span><span class="o">.</span><span class="n">device</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">win</span><span class="p">)</span>
+
+        <span class="n">pad_no</span> <span class="o">=</span> <span class="n">win</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">//</span> <span class="mi">2</span>
+
+        <span class="k">if</span> <span class="n">ndims</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">stride</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">padding</span> <span class="o">=</span> <span class="p">(</span><span class="n">pad_no</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">ndims</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">stride</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">padding</span> <span class="o">=</span> <span class="p">(</span><span class="n">pad_no</span><span class="p">,</span> <span class="n">pad_no</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">stride</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">padding</span> <span class="o">=</span> <span class="p">(</span><span class="n">pad_no</span><span class="p">,</span> <span class="n">pad_no</span><span class="p">,</span> <span class="n">pad_no</span><span class="p">)</span>
+
+        <span class="c1"># get convolution function</span>
+        <span class="n">conv_fn</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">F</span><span class="p">,</span> <span class="s1">&#39;conv</span><span class="si">%d</span><span class="s1">d&#39;</span> <span class="o">%</span> <span class="n">ndims</span><span class="p">)</span>
+
+        <span class="c1"># compute CC squares</span>
+        <span class="n">mu1</span> <span class="o">=</span> <span class="n">conv_fn</span><span class="p">(</span><span class="n">Ii</span><span class="p">,</span> <span class="n">sum_filt</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="n">padding</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="n">stride</span><span class="p">)</span>
+        <span class="n">mu2</span> <span class="o">=</span> <span class="n">conv_fn</span><span class="p">(</span><span class="n">Ji</span><span class="p">,</span> <span class="n">sum_filt</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="n">padding</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="n">stride</span><span class="p">)</span>
+
+        <span class="n">mu1_sq</span> <span class="o">=</span> <span class="n">mu1</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">mu2_sq</span> <span class="o">=</span> <span class="n">mu2</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">mu1_mu2</span> <span class="o">=</span> <span class="n">mu1</span> <span class="o">*</span> <span class="n">mu2</span>
+
+        <span class="n">sigma1_sq</span> <span class="o">=</span> <span class="n">conv_fn</span><span class="p">(</span><span class="n">Ii</span> <span class="o">*</span> <span class="n">Ii</span><span class="p">,</span> <span class="n">sum_filt</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="n">padding</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="n">stride</span><span class="p">)</span> <span class="o">-</span> <span class="n">mu1_sq</span>
+        <span class="n">sigma2_sq</span> <span class="o">=</span> <span class="n">conv_fn</span><span class="p">(</span><span class="n">Ji</span> <span class="o">*</span> <span class="n">Ji</span><span class="p">,</span> <span class="n">sum_filt</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="n">padding</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="n">stride</span><span class="p">)</span> <span class="o">-</span> <span class="n">mu2_sq</span>
+        <span class="n">sigma12</span> <span class="o">=</span> <span class="n">conv_fn</span><span class="p">(</span><span class="n">Ii</span> <span class="o">*</span> <span class="n">Ji</span><span class="p">,</span> <span class="n">sum_filt</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="n">padding</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="n">stride</span><span class="p">)</span> <span class="o">-</span> <span class="n">mu1_mu2</span>
+
+        <span class="n">eps</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">finfo</span><span class="p">(</span><span class="n">sigma12</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span><span class="o">.</span><span class="n">eps</span>
+        <span class="n">cc</span> <span class="o">=</span> <span class="p">(</span><span class="n">sigma12</span> <span class="o">*</span> <span class="n">sigma12</span><span class="p">)</span> <span class="o">/</span> <span class="n">torch</span><span class="o">.</span><span class="n">clamp</span><span class="p">(</span><span class="n">sigma1_sq</span> <span class="o">*</span> <span class="n">sigma2_sq</span><span class="p">,</span> <span class="nb">min</span><span class="o">=</span><span class="n">eps</span><span class="p">)</span>
+        <span class="k">return</span> <span class="o">-</span> <span class="n">torch</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">cc</span><span class="p">)</span>
+
+<div class="viewcode-block" id="NCC_vfa"><a class="viewcode-back" href="../../../api.html#MIR.image_similarity.NCC_vfa">[docs]</a><span class="k">class</span> <span class="nc">NCC_vfa</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Multi-scale NCC from C2FViT: https://github.com/cwmok/C2FViT</span>
+<span class="sd">    suitable for FP16</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span>  <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">window_size</span><span class="o">=</span><span class="mi">9</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">kernel</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">half_resolution</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_scales</span> <span class="o">=</span> <span class="n">scale</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">kernel</span> <span class="o">=</span> <span class="n">kernel</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">half_resolution</span> <span class="o">=</span> <span class="n">half_resolution</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">similarity_metric</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_scales</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">similarity_metric</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                        <span class="n">SingleScaleNCC</span><span class="p">(</span><span class="n">window_size</span><span class="o">-</span><span class="p">(</span><span class="n">i</span><span class="o">*</span><span class="mi">2</span><span class="p">))</span>
+            <span class="p">)</span>
+
+<div class="viewcode-block" id="NCC_vfa.forward"><a class="viewcode-back" href="../../../api.html#MIR.image_similarity.NCC_vfa.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">I</span><span class="p">,</span> <span class="n">J</span><span class="p">):</span>
+        <span class="n">dim</span> <span class="o">=</span> <span class="n">I</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span> <span class="o">-</span> <span class="mi">2</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">half_resolution</span><span class="p">:</span>
+            <span class="n">kwargs</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;scale_factor&#39;</span><span class="p">:</span><span class="mf">0.5</span><span class="p">,</span> <span class="s1">&#39;align_corners&#39;</span><span class="p">:</span><span class="kc">True</span><span class="p">}</span>
+            <span class="k">if</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+                <span class="n">I</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">interpolate</span><span class="p">(</span><span class="n">I</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;bilinear&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+                <span class="n">J</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">interpolate</span><span class="p">(</span><span class="n">J</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;bilinear&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+                <span class="n">I</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">interpolate</span><span class="p">(</span><span class="n">I</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;trilinear&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+                <span class="n">J</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">interpolate</span><span class="p">(</span><span class="n">J</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;trilinear&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">pooling_fn</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">avg_pool2d</span>
+        <span class="k">elif</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="n">pooling_fn</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">avg_pool3d</span>
+
+        <span class="n">total_NCC</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_scales</span><span class="p">):</span>
+            <span class="n">current_NCC</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">similarity_metric</span><span class="p">[</span><span class="n">i</span><span class="p">](</span><span class="n">I</span><span class="p">,</span> <span class="n">J</span><span class="p">)</span>
+            <span class="n">total_NCC</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">current_NCC</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_scales</span><span class="p">)</span>
+
+            <span class="n">I</span> <span class="o">=</span> <span class="n">pooling_fn</span><span class="p">(</span><span class="n">I</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">kernel</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">kernel</span><span class="o">//</span><span class="mi">2</span><span class="p">,</span> <span class="n">count_include_pad</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="n">J</span> <span class="o">=</span> <span class="n">pooling_fn</span><span class="p">(</span><span class="n">J</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">kernel</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">kernel</span><span class="o">//</span><span class="mi">2</span><span class="p">,</span> <span class="n">count_include_pad</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="nb">sum</span><span class="p">(</span><span class="n">total_NCC</span><span class="p">)</span></div></div>
+    
+<div class="viewcode-block" id="FastNCC"><a class="viewcode-back" href="../../../api.html#MIR.image_similarity.FastNCC">[docs]</a><span class="k">class</span> <span class="nc">FastNCC</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Local (over window) normalized cross correlation loss by XiJia</span>
+<span class="sd">    https://github.com/xi-jia/FastLNCC</span>
+<span class="sd">    </span>
+<span class="sd">    # For PyTorch versions &gt; 2.0, if there are numerical differences, please add the following code.</span>
+<span class="sd">    torch.backends.cudnn.allow_tf32 = False</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">win</span><span class="o">=</span><span class="mi">9</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">win</span> <span class="o">=</span> <span class="n">win</span>
+
+<div class="viewcode-block" id="FastNCC.forward"><a class="viewcode-back" href="../../../api.html#MIR.image_similarity.FastNCC.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">):</span>
+
+        <span class="n">Ii</span> <span class="o">=</span> <span class="n">y_true</span>
+        <span class="n">Ji</span> <span class="o">=</span> <span class="n">y_pred</span>
+
+        <span class="c1"># get dimension of volume</span>
+        <span class="c1"># assumes Ii, Ji are sized [batch_size, *vol_shape, nb_feats]</span>
+        <span class="n">ndims</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">Ii</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span> <span class="o">-</span> <span class="mi">2</span>
+        <span class="k">assert</span> <span class="n">ndims</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="s2">&quot;volumes should be 1 to 3 dimensions. found: </span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">ndims</span>
+
+        <span class="c1"># set window size</span>
+        <span class="n">win</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">win</span><span class="p">]</span> <span class="o">*</span> <span class="n">ndims</span>
+
+        <span class="c1"># compute filters</span>
+        <span class="c1"># sum_filt = torch.ones([1, 1, *win]).to(&quot;cuda&quot;)</span>
+        <span class="n">sum_filt</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones</span><span class="p">([</span><span class="mi">5</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="o">*</span><span class="n">win</span><span class="p">])</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">Ii</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+
+        <span class="n">pad_no</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">win</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">ndims</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">stride</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">padding</span> <span class="o">=</span> <span class="p">(</span><span class="n">pad_no</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">ndims</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">stride</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">padding</span> <span class="o">=</span> <span class="p">(</span><span class="n">pad_no</span><span class="p">,</span> <span class="n">pad_no</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">stride</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">padding</span> <span class="o">=</span> <span class="p">(</span><span class="n">pad_no</span><span class="p">,</span> <span class="n">pad_no</span><span class="p">,</span> <span class="n">pad_no</span><span class="p">)</span>
+
+        <span class="c1"># get convolution function</span>
+        <span class="n">conv_fn</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">F</span><span class="p">,</span> <span class="s1">&#39;conv</span><span class="si">%d</span><span class="s1">d&#39;</span> <span class="o">%</span> <span class="n">ndims</span><span class="p">)</span>
+
+        <span class="c1"># compute CC squares</span>
+        <span class="n">I2</span> <span class="o">=</span> <span class="n">Ii</span> <span class="o">*</span> <span class="n">Ii</span>
+        <span class="n">J2</span> <span class="o">=</span> <span class="n">Ji</span> <span class="o">*</span> <span class="n">Ji</span>
+        <span class="n">IJ</span> <span class="o">=</span> <span class="n">Ii</span> <span class="o">*</span> <span class="n">Ji</span>
+        
+        <span class="n">all_five</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">Ii</span><span class="p">,</span> <span class="n">Ji</span><span class="p">,</span> <span class="n">I2</span><span class="p">,</span> <span class="n">J2</span><span class="p">,</span> <span class="n">IJ</span><span class="p">),</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">all_five_conv</span> <span class="o">=</span> <span class="n">conv_fn</span><span class="p">(</span><span class="n">all_five</span><span class="p">,</span> <span class="n">sum_filt</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="n">stride</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="n">padding</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+        <span class="n">I_sum</span><span class="p">,</span> <span class="n">J_sum</span><span class="p">,</span> <span class="n">I2_sum</span><span class="p">,</span> <span class="n">J2_sum</span><span class="p">,</span> <span class="n">IJ_sum</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">all_five_conv</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        
+        <span class="c1"># I_sum = conv_fn(Ii, sum_filt, stride=stride, padding=padding)</span>
+        <span class="c1"># J_sum = conv_fn(Ji, sum_filt, stride=stride, padding=padding)</span>
+        <span class="c1"># I2_sum = conv_fn(I2, sum_filt, stride=stride, padding=padding)</span>
+        <span class="c1"># J2_sum = conv_fn(J2, sum_filt, stride=stride, padding=padding)</span>
+        <span class="c1"># IJ_sum = conv_fn(IJ, sum_filt, stride=stride, padding=padding)</span>
+
+        <span class="c1"># compute cross correlation</span>
+        <span class="c1"># win_size = np.prod(win)</span>
+        <span class="c1"># u_I = I_sum / win_size</span>
+        <span class="c1"># u_J = J_sum / win_size</span>
+
+        <span class="c1"># cross = IJ_sum - u_J * I_sum - u_I * J_sum + u_I * u_J * win_size</span>
+        <span class="c1"># I_var = I2_sum - 2 * u_I * I_sum + u_I * u_I * win_size</span>
+        <span class="c1"># J_var = J2_sum - 2 * u_J * J_sum + u_J * u_J * win_size</span>
+
+
+        <span class="c1"># compute cross correlation</span>
+        <span class="n">win_size</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">win</span><span class="p">)</span>
+
+        <span class="n">cross</span> <span class="o">=</span> <span class="n">IJ_sum</span> <span class="o">-</span> <span class="n">J_sum</span><span class="o">/</span><span class="n">win_size</span><span class="o">*</span><span class="n">I_sum</span>
+        <span class="n">I_var</span> <span class="o">=</span> <span class="n">I2_sum</span> <span class="o">-</span> <span class="n">I_sum</span><span class="o">/</span><span class="n">win_size</span><span class="o">*</span><span class="n">I_sum</span>
+        <span class="n">J_var</span> <span class="o">=</span> <span class="n">J2_sum</span> <span class="o">-</span> <span class="n">J_sum</span><span class="o">/</span><span class="n">win_size</span><span class="o">*</span><span class="n">J_sum</span>
+
+        
+        <span class="n">cc</span> <span class="o">=</span> <span class="n">cross</span> <span class="o">*</span> <span class="n">cross</span> <span class="o">/</span> <span class="p">(</span><span class="n">I_var</span> <span class="o">*</span> <span class="n">J_var</span> <span class="o">+</span> <span class="mf">1e-5</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="o">-</span><span class="n">torch</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">cc</span><span class="p">)</span></div></div>
+    
+<div class="viewcode-block" id="NCC_fp16"><a class="viewcode-back" href="../../../api.html#MIR.image_similarity.NCC_fp16">[docs]</a><span class="k">class</span> <span class="nc">NCC_fp16</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Local normalized cross‑correlation loss for 1‑, 2‑ or 3‑D inputs.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    win      : int</span>
+<span class="sd">        Side length of the cubic averaging window.  Default: 9.</span>
+<span class="sd">    squared  : bool</span>
+<span class="sd">        • False  → classic NCC   ( σ_xy / √(σ_x σ_y) )  </span>
+<span class="sd">        • True   → squared NCC   ( σ_xy² / (σ_x σ_y) )</span>
+<span class="sd">        Default: False.</span>
+<span class="sd">    eps      : float</span>
+<span class="sd">        Small constant to avoid divide‑by‑zero.  Default: 1e‑5.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">win</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">9</span><span class="p">,</span> <span class="n">squared</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">eps</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-5</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">win</span> <span class="o">=</span> <span class="n">win</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">squared</span> <span class="o">=</span> <span class="n">squared</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eps</span> <span class="o">=</span> <span class="n">eps</span>
+
+        <span class="c1"># averaged window filter is cached lazily on first forward pass</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">register_buffer</span><span class="p">(</span><span class="s2">&quot;_filt&quot;</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_filt_device_dtype</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="c1"># ------------------------------------------------------------------</span>
+    <span class="c1"># internal helper</span>
+    <span class="c1"># ------------------------------------------------------------------</span>
+    <span class="k">def</span> <span class="nf">_get_filter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the averaging filter on the input’s device / dtype (cached).&quot;&quot;&quot;</span>
+        <span class="n">ndims</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span> <span class="o">-</span> <span class="mi">2</span>
+        <span class="n">win</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">win</span><span class="p">]</span> <span class="o">*</span> <span class="n">ndims</span>
+        <span class="n">dev_dtype</span> <span class="o">=</span> <span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">x</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_filt</span><span class="o">.</span><span class="n">numel</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_filt_device_dtype</span> <span class="o">!=</span> <span class="n">dev_dtype</span><span class="p">:</span>
+            <span class="n">kernel</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="o">*</span><span class="n">win</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">x</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">x</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+            <span class="n">kernel</span> <span class="o">/=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">win</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_filt</span> <span class="o">=</span> <span class="n">kernel</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_filt_device_dtype</span> <span class="o">=</span> <span class="n">dev_dtype</span>
+
+        <span class="c1"># repeat across channels for grouped conv</span>
+        <span class="n">C</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_filt</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">C</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="o">*</span><span class="p">([</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">ndims</span><span class="p">))</span>
+
+    <span class="c1"># ------------------------------------------------------------------</span>
+    <span class="c1"># forward</span>
+    <span class="c1"># ------------------------------------------------------------------</span>
+<div class="viewcode-block" id="NCC_fp16.forward"><a class="viewcode-back" href="../../../api.html#MIR.image_similarity.NCC_fp16.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">y_true</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+        <span class="k">assert</span> <span class="n">y_true</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="n">y_pred</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="s2">&quot;Inputs must have the same shape&quot;</span>
+        <span class="n">ndims</span> <span class="o">=</span> <span class="n">y_true</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span> <span class="o">-</span> <span class="mi">2</span>
+        <span class="k">assert</span> <span class="n">ndims</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="sa">f</span><span class="s2">&quot;Only 1‑, 2‑ or 3‑D inputs supported, got </span><span class="si">{</span><span class="n">ndims</span><span class="si">}</span><span class="s2">‑D&quot;</span>
+
+        <span class="n">filt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_filter</span><span class="p">(</span><span class="n">y_true</span><span class="p">)</span>
+        <span class="n">conv</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">F</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;conv</span><span class="si">{</span><span class="n">ndims</span><span class="si">}</span><span class="s2">d&quot;</span><span class="p">)</span>
+
+        <span class="n">padding</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">win</span> <span class="o">//</span> <span class="mi">2</span><span class="p">,)</span> <span class="o">*</span> <span class="n">ndims</span>
+        <span class="n">stride</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">,)</span> <span class="o">*</span> <span class="n">ndims</span>
+        <span class="n">groups</span> <span class="o">=</span> <span class="n">y_true</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="n">mu_x</span> <span class="o">=</span> <span class="n">conv</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">filt</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="n">stride</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="n">padding</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="n">groups</span><span class="p">)</span>
+        <span class="n">mu_y</span> <span class="o">=</span> <span class="n">conv</span><span class="p">(</span><span class="n">y_pred</span><span class="p">,</span> <span class="n">filt</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="n">stride</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="n">padding</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="n">groups</span><span class="p">)</span>
+
+        <span class="n">sigma_x</span>  <span class="o">=</span> <span class="n">conv</span><span class="p">(</span><span class="n">y_true</span> <span class="o">*</span> <span class="n">y_true</span><span class="p">,</span> <span class="n">filt</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="n">stride</span><span class="p">,</span>
+                        <span class="n">padding</span><span class="o">=</span><span class="n">padding</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="n">groups</span><span class="p">)</span> <span class="o">-</span> <span class="n">mu_x</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">sigma_y</span>  <span class="o">=</span> <span class="n">conv</span><span class="p">(</span><span class="n">y_pred</span> <span class="o">*</span> <span class="n">y_pred</span><span class="p">,</span> <span class="n">filt</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="n">stride</span><span class="p">,</span>
+                        <span class="n">padding</span><span class="o">=</span><span class="n">padding</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="n">groups</span><span class="p">)</span> <span class="o">-</span> <span class="n">mu_y</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">sigma_xy</span> <span class="o">=</span> <span class="n">conv</span><span class="p">(</span><span class="n">y_true</span> <span class="o">*</span> <span class="n">y_pred</span><span class="p">,</span> <span class="n">filt</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="n">stride</span><span class="p">,</span>
+                        <span class="n">padding</span><span class="o">=</span><span class="n">padding</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="n">groups</span><span class="p">)</span> <span class="o">-</span> <span class="n">mu_x</span> <span class="o">*</span> <span class="n">mu_y</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">squared</span><span class="p">:</span>
+            <span class="n">ncc</span> <span class="o">=</span> <span class="n">sigma_xy</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">sigma_x</span> <span class="o">*</span> <span class="n">sigma_y</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">eps</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">ncc</span> <span class="o">=</span> <span class="n">sigma_xy</span> <span class="o">/</span> <span class="n">torch</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">sigma_x</span> <span class="o">*</span> <span class="n">sigma_y</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">eps</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="o">-</span><span class="n">ncc</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span></div></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,3 +1,5 @@
+"""Registration utility functions and spatial transformer helpers."""
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as nnf
@@ -14,6 +16,12 @@ class SpatialTransformer(nn.Module):
     """
 
     def __init__(self, size, mode='bilinear'):
+        """Initialize a spatial transformer.
+
+        Args:
+            size: Spatial size tuple (H, W[, D]).
+            mode: Interpolation mode ('bilinear' or 'nearest').
+        """
         super().__init__()
 
         self.mode = mode
@@ -33,6 +41,15 @@ class SpatialTransformer(nn.Module):
         self.register_buffer('grid', grid)
 
     def forward(self, src, flow):
+        """Warp a source image with a displacement field.
+
+        Args:
+            src: Source tensor (B, C, ...).
+            flow: Displacement field (B, ndim, ...).
+
+        Returns:
+            Warped source tensor.
+        """
         # new locations
         new_locs = self.grid + flow
         shape = flow.shape[2:]
@@ -58,6 +75,12 @@ class VecInt(nn.Module):
     """
 
     def __init__(self, inshape, nsteps):
+        """Initialize vector field integrator.
+
+        Args:
+            inshape: Spatial shape of the field.
+            nsteps: Number of scaling-and-squaring steps.
+        """
         super().__init__()
 
         assert nsteps >= 0, 'nsteps should be >= 0, found: %d' % nsteps
@@ -66,12 +89,28 @@ class VecInt(nn.Module):
         self.transformer = SpatialTransformer(inshape)
 
     def forward(self, vec):
+        """Integrate a vector field via scaling and squaring.
+
+        Args:
+            vec: Velocity field tensor (B, ndim, ...).
+
+        Returns:
+            Integrated displacement field.
+        """
         vec = vec * self.scale
         for _ in range(self.nsteps):
             vec = vec + self.transformer(vec, vec)
         return vec
 
 def make_affine_from_pixdim(pixdim):
+    """Create a 4x4 affine matrix from pixel spacing.
+
+    Args:
+        pixdim: Sequence of spacing values (dx, dy, dz).
+
+    Returns:
+        4x4 affine matrix.
+    """
     # Create a 4x4 affine with spacing along the diagonal
     affine = np.eye(4)
     affine[0, 0] = pixdim[0]
@@ -80,9 +119,28 @@ def make_affine_from_pixdim(pixdim):
     return affine
 
 def get_pixdim(nib_img):
+    """Extract voxel spacing from a nibabel image.
+
+    Args:
+        nib_img: nibabel image object.
+
+    Returns:
+        Pixel spacing array (dx, dy, dz).
+    """
     return nib_img.header['pixdim'][1:4].astype(float)
 
 def resample_by_pixdim(arr, from_pixdim, to_pixdim, order):
+    """Resample a numpy array by voxel spacing.
+
+    Args:
+        arr: Input numpy array.
+        from_pixdim: Source spacing.
+        to_pixdim: Target spacing.
+        order: Interpolation order.
+
+    Returns:
+        Resampled numpy array.
+    """
     ratio = np.array(from_pixdim, dtype=float) / np.array(to_pixdim, dtype=float)
     return zoom(arr, ratio, order=order)
 
@@ -134,20 +192,21 @@ def crop_or_pad(volume: np.ndarray,
     return output
 
 def resample_to_orginal_space_and_save(deformed_img, ants_affine_mat_path, img_orig_path, out_back_dir, img_pixdim, if_flip=True, flip_axis=1, interpolater='nearestNeighbor'):
-    '''
-    Resample a deformed image to the original image space and save it.
+    """Resample a deformed image back to the original image space.
+
     Args:
-        deformed_img: The deformed image tensor.
+        deformed_img: Deformed image tensor (B, 1, H, W, D).
         ants_affine_mat_path: Path to the ANTs affine matrix.
-        img_orig_path: Path to the original image in .nii.gz.
+        img_orig_path: Path to the original image (.nii.gz).
         out_back_dir: Output directory to save the resampled image.
-        img_pixdim: Pixel dimensions of the deformed image.
+        img_pixdim: Pixel spacing used during preprocessing.
         if_flip: Whether to flip the image along the specified axis.
         flip_axis: Axis along which to flip the image if if_flip is True.
-        interpolater: Interpolator type for ANTs resampling. Options are 'linear', 'nearestNeighbor', 'bSpline' etc.
+        interpolater: ANTs interpolator ('linear', 'nearestNeighbor', 'bSpline').
+
     Returns:
-        img_final: The final resampled image in the original space.
-    '''
+        img_final: The resampled image in the original space.
+    """
     if interpolater == 'nearestNeighbor':
         order = 0
     elif interpolater == 'linear':

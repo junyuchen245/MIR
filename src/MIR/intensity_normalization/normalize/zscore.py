@@ -10,9 +10,9 @@ __all__ = ["ZScoreNormalize"]
 import argparse
 import typing
 
-import intensity_normalization.errors as intnorme
-import intensity_normalization.normalize.base as intnormb
-import intensity_normalization.typing as intnormt
+import MIR.intensity_normalization.errors as intnorme
+import MIR.intensity_normalization.normalize.base as intnormb
+import MIR.intensity_normalization.typing as intnormt
 
 
 class ZScoreNormalize(intnormb.LocationScaleCLIMixin, intnormb.SingleImageNormalizeCLI):

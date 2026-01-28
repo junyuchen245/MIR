@@ -1,10 +1,4 @@
-'''
-Mutual Information
-Modified and tested by:
-Junyu Chen
-jchen245@jhmi.edu
-Johns Hopkins University
-'''
+"""Mutual information losses for image registration."""
 import torch
 import torch.nn.functional as F
 from torch.autograd import Variable
@@ -37,6 +31,15 @@ class MutualInformation(torch.nn.Module):
         self.vol_bin_centers = vol_bin_centers
 
     def mi(self, y_true, y_pred):
+        """Compute mutual information between two images.
+
+        Args:
+            y_true: Fixed image tensor (B, 1, ...).
+            y_pred: Moving image tensor (B, 1, ...).
+
+        Returns:
+            Scalar mutual information.
+        """
         y_pred = torch.clamp(y_pred, 0., self.max_clip)
         y_true = torch.clamp(y_true, 0, self.max_clip)
 
@@ -69,6 +72,15 @@ class MutualInformation(torch.nn.Module):
         return mi.mean()  # average across batch
 
     def forward(self, y_true, y_pred):
+        """Return negative mutual information as a loss.
+
+        Args:
+            y_true: Fixed image tensor (B, 1, ...).
+            y_pred: Moving image tensor (B, 1, ...).
+
+        Returns:
+            Scalar loss.
+        """
         return -self.mi(y_true, y_pred)
 
 class localMutualInformation(torch.nn.Module):
@@ -95,6 +107,15 @@ class localMutualInformation(torch.nn.Module):
         self.patch_size = patch_size
 
     def local_mi(self, y_true, y_pred):
+        """Compute local mutual information over patches.
+
+        Args:
+            y_true: Fixed image tensor (B, 1, ...).
+            y_pred: Moving image tensor (B, 1, ...).
+
+        Returns:
+            Scalar local mutual information.
+        """
         y_pred = torch.clamp(y_pred, 0., self.max_clip)
         y_true = torch.clamp(y_true, 0, self.max_clip)
 
@@ -168,4 +189,13 @@ class localMutualInformation(torch.nn.Module):
         return mi.mean()
 
     def forward(self, y_true, y_pred):
+        """Return negative local mutual information as a loss.
+
+        Args:
+            y_true: Fixed image tensor (B, 1, ...).
+            y_pred: Moving image tensor (B, 1, ...).
+
+        Returns:
+            Scalar loss.
+        """
         return -self.local_mi(y_true, y_pred)

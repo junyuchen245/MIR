@@ -21,6 +21,15 @@ class Grad2D(torch.nn.Module):
         self.loss_mult = loss_mult
 
     def forward(self, y_pred, y_true):
+        """Compute 2D gradient regularization loss.
+
+        Args:
+            y_pred: Predicted displacement/field tensor (B, C, H, W).
+            y_true: Unused placeholder for API compatibility.
+
+        Returns:
+            Scalar gradient penalty.
+        """
         dy = torch.abs(y_pred[:, :, 1:, :] - y_pred[:, :, :-1, :])
         dx = torch.abs(y_pred[:, :, :, 1:] - y_pred[:, :, :, :-1])
 
@@ -46,6 +55,15 @@ class Grad3d(torch.nn.Module):
         self.loss_mult = loss_mult
 
     def forward(self, y_pred, y_true=None):
+        """Compute 3D gradient regularization loss.
+
+        Args:
+            y_pred: Predicted displacement/field tensor (B, C, H, W, D).
+            y_true: Unused placeholder for API compatibility.
+
+        Returns:
+            Scalar gradient penalty.
+        """
         dy = torch.abs(y_pred[:, :, 1:, :, :] - y_pred[:, :, :-1, :, :])
         dx = torch.abs(y_pred[:, :, :, 1:, :] - y_pred[:, :, :, :-1, :])
         dz = torch.abs(y_pred[:, :, :, :, 1:] - y_pred[:, :, :, :, :-1])
@@ -72,6 +90,15 @@ class Grad3DiTV(torch.nn.Module):
         a = 1
 
     def forward(self, y_pred, y_true):
+        """Compute isotropic total-variation loss in 3D.
+
+        Args:
+            y_pred: Predicted displacement/field tensor (B, C, H, W, D).
+            y_true: Unused placeholder for API compatibility.
+
+        Returns:
+            Scalar TV penalty.
+        """
         dy = torch.abs(y_pred[:, :, 1:, 1:, 1:] - y_pred[:, :, :-1, 1:, 1:])
         dx = torch.abs(y_pred[:, :, 1:, 1:, 1:] - y_pred[:, :, 1:, :-1, 1:])
         dz = torch.abs(y_pred[:, :, 1:, 1:, 1:] - y_pred[:, :, 1:, 1:, :-1])
@@ -83,6 +110,7 @@ class Grad3DiTV(torch.nn.Module):
         return grad
 
 class DisplacementRegularizer(torch.nn.Module):
+    """Compute displacement-field regularization energies."""
     def __init__(self, energy_type):
         super().__init__()
         self.energy_type = energy_type
@@ -97,6 +125,15 @@ class DisplacementRegularizer(torch.nn.Module):
         return torch.stack([fn(Txyz[:,i,...]) for i in [0, 1, 2]], dim=1)
 
     def compute_gradient_norm(self, displacement, flag_l1=False):
+        """Compute L1/L2 gradient norm of a displacement field.
+
+        Args:
+            displacement: Tensor (B, 3, H, W, D).
+            flag_l1: If True, uses L1 norm; otherwise L2.
+
+        Returns:
+            Scalar gradient norm.
+        """
         dTdx = self.gradient_txyz(displacement, self.gradient_dx)
         dTdy = self.gradient_txyz(displacement, self.gradient_dy)
         dTdz = self.gradient_txyz(displacement, self.gradient_dz)
@@ -107,6 +144,14 @@ class DisplacementRegularizer(torch.nn.Module):
         return torch.mean(norms)/3.0
 
     def compute_bending_energy(self, displacement):
+        """Compute bending energy of a displacement field.
+
+        Args:
+            displacement: Tensor (B, 3, H, W, D).
+
+        Returns:
+            Scalar bending energy.
+        """
         dTdx = self.gradient_txyz(displacement, self.gradient_dx)
         dTdy = self.gradient_txyz(displacement, self.gradient_dy)
         dTdz = self.gradient_txyz(displacement, self.gradient_dz)

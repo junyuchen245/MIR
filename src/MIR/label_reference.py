@@ -1,3 +1,5 @@
+"""Reference label tables for MIR datasets."""
+
 import numpy as np
 
 totalseg_v1_105labels = {

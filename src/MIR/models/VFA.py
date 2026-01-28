@@ -1,10 +1,22 @@
+"""VFA models and utilities for deformable image registration."""
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as nnf
 import MIR.models.registration_utils as utils
 
 def grid_upsample(grid, mode='bilinear', align_corners=True, scale_factor=2):
-    '''upsample the grid by a factor of two'''
+    """Upsample a sampling grid by a scale factor.
+
+    Args:
+        grid: Tensor of shape [B, C, *spatial] containing absolute coordinates.
+        mode: Interpolation mode passed to `torch.nn.functional.interpolate`.
+        align_corners: Whether to align corners during interpolation.
+        scale_factor: Scale factor to upsample spatial dimensions.
+
+    Returns:
+        Tensor with the same shape as `grid` except spatial dimensions scaled.
+    """
 
     if len(grid.shape[2:]) == 3 and mode == 'bilinear':
         mode = 'trilinear'
@@ -22,7 +34,19 @@ def grid_upsample(grid, mode='bilinear', align_corners=True, scale_factor=2):
     return out
 
 def grid_sampler(source, grid, mode='bilinear', align_corners=True, normalize=True, padding_mode='border'):
-    '''Grid sample with grid store in tensor format'''
+    """Sample `source` at coordinates defined by `grid`.
+
+    Args:
+        source: Tensor of shape [B, C, *spatial].
+        grid: Tensor of shape [B, ndim, *spatial] with absolute coordinates.
+        mode: Interpolation mode for sampling.
+        align_corners: Whether to align corners in grid sampling.
+        normalize: If True, convert `grid` to normalized [-1, 1] coordinates.
+        padding_mode: Padding mode for out-of-bound values.
+
+    Returns:
+        Warped tensor sampled from `source` at `grid` locations.
+    """
     if normalize:
         normed_grid = normalize_grid(grid)
     else:
@@ -49,13 +73,30 @@ def grid_sampler(source, grid, mode='bilinear', align_corners=True, normalize=Tr
     return warped
 
 def normalize_grid(grid):
+    """Normalize an absolute coordinate grid to [-1, 1] for grid sampling.
+
+    Args:
+        grid: Tensor of shape [B, ndim, *spatial] with absolute coordinates.
+
+    Returns:
+        Tensor of the same shape with normalized coordinates.
+    """
     dims = torch.tensor(grid.shape[2:]).to(grid.device)
     dims = dims.view(-1, len(dims), *[1 for x in range(len(dims))])
     normed_grid = grid / (dims - 1) * 2 - 1 # convert to normalized space
     return normed_grid
 
 def identity_grid_like(tensor, normalize, padding=0):
-    '''return the identity grid for the input 2D or 3D tensor'''
+    """Return an identity grid matching a reference tensor.
+
+    Args:
+        tensor: Reference tensor of shape [B, C, *spatial].
+        normalize: If True, return normalized [-1, 1] coordinates.
+        padding: Int or sequence of per-dimension padding for the grid.
+
+    Returns:
+        Tensor of shape [B, ndim, *spatial] with identity coordinates.
+    """
     with torch.inference_mode():
         dims = tensor.shape[2:]
         if isinstance(padding, int):
@@ -83,15 +124,11 @@ def grid_to_flow(grid: torch.Tensor):
     Convert an absolute sampling grid (as produced by VFA) to a
     voxel‑displacement field that VoxelMorph’s SpatialTransformer expects.
 
-    Parameters
-    ----------
-    grid :  Tensor, shape [B, ndim, *spatial_dims]
-            Absolute coordinates in pixel units (0 … size‑1).
+    Args:
+        grid: Tensor of shape [B, ndim, *spatial_dims] with absolute coords.
 
-    Returns
-    -------
-    flow : Tensor, same shape as `grid`
-            Displacements relative to the identity grid.
+    Returns:
+        Tensor of the same shape containing displacements from identity.
     """
     # build an identity grid on the same device / dtype / size
     id_grid = identity_grid_like(grid, normalize=False)  # already channels‑first
@@ -99,13 +136,23 @@ def grid_to_flow(grid: torch.Tensor):
     return flow
 
 class VFASPR(nn.Module):
-    '''VFA model for image registration with spatially varying regularization (VFA-SPR)
+    """VFA model with spatially varying regularization (VFA-SPR).
+
     Args:
-        configs: VFA configs
-        device: Device to run the model on
-        return_orginal: Whether to return the original deformation field used for original VFA, otherwise return the flow as displacement
-        return_all_flows: Whether to return all flows
-    '''
+        configs: VFA configuration object.
+        device: Device to run the model on.
+        return_orginal: If True, return VFA-style composed grids and stats.
+        return_all_flows: If True, return flows for all decoder levels.
+        SVF: If True, integrate flow as stationary velocity field.
+        SVF_steps: Number of scaling-and-squaring steps for integration.
+        return_full: If True, also return warped images and inverse flow.
+
+    Forward inputs:
+        sample: Tuple `(mov, fix)` tensors of shape [B, 1, *spatial].
+
+    Forward outputs:
+        Depending on flags, returns flow(s), spatial weights, or a results dict.
+    """
     def __init__(self, configs, device, return_orginal=False, return_all_flows=False, SVF=False, SVF_steps=7, return_full=False):
         super().__init__()
 
@@ -142,6 +189,15 @@ class VFASPR(nn.Module):
             self.spatial_trans = utils.SpatialTransformer(configs.img_size).cuda()
 
     def forward(self, sample):
+        """Run forward registration.
+
+        Args:
+            sample: Tuple `(mov, fix)` tensors.
+
+        Returns:
+            Output varies by flags (`return_orginal`, `return_all_flows`, `SVF`,
+            `return_full`). See class docstring for details.
+        """
         mov, fix = sample
         F = self.encoder(fix)
         M = self.encoder(mov)
@@ -179,13 +235,23 @@ class VFASPR(nn.Module):
             return flow, spatial_wts
 
 class VFA(nn.Module):
-    '''VFA model for image registration
+    """VFA model for image registration.
+
     Args:
-        configs: VFA configs
-        device: Device to run the model on
-        return_orginal: Whether to return the original deformation field used for original VFA, otherwise return the flow as displacement
-        return_all_flows: Whether to return all flows
-    '''
+        configs: VFA configuration object.
+        device: Device to run the model on.
+        return_orginal: If True, return VFA-style composed grids and stats.
+        return_all_flows: If True, return flows for all decoder levels.
+        SVF: If True, integrate flow as stationary velocity field.
+        SVF_steps: Number of scaling-and-squaring steps for integration.
+        return_full: If True, also return warped images and inverse flow.
+
+    Forward inputs:
+        sample: Tuple `(mov, fix)` tensors of shape [B, 1, *spatial].
+
+    Forward outputs:
+        Depending on flags, returns flow(s) or a results dict.
+    """
     def __init__(self, configs, device, return_orginal=False, return_all_flows=False, SVF=False, SVF_steps=7, return_full=False):
         super().__init__()
 
@@ -221,6 +287,15 @@ class VFA(nn.Module):
             self.spatial_trans = utils.SpatialTransformer(configs.img_size).cuda()
 
     def forward(self, sample):
+        """Run forward registration.
+
+        Args:
+            sample: Tuple `(mov, fix)` tensors.
+
+        Returns:
+            Output varies by flags (`return_orginal`, `return_all_flows`, `SVF`,
+            `return_full`). See class docstring for details.
+        """
         mov, fix = sample
         F = self.encoder(fix)
         M = self.encoder(mov)
@@ -257,6 +332,15 @@ class VFA(nn.Module):
             return flow
         
 class SPRDecoder(nn.Module):
+    """Spatially varying regularization head.
+
+    Inputs:
+        M_feat: Moving-image features.
+        F_feat: Fixed-image features.
+
+    Returns:
+        Tensor of spatial weights in [0, 1] with shape [B, 1, *spatial].
+    """
     def __init__(self, dimension, start_channels):
         super().__init__()
         self.dim = dimension
@@ -278,7 +362,14 @@ class SPRDecoder(nn.Module):
         return spatial_wts
     
 class Encoder(nn.Module):
-    '''VFA encoder network'''
+    """VFA encoder network.
+
+    Inputs:
+        x: Tensor of shape [B, C, *spatial].
+
+    Returns:
+        List of multiscale feature maps ordered from fine to coarse.
+    """
     def __init__(self, dimension, in_channels, downsamples, start_channels, max_channels):
         super().__init__()
         self.dim = dimension
@@ -339,7 +430,15 @@ class Encoder(nn.Module):
         return out_feature_maps[::-1]
 
 class Decoder(nn.Module):
-    '''VFA decoder network'''
+    """VFA decoder network.
+
+    Inputs:
+        F: List of fixed-image feature maps.
+        M: List of moving-image feature maps.
+
+    Returns:
+        List of composed grids at each scale.
+    """
     def __init__(self, dimension, downsamples, matching_channels, start_channels, max_channels,
                  skip, initialize, int_steps):
         super().__init__()
@@ -373,7 +472,14 @@ class Decoder(nn.Module):
         self.R = self.to_token(r).squeeze().detach()
 
     def to_token(self, x):
-        '''flatten the spatial dimensions and put the channel dimension to the end'''
+        """Flatten spatial dimensions and move channels to the last axis.
+
+        Args:
+            x: Tensor of shape [B, C, *spatial].
+
+        Returns:
+            Tensor of shape [B, N, C] where N is the flattened spatial size.
+        """
         x = x.flatten(start_dim=2)
         x = x.transpose(-1, -2)
         return x
@@ -422,6 +528,17 @@ class Decoder(nn.Module):
         return composed_grids
 
     def get_candidate_from_tensor(self, x, dim, kernel=3, stride=1):
+        """Extract local patches into a token tensor.
+
+        Args:
+            x: Tensor of shape [B, C, *spatial].
+            dim: Spatial dimensionality (2 or 3).
+            kernel: Patch size.
+            stride: Patch stride.
+
+        Returns:
+            Tensor of shape [B, *spatial, P, C] with patch tokens.
+        """
         if dim == 3:
             '''from tensor with [Batch x Feature x Height x Weight x Depth],
                     extract patches [Batch x Feature x HxWxD x Patch],
@@ -440,6 +557,7 @@ class Decoder(nn.Module):
         return token
 
 class DoubleConv3d(nn.Module):
+    """Two-layer 3D convolutional block with instance norm and LeakyReLU."""
     def __init__(self, in_channels, mid_channels, out_channels):
         super().__init__()
         self.conv1 = nn.Conv3d(in_channels, mid_channels, 3, padding=1)
@@ -453,6 +571,7 @@ class DoubleConv3d(nn.Module):
         return x
 
 class DoubleConv2d(nn.Module):
+    """Two-layer 2D convolutional block with instance norm and LeakyReLU."""
     def __init__(self, in_channels, mid_channels, out_channels):
         super().__init__()
         self.conv1 = nn.Conv2d(in_channels, mid_channels, 3, padding=1)
@@ -466,12 +585,23 @@ class DoubleConv2d(nn.Module):
         return x
 
 class Attention(nn.Module):
+    """Scaled dot-product attention used for feature matching."""
     def __init__(self):
         super().__init__()
         self.softmax = nn.Softmax(dim=-1)
 
     def forward(self, query, key, value, temperature):
-        '''Expect input dimensions: [batch, *, feature]'''
+        """Apply attention.
+
+        Args:
+            query: Query tensor of shape [B, ..., F].
+            key: Key tensor of shape [B, ..., F].
+            value: Value tensor of shape [B, ..., F].
+            temperature: Optional scaling factor.
+
+        Returns:
+            Tensor of attended values.
+        """
         if temperature is None:
             temperature = key.size(-1) ** 0.5
         attention = torch.matmul(query, key.transpose(-1, -2)) / temperature
@@ -480,6 +610,7 @@ class Attention(nn.Module):
         return x
 
 class Upsample3d(nn.Module):
+    """3D upsampling block with convolution and skip concatenation."""
     def __init__(self, in_channels, out_channels):
         super().__init__()
         self.conv = nn.Conv3d(in_channels, out_channels, 3, padding=1)
@@ -498,6 +629,7 @@ class Upsample3d(nn.Module):
         return x
 
 class Upsample2d(nn.Module):
+    """2D upsampling block with convolution and skip concatenation."""
     def __init__(self, in_channels, out_channels):
         super().__init__()
         self.conv = nn.Conv2d(in_channels, out_channels, 3, padding=1)

@@ -1,0 +1,440 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MIR.deformation_regularizer.GlobalRegularizers &mdash; MIR 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js?v=f6245a2f"></script>
+      <script src="../../../_static/doctools.js?v=888ff710"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            MIR
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">MIR</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">MIR.deformation_regularizer.GlobalRegularizers</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for MIR.deformation_regularizer.GlobalRegularizers</h1><div class="highlight"><pre>
+<span></span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">Global regularizers for deformation regularization.</span>
+<span class="sd">Modified and tested by:</span>
+<span class="sd">Junyu Chen</span>
+<span class="sd">jchen245@jhmi.edu</span>
+<span class="sd">Johns Hopkins University</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">MIR.utils.registration_utils</span> <span class="k">as</span> <span class="nn">reg_utils</span>
+<span class="kn">import</span> <span class="nn">torch.nn.functional</span> <span class="k">as</span> <span class="nn">nnf</span>
+
+<div class="viewcode-block" id="Grad2D"><a class="viewcode-back" href="../../../api.html#MIR.deformation_regularizer.Grad2D">[docs]</a><span class="k">class</span> <span class="nc">Grad2D</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    2D gradient loss.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">penalty</span><span class="o">=</span><span class="s1">&#39;l1&#39;</span><span class="p">,</span> <span class="n">loss_mult</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">Grad2D</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">penalty</span> <span class="o">=</span> <span class="n">penalty</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">loss_mult</span> <span class="o">=</span> <span class="n">loss_mult</span>
+
+<div class="viewcode-block" id="Grad2D.forward"><a class="viewcode-back" href="../../../api.html#MIR.deformation_regularizer.Grad2D.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">,</span> <span class="n">y_true</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute 2D gradient regularization loss.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            y_pred: Predicted displacement/field tensor (B, C, H, W).</span>
+<span class="sd">            y_true: Unused placeholder for API compatibility.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Scalar gradient penalty.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">dy</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">y_pred</span><span class="p">[:,</span> <span class="p">:,</span> <span class="mi">1</span><span class="p">:,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">y_pred</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:])</span>
+        <span class="n">dx</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">y_pred</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="mi">1</span><span class="p">:]</span> <span class="o">-</span> <span class="n">y_pred</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">penalty</span> <span class="o">==</span> <span class="s1">&#39;l2&#39;</span><span class="p">:</span>
+            <span class="n">dy</span> <span class="o">=</span> <span class="n">dy</span> <span class="o">*</span> <span class="n">dy</span>
+            <span class="n">dx</span> <span class="o">=</span> <span class="n">dx</span> <span class="o">*</span> <span class="n">dx</span>
+
+        <span class="n">d</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">dx</span><span class="p">)</span> <span class="o">+</span> <span class="n">torch</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">dy</span><span class="p">)</span>
+        <span class="n">grad</span> <span class="o">=</span> <span class="n">d</span> <span class="o">/</span> <span class="mf">2.0</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">loss_mult</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">grad</span> <span class="o">*=</span> <span class="bp">self</span><span class="o">.</span><span class="n">loss_mult</span>
+        <span class="k">return</span> <span class="n">grad</span></div></div>
+
+<div class="viewcode-block" id="Grad3d"><a class="viewcode-back" href="../../../api.html#MIR.deformation_regularizer.Grad3d">[docs]</a><span class="k">class</span> <span class="nc">Grad3d</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    3D gradient loss.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">penalty</span><span class="o">=</span><span class="s1">&#39;l1&#39;</span><span class="p">,</span> <span class="n">loss_mult</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">Grad3d</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">penalty</span> <span class="o">=</span> <span class="n">penalty</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">loss_mult</span> <span class="o">=</span> <span class="n">loss_mult</span>
+
+<div class="viewcode-block" id="Grad3d.forward"><a class="viewcode-back" href="../../../api.html#MIR.deformation_regularizer.Grad3d.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">,</span> <span class="n">y_true</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute 3D gradient regularization loss.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            y_pred: Predicted displacement/field tensor (B, C, H, W, D).</span>
+<span class="sd">            y_true: Unused placeholder for API compatibility.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Scalar gradient penalty.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">dy</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">y_pred</span><span class="p">[:,</span> <span class="p">:,</span> <span class="mi">1</span><span class="p">:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">y_pred</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:])</span>
+        <span class="n">dx</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">y_pred</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="mi">1</span><span class="p">:,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">y_pred</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:])</span>
+        <span class="n">dz</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">y_pred</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="mi">1</span><span class="p">:]</span> <span class="o">-</span> <span class="n">y_pred</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">penalty</span> <span class="o">==</span> <span class="s1">&#39;l2&#39;</span><span class="p">:</span>
+            <span class="n">dy</span> <span class="o">=</span> <span class="n">dy</span> <span class="o">*</span> <span class="n">dy</span>
+            <span class="n">dx</span> <span class="o">=</span> <span class="n">dx</span> <span class="o">*</span> <span class="n">dx</span>
+            <span class="n">dz</span> <span class="o">=</span> <span class="n">dz</span> <span class="o">*</span> <span class="n">dz</span>
+
+        <span class="n">d</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">dx</span><span class="p">)</span> <span class="o">+</span> <span class="n">torch</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">dy</span><span class="p">)</span> <span class="o">+</span> <span class="n">torch</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">dz</span><span class="p">)</span>
+        <span class="n">grad</span> <span class="o">=</span> <span class="n">d</span> <span class="o">/</span> <span class="mf">3.0</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">loss_mult</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">grad</span> <span class="o">*=</span> <span class="bp">self</span><span class="o">.</span><span class="n">loss_mult</span>
+        <span class="k">return</span> <span class="n">grad</span></div></div>
+
+<div class="viewcode-block" id="Grad3DiTV"><a class="viewcode-back" href="../../../api.html#MIR.deformation_regularizer.Grad3DiTV">[docs]</a><span class="k">class</span> <span class="nc">Grad3DiTV</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    3D gradient Isotropic TV loss.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">Grad3DiTV</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="n">a</span> <span class="o">=</span> <span class="mi">1</span>
+
+<div class="viewcode-block" id="Grad3DiTV.forward"><a class="viewcode-back" href="../../../api.html#MIR.deformation_regularizer.Grad3DiTV.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">,</span> <span class="n">y_true</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute isotropic total-variation loss in 3D.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            y_pred: Predicted displacement/field tensor (B, C, H, W, D).</span>
+<span class="sd">            y_true: Unused placeholder for API compatibility.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Scalar TV penalty.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">dy</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">y_pred</span><span class="p">[:,</span> <span class="p">:,</span> <span class="mi">1</span><span class="p">:,</span> <span class="mi">1</span><span class="p">:,</span> <span class="mi">1</span><span class="p">:]</span> <span class="o">-</span> <span class="n">y_pred</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">:,</span> <span class="mi">1</span><span class="p">:])</span>
+        <span class="n">dx</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">y_pred</span><span class="p">[:,</span> <span class="p">:,</span> <span class="mi">1</span><span class="p">:,</span> <span class="mi">1</span><span class="p">:,</span> <span class="mi">1</span><span class="p">:]</span> <span class="o">-</span> <span class="n">y_pred</span><span class="p">[:,</span> <span class="p">:,</span> <span class="mi">1</span><span class="p">:,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">:])</span>
+        <span class="n">dz</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">y_pred</span><span class="p">[:,</span> <span class="p">:,</span> <span class="mi">1</span><span class="p">:,</span> <span class="mi">1</span><span class="p">:,</span> <span class="mi">1</span><span class="p">:]</span> <span class="o">-</span> <span class="n">y_pred</span><span class="p">[:,</span> <span class="p">:,</span> <span class="mi">1</span><span class="p">:,</span> <span class="mi">1</span><span class="p">:,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">dy</span> <span class="o">=</span> <span class="n">dy</span> <span class="o">*</span> <span class="n">dy</span>
+        <span class="n">dx</span> <span class="o">=</span> <span class="n">dx</span> <span class="o">*</span> <span class="n">dx</span>
+        <span class="n">dz</span> <span class="o">=</span> <span class="n">dz</span> <span class="o">*</span> <span class="n">dz</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">dx</span><span class="o">+</span><span class="n">dy</span><span class="o">+</span><span class="n">dz</span><span class="o">+</span><span class="mf">1e-6</span><span class="p">))</span>
+        <span class="n">grad</span> <span class="o">=</span> <span class="n">d</span> <span class="o">/</span> <span class="mf">3.0</span>
+        <span class="k">return</span> <span class="n">grad</span></div></div>
+
+<div class="viewcode-block" id="DisplacementRegularizer"><a class="viewcode-back" href="../../../api.html#MIR.deformation_regularizer.DisplacementRegularizer">[docs]</a><span class="k">class</span> <span class="nc">DisplacementRegularizer</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute displacement-field regularization energies.&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">energy_type</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">energy_type</span> <span class="o">=</span> <span class="n">energy_type</span>
+
+<div class="viewcode-block" id="DisplacementRegularizer.gradient_dx"><a class="viewcode-back" href="../../../api.html#MIR.deformation_regularizer.DisplacementRegularizer.gradient_dx">[docs]</a>    <span class="k">def</span> <span class="nf">gradient_dx</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fv</span><span class="p">):</span> <span class="k">return</span> <span class="p">(</span><span class="n">fv</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">:,</span> <span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">fv</span><span class="p">[:,</span> <span class="p">:</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <span class="mi">2</span></div>
+
+<div class="viewcode-block" id="DisplacementRegularizer.gradient_dy"><a class="viewcode-back" href="../../../api.html#MIR.deformation_regularizer.DisplacementRegularizer.gradient_dy">[docs]</a>    <span class="k">def</span> <span class="nf">gradient_dy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fv</span><span class="p">):</span> <span class="k">return</span> <span class="p">(</span><span class="n">fv</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">:,</span> <span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">fv</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <span class="mi">2</span></div>
+
+<div class="viewcode-block" id="DisplacementRegularizer.gradient_dz"><a class="viewcode-back" href="../../../api.html#MIR.deformation_regularizer.DisplacementRegularizer.gradient_dz">[docs]</a>    <span class="k">def</span> <span class="nf">gradient_dz</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fv</span><span class="p">):</span> <span class="k">return</span> <span class="p">(</span><span class="n">fv</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">:]</span> <span class="o">-</span> <span class="n">fv</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:</span><span class="o">-</span><span class="mi">2</span><span class="p">])</span> <span class="o">/</span> <span class="mi">2</span></div>
+
+<div class="viewcode-block" id="DisplacementRegularizer.gradient_txyz"><a class="viewcode-back" href="../../../api.html#MIR.deformation_regularizer.DisplacementRegularizer.gradient_txyz">[docs]</a>    <span class="k">def</span> <span class="nf">gradient_txyz</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">Txyz</span><span class="p">,</span> <span class="n">fn</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">fn</span><span class="p">(</span><span class="n">Txyz</span><span class="p">[:,</span><span class="n">i</span><span class="p">,</span><span class="o">...</span><span class="p">])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]],</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="DisplacementRegularizer.compute_gradient_norm"><a class="viewcode-back" href="../../../api.html#MIR.deformation_regularizer.DisplacementRegularizer.compute_gradient_norm">[docs]</a>    <span class="k">def</span> <span class="nf">compute_gradient_norm</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">displacement</span><span class="p">,</span> <span class="n">flag_l1</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute L1/L2 gradient norm of a displacement field.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            displacement: Tensor (B, 3, H, W, D).</span>
+<span class="sd">            flag_l1: If True, uses L1 norm; otherwise L2.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Scalar gradient norm.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">dTdx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gradient_txyz</span><span class="p">(</span><span class="n">displacement</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">gradient_dx</span><span class="p">)</span>
+        <span class="n">dTdy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gradient_txyz</span><span class="p">(</span><span class="n">displacement</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">gradient_dy</span><span class="p">)</span>
+        <span class="n">dTdz</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gradient_txyz</span><span class="p">(</span><span class="n">displacement</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">gradient_dz</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">flag_l1</span><span class="p">:</span>
+            <span class="n">norms</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">dTdx</span><span class="p">)</span> <span class="o">+</span> <span class="n">torch</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">dTdy</span><span class="p">)</span> <span class="o">+</span> <span class="n">torch</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">dTdz</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">norms</span> <span class="o">=</span> <span class="n">dTdx</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">dTdy</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">dTdz</span><span class="o">**</span><span class="mi">2</span>
+        <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">norms</span><span class="p">)</span><span class="o">/</span><span class="mf">3.0</span></div>
+
+<div class="viewcode-block" id="DisplacementRegularizer.compute_bending_energy"><a class="viewcode-back" href="../../../api.html#MIR.deformation_regularizer.DisplacementRegularizer.compute_bending_energy">[docs]</a>    <span class="k">def</span> <span class="nf">compute_bending_energy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">displacement</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute bending energy of a displacement field.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            displacement: Tensor (B, 3, H, W, D).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Scalar bending energy.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">dTdx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gradient_txyz</span><span class="p">(</span><span class="n">displacement</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">gradient_dx</span><span class="p">)</span>
+        <span class="n">dTdy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gradient_txyz</span><span class="p">(</span><span class="n">displacement</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">gradient_dy</span><span class="p">)</span>
+        <span class="n">dTdz</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gradient_txyz</span><span class="p">(</span><span class="n">displacement</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">gradient_dz</span><span class="p">)</span>
+        <span class="n">dTdxx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gradient_txyz</span><span class="p">(</span><span class="n">dTdx</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">gradient_dx</span><span class="p">)</span>
+        <span class="n">dTdyy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gradient_txyz</span><span class="p">(</span><span class="n">dTdy</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">gradient_dy</span><span class="p">)</span>
+        <span class="n">dTdzz</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gradient_txyz</span><span class="p">(</span><span class="n">dTdz</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">gradient_dz</span><span class="p">)</span>
+        <span class="n">dTdxy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gradient_txyz</span><span class="p">(</span><span class="n">dTdx</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">gradient_dy</span><span class="p">)</span>
+        <span class="n">dTdyz</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gradient_txyz</span><span class="p">(</span><span class="n">dTdy</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">gradient_dz</span><span class="p">)</span>
+        <span class="n">dTdxz</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gradient_txyz</span><span class="p">(</span><span class="n">dTdx</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">gradient_dz</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">dTdxx</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">dTdyy</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">dTdzz</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="mi">2</span><span class="o">*</span><span class="n">dTdxy</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="mi">2</span><span class="o">*</span><span class="n">dTdxz</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="mi">2</span><span class="o">*</span><span class="n">dTdyz</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="DisplacementRegularizer.forward"><a class="viewcode-back" href="../../../api.html#MIR.deformation_regularizer.DisplacementRegularizer.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">disp</span><span class="p">,</span> <span class="n">_</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">energy_type</span> <span class="o">==</span> <span class="s1">&#39;bending&#39;</span><span class="p">:</span>
+            <span class="n">energy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_bending_energy</span><span class="p">(</span><span class="n">disp</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">energy_type</span> <span class="o">==</span> <span class="s1">&#39;gradient-l2&#39;</span><span class="p">:</span>
+            <span class="n">energy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_gradient_norm</span><span class="p">(</span><span class="n">disp</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">energy_type</span> <span class="o">==</span> <span class="s1">&#39;gradient-l1&#39;</span><span class="p">:</span>
+            <span class="n">energy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_gradient_norm</span><span class="p">(</span><span class="n">disp</span><span class="p">,</span> <span class="n">flag_l1</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">&#39;Not recognised local regulariser!&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">energy</span></div></div>
+    
+<div class="viewcode-block" id="GradICON3d"><a class="viewcode-back" href="../../../api.html#MIR.deformation_regularizer.GradICON3d">[docs]</a><span class="k">class</span> <span class="nc">GradICON3d</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Gradient‑ICON loss for 3‑D displacement fields.</span>
+<span class="sd">    Penalises the Frobenius‑norm of the Jacobian of the</span>
+<span class="sd">    composition Φ^{AB}∘Φ^{BA} (forward ◦ inverse).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">flow_shape</span><span class="p">,</span> <span class="n">penalty</span><span class="o">=</span><span class="s1">&#39;l2&#39;</span><span class="p">,</span> <span class="n">loss_mult</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">both_dirs</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;cpu&#39;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Args</span>
+<span class="sd">        ----</span>
+<span class="sd">        stn        : instance of SpatialTransformer (warps tensors by displacements)</span>
+<span class="sd">        penalty    : &#39;l1&#39; or &#39;l2&#39;</span>
+<span class="sd">        loss_mult  : optional scalar multiplier</span>
+<span class="sd">        both_dirs  : if True also penalise the reverse composition</span>
+<span class="sd">                     Φ^{BA}∘Φ^{AB} and average the two losses</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">penalty</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;l1&#39;</span><span class="p">,</span> <span class="s1">&#39;l2&#39;</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;penalty must be &#39;l1&#39; or &#39;l2&#39;&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stn</span>        <span class="o">=</span> <span class="n">reg_utils</span><span class="o">.</span><span class="n">SpatialTransformer</span><span class="p">(</span><span class="n">flow_shape</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">penalty</span>    <span class="o">=</span> <span class="n">penalty</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">loss_mult</span>  <span class="o">=</span> <span class="n">loss_mult</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">both_dirs</span>  <span class="o">=</span> <span class="n">both_dirs</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_grad3d</span><span class="p">(</span><span class="n">disp</span><span class="p">,</span> <span class="n">p</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;finite‑difference gradient loss for one displacement&quot;&quot;&quot;</span>
+        <span class="n">dy</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">disp</span><span class="p">[:,</span> <span class="p">:,</span> <span class="mi">1</span><span class="p">:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">disp</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:])</span>
+        <span class="n">dx</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">disp</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="mi">1</span><span class="p">:,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">disp</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:])</span>
+        <span class="n">dz</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">disp</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="mi">1</span><span class="p">:]</span> <span class="o">-</span> <span class="n">disp</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+
+        <span class="k">if</span> <span class="n">p</span> <span class="o">==</span> <span class="s1">&#39;l2&#39;</span><span class="p">:</span>
+            <span class="n">dy</span> <span class="o">=</span> <span class="n">dy</span> <span class="o">*</span> <span class="n">dy</span>
+            <span class="n">dx</span> <span class="o">=</span> <span class="n">dx</span> <span class="o">*</span> <span class="n">dx</span>
+            <span class="n">dz</span> <span class="o">=</span> <span class="n">dz</span> <span class="o">*</span> <span class="n">dz</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">dx</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="o">+</span> <span class="n">dy</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span> <span class="o">+</span> <span class="n">dz</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span> <span class="o">/</span> <span class="mf">3.0</span>
+
+<div class="viewcode-block" id="GradICON3d.forward"><a class="viewcode-back" href="../../../api.html#MIR.deformation_regularizer.GradICON3d.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">flow_fwd</span><span class="p">,</span> <span class="n">flow_inv</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        loss : scalar GradICON penalty</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Φ^{AB}∘Φ^{BA} − Id   (displacement form)</span>
+        <span class="n">comp_f</span> <span class="o">=</span> <span class="n">flow_inv</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">stn</span><span class="p">(</span><span class="n">flow_fwd</span><span class="p">,</span> <span class="n">flow_inv</span><span class="p">)</span>
+        <span class="n">loss</span>   <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_grad3d</span><span class="p">(</span><span class="n">comp_f</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">penalty</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">both_dirs</span><span class="p">:</span>
+            <span class="c1"># Φ^{BA}∘Φ^{AB} − Id</span>
+            <span class="n">comp_b</span> <span class="o">=</span> <span class="n">flow_fwd</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">stn</span><span class="p">(</span><span class="n">flow_inv</span><span class="p">,</span> <span class="n">flow_fwd</span><span class="p">)</span>
+            <span class="n">loss</span>   <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">loss</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_grad3d</span><span class="p">(</span><span class="n">comp_b</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">penalty</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">loss_mult</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">loss</span> <span class="o">*=</span> <span class="bp">self</span><span class="o">.</span><span class="n">loss_mult</span>
+        <span class="k">return</span> <span class="n">loss</span></div></div>
+
+<div class="viewcode-block" id="GradICONExact3d"><a class="viewcode-back" href="../../../api.html#MIR.deformation_regularizer.GradICONExact3d">[docs]</a><span class="k">class</span> <span class="nc">GradICONExact3d</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Paper‑faithful Gradient‑ICON for 3‑D flows</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vol_shape</span><span class="p">,</span> <span class="n">penalty</span><span class="o">=</span><span class="s1">&#39;l2&#39;</span><span class="p">,</span>
+                 <span class="n">both_dirs</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;cpu&#39;</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">penalty</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;l1&#39;</span><span class="p">,</span> <span class="s1">&#39;l2&#39;</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;penalty must be &#39;l1&#39; or &#39;l2&#39;&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">D</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">H</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">W</span> <span class="o">=</span> <span class="n">vol_shape</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">penalty</span>   <span class="o">=</span> <span class="n">penalty</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">both_dirs</span> <span class="o">=</span> <span class="n">both_dirs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">device</span>    <span class="o">=</span> <span class="n">device</span>
+
+        <span class="c1"># unchanged voxelmorph ST‑N</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stn</span> <span class="o">=</span> <span class="n">reg_utils</span><span class="o">.</span><span class="n">SpatialTransformer</span><span class="p">(</span><span class="n">vol_shape</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+
+        <span class="c1"># Δx = 1e‑3 in unit‑cube coords  →  voxel step</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dx_vox</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="n">s</span> <span class="o">-</span> <span class="mi">1</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">vol_shape</span><span class="p">],</span>
+                                   <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span> <span class="o">*</span> <span class="mf">1e-3</span>
+
+        <span class="c1"># full identity grid in voxel coords (D,H,W,3)</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">D</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">D</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">H</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">H</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">W</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">W</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">zz</span><span class="p">,</span> <span class="n">yy</span><span class="p">,</span> <span class="n">xx</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">indexing</span><span class="o">=</span><span class="s1">&#39;ij&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">grid_full</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">xx</span><span class="p">,</span> <span class="n">yy</span><span class="p">,</span> <span class="n">zz</span><span class="p">],</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>  <span class="c1"># (N,3)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Nsub</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">grid_full</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">//</span> <span class="mi">8</span>                         <span class="c1"># vox/2³</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">register_buffer</span><span class="p">(</span><span class="s1">&#39;eye3&#39;</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">3</span><span class="p">))</span>
+
+    <span class="c1"># ---------------------------------------------------------------- utilities</span>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_fro</span><span class="p">(</span><span class="n">diff</span><span class="p">,</span> <span class="n">p</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">p</span> <span class="o">==</span> <span class="s1">&#39;l1&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">diff</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>       <span class="c1"># ||·||_F  (L¹)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">diff</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">((</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">))</span>      <span class="c1"># ||·||_F²</span>
+
+    <span class="c1"># ---------------------------------------------------------------- helpers</span>
+    <span class="k">def</span> <span class="nf">_compose_disp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">flow_fwd</span><span class="p">,</span> <span class="n">flow_inv</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns displacement of Φ_AB∘Φ_BA on the voxel grid (B,3,D,H,W)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">flow_inv</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">stn</span><span class="p">(</span><span class="n">flow_fwd</span><span class="p">,</span> <span class="n">flow_inv</span><span class="p">)</span>    <span class="c1"># exactly as in your code</span>
+
+    <span class="k">def</span> <span class="nf">_jacobian_samples</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">disp</span><span class="p">,</span> <span class="n">pts_vox</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        disp       : (B,3,D,H,W) displacement field in *voxel* units</span>
+<span class="sd">        pts_vox    : (B,N,3) random sample points in *voxel* coords</span>
+<span class="sd">        returns    : (B,N,3,3) finite‑difference Jacobian at those points</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">B</span><span class="p">,</span> <span class="n">N</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">pts_vox</span><span class="o">.</span><span class="n">shape</span>
+
+        <span class="c1"># helper to sample disp at arbitrary pts via grid_sample</span>
+        <span class="k">def</span> <span class="nf">sample</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">p</span><span class="p">):</span>
+            <span class="n">p_norm</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>                            <span class="c1"># [0,1]³ → [-1,1]³</span>
+            <span class="n">p_norm</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">W</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="mf">0.5</span><span class="p">)</span>
+            <span class="n">p_norm</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">H</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="mf">0.5</span><span class="p">)</span>
+            <span class="n">p_norm</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">D</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="mf">0.5</span><span class="p">)</span>
+            <span class="n">g</span> <span class="o">=</span> <span class="n">p_norm</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">B</span><span class="p">,</span> <span class="n">N</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+            <span class="n">v</span> <span class="o">=</span> <span class="n">nnf</span><span class="o">.</span><span class="n">grid_sample</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">align_corners</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                              <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;bilinear&#39;</span><span class="p">,</span> <span class="n">padding_mode</span><span class="o">=</span><span class="s1">&#39;border&#39;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">v</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">B</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">N</span><span class="p">)</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>       <span class="c1"># B×N×3</span>
+
+        <span class="c1"># Φ(x) = x + disp(x)</span>
+        <span class="n">x</span>      <span class="o">=</span> <span class="n">pts_vox</span>                                   <span class="c1"># B×N×3</span>
+        <span class="n">phi_x</span>  <span class="o">=</span> <span class="n">x</span> <span class="o">+</span> <span class="n">sample</span><span class="p">(</span><span class="n">disp</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
+
+        <span class="n">grads</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># finite differences: (Φ(x+Δx e_i) - Φ(x)) / Δx</span>
+        <span class="k">for</span> <span class="n">axis</span><span class="p">,</span> <span class="n">dx</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dx_vox</span><span class="p">):</span>
+            <span class="n">x_shift</span>    <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+            <span class="n">x_shift</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">axis</span><span class="p">]</span> <span class="o">+=</span> <span class="n">dx</span>
+            <span class="n">phi_shift</span>  <span class="o">=</span> <span class="n">x_shift</span> <span class="o">+</span> <span class="n">sample</span><span class="p">(</span><span class="n">disp</span><span class="p">,</span> <span class="n">x_shift</span><span class="p">)</span>
+            <span class="n">grads</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">phi_shift</span> <span class="o">-</span> <span class="n">phi_x</span><span class="p">)</span> <span class="o">/</span> <span class="n">dx</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">grads</span><span class="p">,</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>                  <span class="c1"># B×N×3×3</span>
+
+    <span class="c1"># ---------------------------------------------------------------- forward</span>
+<div class="viewcode-block" id="GradICONExact3d.forward"><a class="viewcode-back" href="../../../api.html#MIR.deformation_regularizer.GradICONExact3d.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">flow_fwd</span><span class="p">,</span> <span class="n">flow_inv</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        flow_fwd, flow_inv : (B,3,D,H,W) voxel‑unit displacements</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">B</span> <span class="o">=</span> <span class="n">flow_fwd</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="c1"># uniform random sub‑sample of voxel centres</span>
+        <span class="n">idx</span>  <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randperm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">grid_full</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)[:</span><span class="bp">self</span><span class="o">.</span><span class="n">Nsub</span><span class="p">]</span>
+        <span class="n">pts0</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">grid_full</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">B</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>  <span class="c1"># B×Ns×3</span>
+
+        <span class="c1"># Φ_AB∘Φ_BA displacement field</span>
+        <span class="n">comp_disp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compose_disp</span><span class="p">(</span><span class="n">flow_fwd</span><span class="p">,</span> <span class="n">flow_inv</span><span class="p">)</span>
+
+        <span class="c1"># Jacobian of composition at sampled points</span>
+        <span class="n">J</span>  <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_jacobian_samples</span><span class="p">(</span><span class="n">comp_disp</span><span class="p">,</span> <span class="n">pts0</span><span class="p">)</span>
+        <span class="n">diff</span> <span class="o">=</span> <span class="n">J</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">eye3</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">J</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>                                <span class="c1"># ∇Φ − I</span>
+        <span class="n">loss</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fro</span><span class="p">(</span><span class="n">diff</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">penalty</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">both_dirs</span><span class="p">:</span>                                  <span class="c1"># reverse term</span>
+            <span class="n">comp_disp_b</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compose_disp</span><span class="p">(</span><span class="n">flow_inv</span><span class="p">,</span> <span class="n">flow_fwd</span><span class="p">)</span>
+            <span class="n">J_b</span>  <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_jacobian_samples</span><span class="p">(</span><span class="n">comp_disp_b</span><span class="p">,</span> <span class="n">pts0</span><span class="p">)</span>
+            <span class="n">diff_b</span> <span class="o">=</span> <span class="n">J_b</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">eye3</span>
+            <span class="n">loss</span>   <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">loss</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fro</span><span class="p">(</span><span class="n">diff_b</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">penalty</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span>
+
+        <span class="k">return</span> <span class="n">loss</span></div></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

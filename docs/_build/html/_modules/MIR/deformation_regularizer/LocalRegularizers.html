@@ -1,0 +1,186 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MIR.deformation_regularizer.LocalRegularizers &mdash; MIR 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js?v=f6245a2f"></script>
+      <script src="../../../_static/doctools.js?v=888ff710"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            MIR
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">MIR</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">MIR.deformation_regularizer.LocalRegularizers</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for MIR.deformation_regularizer.LocalRegularizers</h1><div class="highlight"><pre>
+<span></span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">Global regularizers for deformation regularization. Mainly for Spatially Varying Regularization.</span>
+<span class="sd">Modified and tested by:</span>
+<span class="sd">Junyu Chen</span>
+<span class="sd">jchen245@jhmi.edu</span>
+<span class="sd">Johns Hopkins University</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="kn">import</span> <span class="nn">torch</span>
+
+<div class="viewcode-block" id="logBeta"><a class="viewcode-back" href="../../../api.html#MIR.deformation_regularizer.logBeta">[docs]</a><span class="k">class</span> <span class="nc">logBeta</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Negative log-likelihood term for Beta prior on weights.&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">logBeta</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eps</span> <span class="o">=</span> <span class="n">eps</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">beta</span> <span class="o">=</span> <span class="mf">1.</span>
+
+<div class="viewcode-block" id="logBeta.forward"><a class="viewcode-back" href="../../../api.html#MIR.deformation_regularizer.logBeta.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">weights</span><span class="p">,</span> <span class="n">alpha</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute Beta prior regularization.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            weights: Tensor of weights.</span>
+<span class="sd">            alpha: Beta distribution alpha parameter.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Scalar regularization loss.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">lambdas</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">clamp</span><span class="p">(</span><span class="n">weights</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">eps</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+        <span class="c1">#beta = torch.log(lambdas**(alpha-1)*(1-lambdas)**(self.beta-1))</span>
+        <span class="n">beta</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">lambdas</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">(</span><span class="mf">1.</span><span class="o">-</span><span class="n">alpha</span><span class="p">)</span><span class="o">*</span><span class="n">beta</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span></div></div>
+
+<div class="viewcode-block" id="logGaussian"><a class="viewcode-back" href="../../../api.html#MIR.deformation_regularizer.logGaussian">[docs]</a><span class="k">class</span> <span class="nc">logGaussian</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Gaussian prior regularizer for weights.&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gaus_bond</span><span class="o">=</span><span class="mf">5.</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">logGaussian</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eps</span> <span class="o">=</span> <span class="n">eps</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gaus_bond</span> <span class="o">=</span> <span class="n">gaus_bond</span>
+
+<div class="viewcode-block" id="logGaussian.forward"><a class="viewcode-back" href="../../../api.html#MIR.deformation_regularizer.logGaussian.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">weights</span><span class="p">,</span> <span class="n">inv_sigma2</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute Gaussian prior regularization.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            weights: Tensor of weights.</span>
+<span class="sd">            inv_sigma2: Inverse variance scalar/tensor.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Scalar regularization loss.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">weights</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">clamp</span><span class="p">(</span><span class="n">weights</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">eps</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">gaus_bond</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">inv_sigma2</span><span class="o">*</span><span class="n">torch</span><span class="o">.</span><span class="n">mean</span><span class="p">((</span><span class="n">weights</span><span class="o">-</span><span class="mf">1.</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span></div></div>
+
+<div class="viewcode-block" id="LocalGrad3d"><a class="viewcode-back" href="../../../api.html#MIR.deformation_regularizer.LocalGrad3d">[docs]</a><span class="k">class</span> <span class="nc">LocalGrad3d</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Local 3D gradient loss.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">penalty</span><span class="o">=</span><span class="s1">&#39;l1&#39;</span><span class="p">,</span> <span class="n">loss_mult</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">LocalGrad3d</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">penalty</span> <span class="o">=</span> <span class="n">penalty</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">loss_mult</span> <span class="o">=</span> <span class="n">loss_mult</span>
+
+<div class="viewcode-block" id="LocalGrad3d.forward"><a class="viewcode-back" href="../../../api.html#MIR.deformation_regularizer.LocalGrad3d.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">,</span> <span class="n">weight</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute weighted 3D gradient regularization.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            y_pred: Predicted displacement/field tensor (B, C, H, W, D).</span>
+<span class="sd">            weight: Spatial weight tensor (B, 1, H, W, D).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Scalar weighted gradient penalty.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">dy</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">y_pred</span><span class="p">[:,</span> <span class="p">:,</span> <span class="mi">1</span><span class="p">:,</span> <span class="p">:,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">y_pred</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:])</span>
+        <span class="n">dx</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">y_pred</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="mi">1</span><span class="p">:,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">y_pred</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:])</span>
+        <span class="n">dz</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">y_pred</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="mi">1</span><span class="p">:]</span> <span class="o">-</span> <span class="n">y_pred</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">penalty</span> <span class="o">==</span> <span class="s1">&#39;l2&#39;</span><span class="p">:</span>
+            <span class="n">dy</span> <span class="o">=</span> <span class="n">dy</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+            <span class="n">dx</span> <span class="o">=</span> <span class="n">dx</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+            <span class="n">dz</span> <span class="o">=</span> <span class="n">dz</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">dx</span><span class="o">*</span><span class="n">weight</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="mi">1</span><span class="p">:,</span> <span class="p">:])</span><span class="o">+</span><span class="n">torch</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">dy</span><span class="o">*</span><span class="n">weight</span><span class="p">[:,</span> <span class="p">:,</span> <span class="mi">1</span><span class="p">:,</span> <span class="p">:,</span> <span class="p">:])</span><span class="o">+</span><span class="n">torch</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">dz</span><span class="o">*</span><span class="n">weight</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="mi">1</span><span class="p">:])</span>
+        <span class="n">grad</span> <span class="o">=</span> <span class="n">d</span> <span class="o">/</span> <span class="mf">3.0</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">loss_mult</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">grad</span> <span class="o">*=</span> <span class="bp">self</span><span class="o">.</span><span class="n">loss_mult</span>
+        <span class="k">return</span> <span class="n">grad</span></div></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
