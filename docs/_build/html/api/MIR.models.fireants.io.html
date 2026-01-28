@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MIR.models.convexAdam &mdash; MIR 0.0.1 documentation</title>
+  <title>MIR.models.fireants.io &mdash; MIR 0.0.1 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
 
@@ -19,8 +19,8 @@
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="MIR.models.convexAdam.apply_convex" href="MIR.models.convexAdam.apply_convex.html" />
-    <link rel="prev" title="MIR.models.configs_VoxelMorph" href="MIR.models.configs_VoxelMorph.html" /> 
+    <link rel="next" title="MIR.models.fireants.io.image" href="MIR.models.fireants.io.image.html" />
+    <link rel="prev" title="MIR.models.fireants.interpolator.grid_sample" href="MIR.models.fireants.interpolator.grid_sample.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -65,17 +65,17 @@
 <li class="toctree-l3"><a class="reference internal" href="MIR.models.configs_TransMorph.html">MIR.models.configs_TransMorph</a></li>
 <li class="toctree-l3"><a class="reference internal" href="MIR.models.configs_VFA.html">MIR.models.configs_VFA</a></li>
 <li class="toctree-l3"><a class="reference internal" href="MIR.models.configs_VoxelMorph.html">MIR.models.configs_VoxelMorph</a></li>
-<li class="toctree-l3 current"><a class="current reference internal" href="#">MIR.models.convexAdam</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="MIR.models.convexAdam.apply_convex.html">MIR.models.convexAdam.apply_convex</a></li>
-<li class="toctree-l4"><a class="reference internal" href="MIR.models.convexAdam.configs_ConvexAdam_MIND.html">MIR.models.convexAdam.configs_ConvexAdam_MIND</a></li>
-<li class="toctree-l4"><a class="reference internal" href="MIR.models.convexAdam.convex_adam_MIND.html">MIR.models.convexAdam.convex_adam_MIND</a></li>
-<li class="toctree-l4"><a class="reference internal" href="MIR.models.convexAdam.convex_adam_MIND_SPR.html">MIR.models.convexAdam.convex_adam_MIND_SPR</a></li>
-<li class="toctree-l4"><a class="reference internal" href="MIR.models.convexAdam.convex_adam_features.html">MIR.models.convexAdam.convex_adam_features</a></li>
-<li class="toctree-l4"><a class="reference internal" href="MIR.models.convexAdam.convex_adam_nnUNet.html">MIR.models.convexAdam.convex_adam_nnUNet</a></li>
-<li class="toctree-l4"><a class="reference internal" href="MIR.models.convexAdam.convex_adam_utils.html">MIR.models.convexAdam.convex_adam_utils</a></li>
+<li class="toctree-l3"><a class="reference internal" href="MIR.models.convexAdam.html">MIR.models.convexAdam</a></li>
+<li class="toctree-l3 current"><a class="reference internal" href="MIR.models.fireants.html">MIR.models.fireants</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="MIR.models.fireants.dispatcher.html">MIR.models.fireants.dispatcher</a></li>
+<li class="toctree-l4"><a class="reference internal" href="MIR.models.fireants.interpolator.html">MIR.models.fireants.interpolator</a></li>
+<li class="toctree-l4 current"><a class="current reference internal" href="#">MIR.models.fireants.io</a></li>
+<li class="toctree-l4"><a class="reference internal" href="MIR.models.fireants.losses.html">MIR.models.fireants.losses</a></li>
+<li class="toctree-l4"><a class="reference internal" href="MIR.models.fireants.registration.html">MIR.models.fireants.registration</a></li>
+<li class="toctree-l4"><a class="reference internal" href="MIR.models.fireants.types.html">MIR.models.fireants.types</a></li>
+<li class="toctree-l4"><a class="reference internal" href="MIR.models.fireants.utils.html">MIR.models.fireants.utils</a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="MIR.models.fireants.html">MIR.models.fireants</a></li>
 <li class="toctree-l3"><a class="reference internal" href="MIR.models.registration_utils.html">MIR.models.registration_utils</a></li>
 </ul>
 </li>
@@ -234,9 +234,10 @@
       <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
           <li class="breadcrumb-item"><a href="../api.html">API Reference</a></li>
           <li class="breadcrumb-item"><a href="MIR.models.html">MIR.models</a></li>
-      <li class="breadcrumb-item active">MIR.models.convexAdam</li>
+          <li class="breadcrumb-item"><a href="MIR.models.fireants.html">MIR.models.fireants</a></li>
+      <li class="breadcrumb-item active">MIR.models.fireants.io</li>
       <li class="wy-breadcrumbs-aside">
-            <a href="../_sources/api/MIR.models.convexAdam.rst.txt" rel="nofollow"> View page source</a>
+            <a href="../_sources/api/MIR.models.fireants.io.rst.txt" rel="nofollow"> View page source</a>
       </li>
   </ul>
   <hr/>
@@ -244,32 +245,17 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="module-MIR.models.convexAdam">
-<span id="mir-models-convexadam"></span><h1>MIR.models.convexAdam<a class="headerlink" href="#module-MIR.models.convexAdam" title="Permalink to this heading"></a></h1>
-<p>ConvexAdam registration wrappers and configuration presets.</p>
+  <section id="module-MIR.models.fireants.io">
+<span id="mir-models-fireants-io"></span><h1>MIR.models.fireants.io<a class="headerlink" href="#module-MIR.models.fireants.io" title="Permalink to this heading"></a></h1>
+<p>IO utilities for FireANTs image containers.</p>
 <p class="rubric">Modules</p>
 <table class="autosummary longtable docutils align-default">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="MIR.models.convexAdam.apply_convex.html#module-MIR.models.convexAdam.apply_convex" title="MIR.models.convexAdam.apply_convex"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MIR.models.convexAdam.apply_convex</span></code></a></p></td>
-<td><p></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="MIR.models.fireants.io.image.html#module-MIR.models.fireants.io.image" title="MIR.models.fireants.io.image"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MIR.models.fireants.io.image</span></code></a></p></td>
+<td><p>This module provides classes for handling medical images with SimpleITK backend and PyTorch tensor support.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="MIR.models.convexAdam.configs_ConvexAdam_MIND.html#module-MIR.models.convexAdam.configs_ConvexAdam_MIND" title="MIR.models.convexAdam.configs_ConvexAdam_MIND"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MIR.models.convexAdam.configs_ConvexAdam_MIND</span></code></a></p></td>
-<td><p></p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="MIR.models.convexAdam.convex_adam_MIND.html#MIR.models.convexAdam.convex_adam_MIND" title="MIR.models.convexAdam.convex_adam_MIND"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MIR.models.convexAdam.convex_adam_MIND</span></code></a>(...)</p></td>
-<td><p>Coupled convex optimisation with adam instance optimisation</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="MIR.models.convexAdam.convex_adam_MIND_SPR.html#MIR.models.convexAdam.convex_adam_MIND_SPR" title="MIR.models.convexAdam.convex_adam_MIND_SPR"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MIR.models.convexAdam.convex_adam_MIND_SPR</span></code></a>(...)</p></td>
-<td><p>Coupled convex optimisation with adam instance optimisation</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="MIR.models.convexAdam.convex_adam_features.html#MIR.models.convexAdam.convex_adam_features" title="MIR.models.convexAdam.convex_adam_features"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MIR.models.convexAdam.convex_adam_features</span></code></a>(...)</p></td>
-<td><p>Coupled convex optimisation with adam instance optimisation</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="MIR.models.convexAdam.convex_adam_nnUNet.html#module-MIR.models.convexAdam.convex_adam_nnUNet" title="MIR.models.convexAdam.convex_adam_nnUNet"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MIR.models.convexAdam.convex_adam_nnUNet</span></code></a></p></td>
-<td><p>Wrapper for Convex Adam with Segmentation features This code is based on the original Convex Adam code from: Siebert, Hanna, et al. &quot;ConvexAdam: Self-Configuring Dual-Optimisation-Based 3D Multitask Medical Image Registration.&quot; IEEE Transactions on Medical Imaging (2024).</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="MIR.models.convexAdam.convex_adam_utils.html#module-MIR.models.convexAdam.convex_adam_utils" title="MIR.models.convexAdam.convex_adam_utils"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MIR.models.convexAdam.convex_adam_utils</span></code></a></p></td>
-<td><p></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="MIR.models.fireants.io.transform.html#module-MIR.models.fireants.io.transform" title="MIR.models.fireants.io.transform"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MIR.models.fireants.io.transform</span></code></a></p></td>
+<td><p>simple utilities for retrieving image transforms</p></td>
 </tr>
 </tbody>
 </table>
@@ -279,8 +265,8 @@
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="MIR.models.configs_VoxelMorph.html" class="btn btn-neutral float-left" title="MIR.models.configs_VoxelMorph" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="MIR.models.convexAdam.apply_convex.html" class="btn btn-neutral float-right" title="MIR.models.convexAdam.apply_convex" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="MIR.models.fireants.interpolator.grid_sample.html" class="btn btn-neutral float-left" title="MIR.models.fireants.interpolator.grid_sample" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="MIR.models.fireants.io.image.html" class="btn btn-neutral float-right" title="MIR.models.fireants.io.image" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>
