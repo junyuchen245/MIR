@@ -469,23 +469,23 @@
 <table class="autosummary longtable docutils align-default">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="api/MIR.models.html#module-MIR.models" title="MIR.models"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MIR.models</span></code></a></p></td>
-<td><p>Auto-generated on 2025-05-01 – edit as needed.</p></td>
+<td><p>Model zoo and configuration helpers for MIR registration pipelines.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="api/MIR.utils.html#module-MIR.utils" title="MIR.utils"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MIR.utils</span></code></a></p></td>
-<td><p>Auto-generated on 2025-05-01 – edit as needed.</p></td>
+<td><p>Utility helpers for registration, training, visualization, and IO.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="api/MIR.image_similarity.html#module-MIR.image_similarity" title="MIR.image_similarity"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MIR.image_similarity</span></code></a></p></td>
-<td><p>Auto-generated on 2025-05-01 – edit as needed.</p></td>
+<td><p>Image similarity losses and metrics used in MIR registration.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="api/MIR.deformation_regularizer.html#module-MIR.deformation_regularizer" title="MIR.deformation_regularizer"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MIR.deformation_regularizer</span></code></a></p></td>
-<td><p>Auto-generated on 2025-05-01 – edit as needed.</p></td>
+<td><p>Regularization terms for deformation fields and velocity models.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="api/MIR.accuracy_measures.html#module-MIR.accuracy_measures" title="MIR.accuracy_measures"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MIR.accuracy_measures</span></code></a></p></td>
-<td><p>Auto-generated on 2025-05-01 – edit as needed.</p></td>
+<td><p>Accuracy metrics and Jacobian-based measures for evaluation.</p></td>
 </tr>
 </tbody>
 </table>
-<span class="target" id="module-MIR.models"></span><p>Auto-generated on 2025-05-01 – edit as needed.</p>
+<span class="target" id="module-MIR.models"></span><p>Model zoo and configuration helpers for MIR registration pipelines.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="MIR.models.AdvancedDecoder3D">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">MIR.models.</span></span><span class="sig-name descname"><span class="pre">AdvancedDecoder3D</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/MIR/models/Segmentation_Heads.html#AdvancedDecoder3D"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#MIR.models.AdvancedDecoder3D" title="Permalink to this definition"></a></dt>
@@ -2032,7 +2032,7 @@ Returns a displacement field (numpy) of same shape.</p>
 </dl>
 </dd></dl>
 
-<span class="target" id="module-MIR.utils"></span><p>Auto-generated on 2025-05-01 – edit as needed.</p>
+<span class="target" id="module-MIR.utils"></span><p>Utility helpers for registration, training, visualization, and IO.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="MIR.utils.AverageMeter">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">MIR.utils.</span></span><span class="sig-name descname"><span class="pre">AverageMeter</span></span><a class="reference internal" href="_modules/MIR/utils/training_utils.html#AverageMeter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#MIR.utils.AverageMeter" title="Permalink to this definition"></a></dt>
@@ -2330,7 +2330,7 @@ Obtained from <a class="reference external" href="https://github.com/voxelmorph/
 </dl>
 </dd></dl>
 
-<span class="target" id="module-MIR.image_similarity"></span><p>Auto-generated on 2025-05-01 – edit as needed.</p>
+<span class="target" id="module-MIR.image_similarity"></span><p>Image similarity losses and metrics used in MIR registration.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="MIR.image_similarity.CompRecon">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">MIR.image_similarity.</span></span><span class="sig-name descname"><span class="pre">CompRecon</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/MIR/image_similarity/CompositeRecon.html#CompRecon"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#MIR.image_similarity.CompRecon" title="Permalink to this definition"></a></dt>
@@ -2938,7 +2938,7 @@ target: (B, ph, pw, pd)  ints in [0..C-1]</p>
 <span class="sig-prename descclassname"><span class="pre">MIR.image_similarity.</span></span><span class="sig-name descname"><span class="pre">ssim3D</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">img1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">img2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">window_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">11</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size_average</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/MIR/image_similarity/SSIM.html#ssim3D"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#MIR.image_similarity.ssim3D" title="Permalink to this definition"></a></dt>
 <dd></dd></dl>
 
-<span class="target" id="module-MIR.deformation_regularizer"></span><p>Auto-generated on 2025-05-01 – edit as needed.</p>
+<span class="target" id="module-MIR.deformation_regularizer"></span><p>Regularization terms for deformation fields and velocity models.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="MIR.deformation_regularizer.DisplacementRegularizer">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">MIR.deformation_regularizer.</span></span><span class="sig-name descname"><span class="pre">DisplacementRegularizer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/MIR/deformation_regularizer/GlobalRegularizers.html#DisplacementRegularizer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#MIR.deformation_regularizer.DisplacementRegularizer" title="Permalink to this definition"></a></dt>
@@ -3229,7 +3229,7 @@ composition Φ^{AB}∘Φ^{BA} (forward ◦ inverse).</p>
 
 </dd></dl>
 
-<span class="target" id="module-MIR.accuracy_measures"></span><p>Auto-generated on 2025-05-01 – edit as needed.</p>
+<span class="target" id="module-MIR.accuracy_measures"></span><p>Accuracy metrics and Jacobian-based measures for evaluation.</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="MIR.accuracy_measures.calc_J_i">
 <span class="sig-prename descclassname"><span class="pre">MIR.accuracy_measures.</span></span><span class="sig-name descname"><span class="pre">calc_J_i</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">trans</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grad_args</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/MIR/accuracy_measures/digital_diffeomorphism.html#calc_J_i"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#MIR.accuracy_measures.calc_J_i" title="Permalink to this definition"></a></dt>
