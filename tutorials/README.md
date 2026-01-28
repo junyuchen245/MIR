@@ -13,26 +13,26 @@ Each tutorial folder contains a runnable script and, when applicable, a README w
 
 ## Tutorial summaries
 
-- [MIR/tutorials/IXI_SITReg](MIR/tutorials/IXI_SITReg): SITReg training and validation on IXI with NCC + diffusion regularization.
-- [MIR/tutorials/IXI_HyperTransMorph](MIR/tutorials/IXI_HyperTransMorph): HyperTransMorph-based IXI registration with hyperparameter conditioning.
-- [MIR/tutorials/IXI_HyperMorph](MIR/tutorials/IXI_HyperMorph): HyperMorph (VoxelMorph-style) IXI registration and evaluation.
-- [MIR/tutorials/IXI_TransMorphSPR](MIR/tutorials/IXI_TransMorphSPR): TransMorph with spatially varying regularization on IXI.
-- [MIR/tutorials/lumir24_TransMorph](MIR/tutorials/lumir24_TransMorph): TransMorph pipelines for Learn2Reg 2024.
-- [MIR/tutorials/lumir24_VFA](MIR/tutorials/lumir24_VFA): VFA pipelines for Learn2Reg 2024.
-- [MIR/tutorials/lumir24_ConvexAdam](MIR/tutorials/lumir24_ConvexAdam): ConvexAdam baselines for Learn2Reg 2024.
-- [MIR/tutorials/lumir25_VFA](MIR/tutorials/lumir25_VFA): VFA pipelines for Learn2Reg 2025.
-- [MIR/tutorials/lumir25_SITReg](MIR/tutorials/lumir25_SITReg): SITReg pipelines for Learn2Reg 2025.
-- [MIR/tutorials/lumir25_ConvexAdam](MIR/tutorials/lumir25_ConvexAdam): ConvexAdam baselines for Learn2Reg 2025.
-- [MIR/tutorials/autoPET_TransMorphSPR](MIR/tutorials/autoPET_TransMorphSPR): PET/CT registration with TransMorph SPR.
-- [MIR/tutorials/autoPET_ConvexAdamSPR](MIR/tutorials/autoPET_ConvexAdamSPR): PET/CT registration with ConvexAdam SPR.
-- [MIR/tutorials/autoPET_FireANTs_SPR](MIR/tutorials/autoPET_FireANTs_SPR): PET/CT registration with FireANTs SPR baselines.
-- [MIR/tutorials/PSMA_atlas_building](MIR/tutorials/PSMA_atlas_building): PSMA atlas building, population analysis, and statistical evaluation.
-- [MIR/tutorials/PSMA_atlas_building_MultiMorph](MIR/tutorials/PSMA_atlas_building_MultiMorph): MultiMorph-based PSMA atlas building pipeline.
-- [MIR/tutorials/VFA_image_seg](MIR/tutorials/VFA_image_seg): VFA-based feature extraction for segmentation tasks.
-- [MIR/tutorials/VFA_image_synthesis](MIR/tutorials/VFA_image_synthesis): VFA-based feature extraction for synthesis tasks.
-- [MIR/tutorials/brain_MRI_preprocessing](MIR/tutorials/brain_MRI_preprocessing): MRI preprocessing utilities (bias correction, normalization, masking).
-- [MIR/tutorials/IPEN_registration](MIR/tutorials/IPEN_registration): Registration workflows for the IPEN dataset.
-- [MIR/tutorials/pretraining_registration_DNNs](MIR/tutorials/pretraining_registration_DNNs): Random-image pretraining pipelines for registration networks.
+- [IXI_SITReg](https://github.com/junyuchen245/MIR/tree/main/tutorials/IXI_SITReg): SITReg training and validation on IXI with NCC + diffusion regularization.
+- [IXI_HyperTransMorph](https://github.com/junyuchen245/MIR/tree/main/tutorials/IXI_HyperTransMorph): HyperTransMorph-based IXI registration with hyperparameter conditioning.
+- [IXI_HyperMorph](https://github.com/junyuchen245/MIR/tree/main/tutorials/IXI_HyperMorph): HyperMorph (VoxelMorph-style) IXI registration and evaluation.
+- [IXI_TransMorphSPR](https://github.com/junyuchen245/MIR/tree/main/tutorials/IXI_TransMorphSPR): TransMorph with spatially varying regularization on IXI.
+- [lumir24_TransMorph](https://github.com/junyuchen245/MIR/tree/main/tutorials/lumir24_TransMorph): TransMorph pipelines for Learn2Reg 2024.
+- [lumir24_VFA](https://github.com/junyuchen245/MIR/tree/main/tutorials/lumir24_VFA): VFA pipelines for Learn2Reg 2024.
+- [lumir24_ConvexAdam](https://github.com/junyuchen245/MIR/tree/main/tutorials/lumir24_ConvexAdam): ConvexAdam baselines for Learn2Reg 2024.
+- [lumir25_VFA](https://github.com/junyuchen245/MIR/tree/main/tutorials/lumir25_VFA): VFA pipelines for Learn2Reg 2025.
+- [lumir25_SITReg](https://github.com/junyuchen245/MIR/tree/main/tutorials/lumir25_SITReg): SITReg pipelines for Learn2Reg 2025.
+- [lumir25_ConvexAdam](https://github.com/junyuchen245/MIR/tree/main/tutorials/lumir25_ConvexAdam): ConvexAdam baselines for Learn2Reg 2025.
+- [autoPET_TransMorphSPR](https://github.com/junyuchen245/MIR/tree/main/tutorials/autoPET_TransMorphSPR): PET/CT registration with TransMorph SPR.
+- [autoPET_ConvexAdamSPR](https://github.com/junyuchen245/MIR/tree/main/tutorials/autoPET_ConvexAdamSPR): PET/CT registration with ConvexAdam SPR.
+- [autoPET_FireANTs_SPR](https://github.com/junyuchen245/MIR/tree/main/tutorials/autoPET_FireANTs_SPR): PET/CT registration with FireANTs SPR baselines.
+- [PSMA_atlas_building](https://github.com/junyuchen245/MIR/tree/main/tutorials/PSMA_atlas_building): PSMA atlas building, population analysis, and statistical evaluation.
+- [PSMA_atlas_building_MultiMorph](https://github.com/junyuchen245/MIR/tree/main/tutorials/PSMA_atlas_building_MultiMorph): MultiMorph-based PSMA atlas building pipeline.
+- [VFA_image_seg](https://github.com/junyuchen245/MIR/tree/main/tutorials/VFA_image_seg): VFA-based feature extraction for segmentation tasks.
+- [VFA_image_synthesis](https://github.com/junyuchen245/MIR/tree/main/tutorials/VFA_image_synthesis): VFA-based feature extraction for synthesis tasks.
+- [brain_MRI_preprocessing](https://github.com/junyuchen245/MIR/tree/main/tutorials/brain_MRI_preprocessing): MRI preprocessing utilities (bias correction, normalization, masking).
+- [IPEN_registration](https://github.com/junyuchen245/MIR/tree/main/tutorials/IPEN_registration): Registration workflows for the IPEN dataset.
+- [pretraining_registration_DNNs](https://github.com/junyuchen245/MIR/tree/main/tutorials/pretraining_registration_DNNs): Random-image pretraining pipelines for registration networks.
 
 |Model/File|Google Drive ID |Dict Key|
 |---|---|---|
