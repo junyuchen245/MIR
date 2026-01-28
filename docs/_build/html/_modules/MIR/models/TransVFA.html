@@ -1,0 +1,350 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MIR.models.TransVFA &mdash; MIR 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js?v=f6245a2f"></script>
+      <script src="../../../_static/doctools.js?v=888ff710"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            MIR
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">MIR</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">MIR.models.TransVFA</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for MIR.models.TransVFA</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
+<span class="kn">import</span> <span class="nn">torch.nn.functional</span> <span class="k">as</span> <span class="nn">nnf</span>
+<span class="kn">import</span> <span class="nn">MIR.models.Swin_Transformer</span> <span class="k">as</span> <span class="nn">swin</span>
+<span class="kn">import</span> <span class="nn">MIR.models.Deformable_Swin_Transformer</span> <span class="k">as</span> <span class="nn">dswin</span>
+<span class="kn">import</span> <span class="nn">MIR.models.Deformable_Swin_Transformer_v2</span> <span class="k">as</span> <span class="nn">dswin_v2</span>
+<span class="kn">import</span> <span class="nn">MIR.models</span> <span class="k">as</span> <span class="nn">mir_m</span>
+<span class="kn">from</span> <span class="nn">MIR.models.VFA</span> <span class="kn">import</span> <span class="n">Decoder</span><span class="p">,</span> <span class="n">DoubleConv3d</span><span class="p">,</span> <span class="n">grid_to_flow</span>
+
+<span class="k">class</span> <span class="nc">VoxelShuffle</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    3D voxel shuffle layer.</span>
+<span class="sd">    Upscales a (B, C, H, W, D) input by factor r in each spatial dim,</span>
+<span class="sd">    where C = C_out * (r ** 3).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">upscale_factor</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">r</span> <span class="o">=</span> <span class="n">upscale_factor</span>
+
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        x: (B, C_in, H, W, D)</span>
+<span class="sd">        returns: (B, C_out, H*r, W*r, D*r)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">B</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span> <span class="n">H</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">D</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">r</span>
+        <span class="k">if</span> <span class="n">C</span> <span class="o">%</span> <span class="p">(</span><span class="n">r</span><span class="o">**</span><span class="mi">3</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Input channels (</span><span class="si">{</span><span class="n">C</span><span class="si">}</span><span class="s2">) must be divisible by r^3 (</span><span class="si">{</span><span class="n">r</span><span class="o">**</span><span class="mi">3</span><span class="si">}</span><span class="s2">)&quot;</span>
+            <span class="p">)</span>
+        <span class="n">C_out</span> <span class="o">=</span> <span class="n">C</span> <span class="o">//</span> <span class="p">(</span><span class="n">r</span><span class="o">**</span><span class="mi">3</span><span class="p">)</span>
+        <span class="c1"># reshape to (B, C_out, r, r, r, H, W, D)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">B</span><span class="p">,</span> <span class="n">C_out</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">H</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">D</span><span class="p">)</span>
+        <span class="c1"># permute to (B, C_out, H, r, W, r, D, r)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span><span class="o">.</span><span class="n">contiguous</span><span class="p">()</span>
+        <span class="c1"># merge interleaved dims → (B, C_out, H*r, W*r, D*r)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">B</span><span class="p">,</span> <span class="n">C_out</span><span class="p">,</span> <span class="n">H</span> <span class="o">*</span> <span class="n">r</span><span class="p">,</span> <span class="n">W</span> <span class="o">*</span> <span class="n">r</span><span class="p">,</span> <span class="n">D</span> <span class="o">*</span> <span class="n">r</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">x</span>
+
+<span class="k">class</span> <span class="nc">Feature2VFA</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Feature converter module to convert Transformer features for VFA</span>
+<span class="sd">    Args:</span>
+<span class="sd">        configs_sw: Swin Transformer configs</span>
+<span class="sd">        vfa_channels: Number of channels for VFA</span>
+<span class="sd">        embed_dim: Embedding dimension for Swin Transformer</span>
+<span class="sd">        swin_type: Type of Swin Transformer (&#39;swin&#39; or &#39;dswin&#39;)</span>
+<span class="sd">        in_norm: Whether to apply instance normalization to the input</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">configs_sw</span><span class="p">,</span> <span class="n">vfa_channels</span><span class="o">=</span><span class="p">[</span><span class="mi">8</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">64</span><span class="p">],</span> <span class="n">embed_dim</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span> <span class="n">swin_type</span><span class="o">=</span><span class="s1">&#39;swin&#39;</span><span class="p">,</span> <span class="n">in_norm</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">swin_type</span> <span class="o">==</span> <span class="s1">&#39;swin&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span> <span class="o">=</span> <span class="n">swin</span><span class="o">.</span><span class="n">SwinTransformer</span><span class="p">(</span><span class="n">patch_size</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">patch_size</span><span class="p">,</span>
+                                           <span class="n">in_chans</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                                           <span class="n">embed_dim</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">embed_dim</span><span class="p">,</span>
+                                           <span class="n">depths</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">depths</span><span class="p">,</span>
+                                           <span class="n">num_heads</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">num_heads</span><span class="p">,</span>
+                                           <span class="n">window_size</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">window_size</span><span class="p">,</span>
+                                           <span class="n">mlp_ratio</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">mlp_ratio</span><span class="p">,</span>
+                                           <span class="n">qkv_bias</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">qkv_bias</span><span class="p">,</span>
+                                           <span class="n">drop_rate</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">drop_rate</span><span class="p">,</span>
+                                           <span class="n">drop_path_rate</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">drop_path_rate</span><span class="p">,</span>
+                                           <span class="n">ape</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">ape</span><span class="p">,</span>
+                                           <span class="n">spe</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">spe</span><span class="p">,</span>
+                                           <span class="n">rpe</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">rpe</span><span class="p">,</span>
+                                           <span class="n">patch_norm</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">patch_norm</span><span class="p">,</span>
+                                           <span class="n">use_checkpoint</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">use_checkpoint</span><span class="p">,</span>
+                                           <span class="n">out_indices</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">out_indices</span><span class="p">,</span>
+                                           <span class="n">pat_merg_rf</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">pat_merg_rf</span><span class="p">,</span>
+                                           <span class="p">)</span>
+        <span class="k">elif</span> <span class="n">swin_type</span> <span class="o">==</span> <span class="s1">&#39;dswin&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span> <span class="o">=</span> <span class="n">dswin</span><span class="o">.</span><span class="n">DefSwinTransformer</span><span class="p">(</span><span class="n">patch_size</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">patch_size</span><span class="p">,</span>
+                                           <span class="n">in_chans</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+                                           <span class="n">embed_dim</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">embed_dim</span><span class="p">,</span>
+                                           <span class="n">depths</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">depths</span><span class="p">,</span>
+                                           <span class="n">num_heads</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">num_heads</span><span class="p">,</span>
+                                           <span class="n">window_size</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">window_size</span><span class="p">,</span>
+                                           <span class="n">mlp_ratio</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">mlp_ratio</span><span class="p">,</span>
+                                           <span class="n">qkv_bias</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">qkv_bias</span><span class="p">,</span>
+                                           <span class="n">drop_rate</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">drop_rate</span><span class="p">,</span>
+                                           <span class="n">drop_path_rate</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">drop_path_rate</span><span class="p">,</span>
+                                           <span class="n">ape</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">ape</span><span class="p">,</span>
+                                           <span class="n">spe</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">spe</span><span class="p">,</span>
+                                           <span class="n">rpe</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">rpe</span><span class="p">,</span>
+                                           <span class="n">patch_norm</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">patch_norm</span><span class="p">,</span>
+                                           <span class="n">use_checkpoint</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">use_checkpoint</span><span class="p">,</span>
+                                           <span class="n">out_indices</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">out_indices</span><span class="p">,</span>
+                                           <span class="n">pat_merg_rf</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">pat_merg_rf</span><span class="p">,</span>
+                                           <span class="n">dwin_size</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">dwin_kernel_size</span><span class="p">,</span>
+                                           <span class="n">img_size</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">img_size</span><span class="p">,</span>
+                                           <span class="p">)</span>
+        <span class="k">elif</span> <span class="n">swin_type</span> <span class="o">==</span> <span class="s1">&#39;dswinv2&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span> <span class="o">=</span> <span class="n">dswin_v2</span><span class="o">.</span><span class="n">DefSwinTransformerV2</span><span class="p">(</span><span class="n">patch_size</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">patch_size</span><span class="p">,</span>
+                                           <span class="n">in_chans</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+                                           <span class="n">embed_dim</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">embed_dim</span><span class="p">,</span>
+                                           <span class="n">depths</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">depths</span><span class="p">,</span>
+                                           <span class="n">num_heads</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">num_heads</span><span class="p">,</span>
+                                           <span class="n">window_size</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">window_size</span><span class="p">,</span>
+                                           <span class="n">mlp_ratio</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">mlp_ratio</span><span class="p">,</span>
+                                           <span class="n">qkv_bias</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">qkv_bias</span><span class="p">,</span>
+                                           <span class="n">drop_rate</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">drop_rate</span><span class="p">,</span>
+                                           <span class="n">drop_path_rate</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">drop_path_rate</span><span class="p">,</span>
+                                           <span class="n">ape</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">ape</span><span class="p">,</span>
+                                           <span class="n">spe</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">spe</span><span class="p">,</span>
+                                           <span class="n">rpe</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">rpe</span><span class="p">,</span>
+                                           <span class="n">patch_norm</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">patch_norm</span><span class="p">,</span>
+                                           <span class="n">use_checkpoint</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">use_checkpoint</span><span class="p">,</span>
+                                           <span class="n">out_indices</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">out_indices</span><span class="p">,</span>
+                                           <span class="n">pat_merg_rf</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">pat_merg_rf</span><span class="p">,</span>
+                                           <span class="n">dwin_size</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">dwin_kernel_size</span><span class="p">,</span>
+                                           <span class="n">img_size</span><span class="o">=</span><span class="n">configs_sw</span><span class="o">.</span><span class="n">img_size</span><span class="p">,</span>
+                                           <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Unknown Transformer type: </span><span class="si">{</span><span class="n">swin_type</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">in_norm</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">norm_first</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">InstanceNorm3d</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">affine</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">in_norm</span> <span class="o">=</span> <span class="n">in_norm</span>
+        <span class="n">if_transskip</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">if_convskip</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">swin_type</span> <span class="o">=</span> <span class="n">swin_type</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">up0</span> <span class="o">=</span> <span class="n">mir_m</span><span class="o">.</span><span class="n">DecoderBlock</span><span class="p">(</span><span class="n">embed_dim</span><span class="o">*</span><span class="mi">4</span><span class="p">,</span> <span class="n">vfa_channels</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="n">skip_channels</span><span class="o">=</span><span class="n">embed_dim</span><span class="o">*</span><span class="mi">2</span> <span class="k">if</span> <span class="n">if_transskip</span> <span class="k">else</span> <span class="mi">0</span><span class="p">,</span> <span class="n">use_batchnorm</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">up1</span> <span class="o">=</span> <span class="n">mir_m</span><span class="o">.</span><span class="n">DecoderBlock</span><span class="p">(</span><span class="n">vfa_channels</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="n">vfa_channels</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">skip_channels</span><span class="o">=</span><span class="n">embed_dim</span> <span class="k">if</span> <span class="n">if_transskip</span> <span class="k">else</span> <span class="mi">0</span><span class="p">,</span> <span class="n">use_batchnorm</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>  <span class="c1"># 384, 20, 20, 64</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">up2</span> <span class="o">=</span> <span class="n">mir_m</span><span class="o">.</span><span class="n">DecoderBlock</span><span class="p">(</span><span class="n">vfa_channels</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">vfa_channels</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">skip_channels</span><span class="o">=</span><span class="n">embed_dim</span><span class="o">//</span><span class="mi">2</span> <span class="k">if</span> <span class="n">if_transskip</span> <span class="k">else</span> <span class="mi">0</span><span class="p">,</span> <span class="n">use_batchnorm</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>  <span class="c1"># 384, 40, 40, 64</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">up3</span> <span class="o">=</span> <span class="n">mir_m</span><span class="o">.</span><span class="n">DecoderBlock</span><span class="p">(</span><span class="n">vfa_channels</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">vfa_channels</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">skip_channels</span><span class="o">=</span><span class="n">vfa_channels</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">if_convskip</span> <span class="k">else</span> <span class="mi">0</span><span class="p">,</span> <span class="n">use_batchnorm</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>  <span class="c1"># 384, 80, 80, 128</span>
+        <span class="c1">#self.up4 = DecoderBlock(embed_dim//2, config.reg_head_chan, skip_channels=config.reg_head_chan if if_convskip else 0, use_batchnorm=False)  # 384, 160, 160, 256</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">c1</span> <span class="o">=</span> <span class="n">mir_m</span><span class="o">.</span><span class="n">Conv3dReLU</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">embed_dim</span><span class="o">//</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">use_batchnorm</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">c2</span> <span class="o">=</span> <span class="n">mir_m</span><span class="o">.</span><span class="n">Conv3dReLU</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">vfa_channels</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">use_batchnorm</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cb</span> <span class="o">=</span> <span class="n">mir_m</span><span class="o">.</span><span class="n">Conv3dReLU</span><span class="p">(</span><span class="n">embed_dim</span><span class="o">*</span><span class="mi">4</span><span class="p">,</span> <span class="n">vfa_channels</span><span class="p">[</span><span class="mi">4</span><span class="p">],</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">use_batchnorm</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">avg_pool</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">AvgPool3d</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vfa_channels</span> <span class="o">=</span> <span class="n">vfa_channels</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">swin_type</span> <span class="o">=</span> <span class="n">swin_type</span>
+        
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">swin_type</span> <span class="o">==</span> <span class="s1">&#39;swin&#39;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_norm</span><span class="p">:</span>
+                <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">norm_first</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+            <span class="n">x_s1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">avg_pool</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+            <span class="n">f3</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">c1</span><span class="p">(</span><span class="n">x_s1</span><span class="p">)</span>
+            <span class="n">f4</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">c2</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+            <span class="n">out_feats</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+            <span class="n">f0</span> <span class="o">=</span> <span class="n">out_feats</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">f1</span> <span class="o">=</span> <span class="n">out_feats</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span>
+            <span class="n">f2</span> <span class="o">=</span> <span class="n">out_feats</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">]</span>
+            <span class="n">feats_0</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cb</span><span class="p">(</span><span class="n">f0</span><span class="p">)</span>
+            <span class="n">feats_1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">up0</span><span class="p">(</span><span class="n">f0</span><span class="p">,</span> <span class="n">f1</span><span class="p">)</span>
+            <span class="n">feats_2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">up1</span><span class="p">(</span><span class="n">feats_1</span><span class="p">,</span> <span class="n">f2</span><span class="p">)</span>
+            <span class="n">feats_3</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">up2</span><span class="p">(</span><span class="n">feats_2</span><span class="p">,</span> <span class="n">f3</span><span class="p">)</span>
+            <span class="n">feats_4</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">up3</span><span class="p">(</span><span class="n">feats_3</span><span class="p">,</span> <span class="n">f4</span><span class="p">)</span>
+            <span class="n">out_features</span> <span class="o">=</span> <span class="p">[</span><span class="n">feats_4</span><span class="p">,</span> <span class="n">feats_3</span><span class="p">,</span> <span class="n">feats_2</span><span class="p">,</span> <span class="n">feats_1</span><span class="p">,</span> <span class="n">feats_0</span><span class="p">]</span>
+            <span class="k">return</span> <span class="n">out_features</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_norm</span><span class="p">:</span>
+                <span class="n">x</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">norm_first</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="bp">self</span><span class="o">.</span><span class="n">norm_first</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">])]</span>
+            <span class="n">x_in</span> <span class="o">=</span> <span class="n">x</span>  
+            <span class="n">out_feats</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="p">((</span><span class="n">x_in</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">x_in</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">avg_pool</span><span class="p">(</span><span class="n">x_in</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">f3</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">c1</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+            <span class="n">f4</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">c2</span><span class="p">(</span><span class="n">x_in</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">f0</span> <span class="o">=</span> <span class="n">out_feats</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">f1</span> <span class="o">=</span> <span class="n">out_feats</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">f2</span> <span class="o">=</span> <span class="n">out_feats</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">feats_0</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cb</span><span class="p">(</span><span class="n">f0</span><span class="p">)</span>
+            <span class="n">feats_1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">up0</span><span class="p">(</span><span class="n">f0</span><span class="p">,</span> <span class="n">f1</span><span class="p">)</span>
+            <span class="n">feats_2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">up1</span><span class="p">(</span><span class="n">feats_1</span><span class="p">,</span> <span class="n">f2</span><span class="p">)</span>
+            <span class="n">feats_3</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">up2</span><span class="p">(</span><span class="n">feats_2</span><span class="p">,</span> <span class="n">f3</span><span class="p">)</span>
+            <span class="n">feats_4</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">up3</span><span class="p">(</span><span class="n">feats_3</span><span class="p">,</span> <span class="n">f4</span><span class="p">)</span>
+            
+            <span class="n">out_features_m</span> <span class="o">=</span> <span class="p">[</span><span class="n">feats_4</span><span class="p">,</span> <span class="n">feats_3</span><span class="p">,</span> <span class="n">feats_2</span><span class="p">,</span> <span class="n">feats_1</span><span class="p">,</span> <span class="n">feats_0</span><span class="p">]</span>
+            
+            <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">avg_pool</span><span class="p">(</span><span class="n">x_in</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+            <span class="n">f3</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">c1</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+            <span class="n">f4</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">c2</span><span class="p">(</span><span class="n">x_in</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+            <span class="n">f0</span> <span class="o">=</span> <span class="n">out_feats</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">f1</span> <span class="o">=</span> <span class="n">out_feats</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">f2</span> <span class="o">=</span> <span class="n">out_feats</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">feats_0</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cb</span><span class="p">(</span><span class="n">f0</span><span class="p">)</span>
+            <span class="n">feats_1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">up0</span><span class="p">(</span><span class="n">f0</span><span class="p">,</span> <span class="n">f1</span><span class="p">)</span>
+            <span class="n">feats_2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">up1</span><span class="p">(</span><span class="n">feats_1</span><span class="p">,</span> <span class="n">f2</span><span class="p">)</span>
+            <span class="n">feats_3</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">up2</span><span class="p">(</span><span class="n">feats_2</span><span class="p">,</span> <span class="n">f3</span><span class="p">)</span>
+            <span class="n">feats_4</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">up3</span><span class="p">(</span><span class="n">feats_3</span><span class="p">,</span> <span class="n">f4</span><span class="p">)</span>
+            <span class="n">out_features_f</span> <span class="o">=</span> <span class="p">[</span><span class="n">feats_4</span><span class="p">,</span> <span class="n">feats_3</span><span class="p">,</span> <span class="n">feats_2</span><span class="p">,</span> <span class="n">feats_1</span><span class="p">,</span> <span class="n">feats_0</span><span class="p">]</span>
+            <span class="k">return</span> <span class="n">out_features_m</span><span class="p">,</span> <span class="n">out_features_f</span>
+        
+
+<div class="viewcode-block" id="TransVFA"><a class="viewcode-back" href="../../../api.html#MIR.models.TransVFA">[docs]</a><span class="k">class</span> <span class="nc">TransVFA</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    TransVFA model for image registration</span>
+<span class="sd">    Args:</span>
+<span class="sd">        configs_sw: Swin Transformer configs</span>
+<span class="sd">        configs: VFA configs</span>
+<span class="sd">        device: Device to run the model on</span>
+<span class="sd">        swin_type: Type of Swin Transformer (&#39;swin&#39; or &#39;dswin&#39;)</span>
+<span class="sd">        return_orginal: Whether to return the original deformation field used for original VFA, otherwise return the flow as displacement</span>
+<span class="sd">        return_all_flows: Whether to return all flows</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">configs_sw</span><span class="p">,</span> <span class="n">configs</span><span class="p">,</span> <span class="n">device</span><span class="p">,</span> <span class="n">swin_type</span><span class="o">=</span><span class="s1">&#39;swin&#39;</span><span class="p">,</span> <span class="n">return_orginal</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">return_all_flows</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">max_channels</span><span class="o">=</span><span class="mi">64</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">configs</span><span class="o">.</span><span class="n">img_size</span><span class="p">)</span>
+        <span class="n">channels</span> <span class="o">=</span> <span class="p">[</span><span class="nb">min</span><span class="p">(</span><span class="n">configs</span><span class="o">.</span><span class="n">start_channels</span> <span class="o">*</span> <span class="mi">2</span><span class="o">**</span><span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">),</span> <span class="n">max_channels</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">configs</span><span class="o">.</span><span class="n">downsamples</span><span class="o">+</span><span class="mi">1</span><span class="p">)]</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;VFA channels: &#39;</span><span class="p">,</span> <span class="n">channels</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">swin_type</span> <span class="o">=</span> <span class="n">swin_type</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span> <span class="o">=</span> <span class="n">Feature2VFA</span><span class="p">(</span><span class="n">configs_sw</span><span class="p">,</span> <span class="n">channels</span><span class="p">,</span> <span class="n">configs_sw</span><span class="o">.</span><span class="n">embed_dim</span><span class="p">,</span> <span class="n">swin_type</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span> <span class="o">=</span> <span class="n">Decoder</span><span class="p">(</span>
+                        <span class="n">dimension</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">,</span>
+                        <span class="n">downsamples</span><span class="o">=</span><span class="n">configs</span><span class="o">.</span><span class="n">downsamples</span><span class="p">,</span>
+                        <span class="n">matching_channels</span><span class="o">=</span><span class="n">configs</span><span class="o">.</span><span class="n">matching_channels</span><span class="p">,</span>
+                        <span class="n">start_channels</span><span class="o">=</span><span class="n">configs</span><span class="o">.</span><span class="n">start_channels</span><span class="p">,</span>
+                        <span class="n">max_channels</span><span class="o">=</span><span class="n">configs</span><span class="o">.</span><span class="n">max_channels</span><span class="p">,</span>
+                        <span class="n">skip</span><span class="o">=</span><span class="n">configs</span><span class="o">.</span><span class="n">skip</span><span class="p">,</span>
+                        <span class="n">initialize</span><span class="o">=</span><span class="n">configs</span><span class="o">.</span><span class="n">initialize</span><span class="p">,</span>
+                        <span class="n">int_steps</span><span class="o">=</span><span class="n">configs</span><span class="o">.</span><span class="n">int_steps</span><span class="p">,</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">type</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">configs</span> <span class="o">=</span> <span class="n">configs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="n">device</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span><span class="o">.</span><span class="n">R</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span><span class="o">.</span><span class="n">R</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">return_orginal</span> <span class="o">=</span> <span class="n">return_orginal</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">return_all_flows</span> <span class="o">=</span> <span class="n">return_all_flows</span>
+
+<div class="viewcode-block" id="TransVFA.forward"><a class="viewcode-back" href="../../../api.html#MIR.models.TransVFA.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sample</span><span class="p">):</span>
+        <span class="n">mov</span><span class="p">,</span> <span class="n">fix</span> <span class="o">=</span> <span class="n">sample</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">swin_type</span> <span class="o">==</span> <span class="s1">&#39;swin&#39;</span><span class="p">:</span>
+            <span class="n">F</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="p">(</span><span class="n">fix</span><span class="p">)</span>
+            <span class="n">M</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="p">(</span><span class="n">mov</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">M</span><span class="p">,</span> <span class="n">F</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="p">((</span><span class="n">mov</span><span class="p">,</span> <span class="n">fix</span><span class="p">))</span>
+        <span class="n">composed_grids</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span><span class="p">(</span><span class="n">F</span><span class="p">,</span> <span class="n">M</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">return_orginal</span><span class="p">:</span>
+            <span class="n">results</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">generate_results</span><span class="p">(</span><span class="n">composed_grids</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">sample</span><span class="p">)</span>
+            <span class="n">results</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s1">&#39;composed_grids&#39;</span><span class="p">:</span> <span class="n">composed_grids</span><span class="p">,</span>
+                            <span class="s1">&#39;beta&#39;</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">decoder</span><span class="o">.</span><span class="n">beta</span><span class="o">.</span><span class="n">clone</span><span class="p">(),})</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">configs</span><span class="o">.</span><span class="n">affine</span><span class="p">:</span>
+                <span class="n">affine_results</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">generate_affine_results</span><span class="p">(</span>
+                                                        <span class="n">composed_grids</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span>
+                                                        <span class="n">sample</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="n">results</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">affine_results</span><span class="p">)</span>
+        
+            <span class="k">return</span> <span class="n">results</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">return_all_flows</span><span class="p">:</span>
+            <span class="n">composed_flows</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">composed_grids</span><span class="p">)):</span>
+                <span class="n">composed_flows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">grid_to_flow</span><span class="p">(</span><span class="n">composed_grids</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span>
+            <span class="k">return</span> <span class="n">composed_flows</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">grid_to_flow</span><span class="p">(</span><span class="n">composed_grids</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span></div></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,883 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MIR.models.TransMorph &mdash; MIR 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js?v=f6245a2f"></script>
+      <script src="../../../_static/doctools.js?v=888ff710"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            MIR
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">MIR</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">MIR.models.TransMorph</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for MIR.models.TransMorph</h1><div class="highlight"><pre>
+<span></span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">TransMorph model</span>
+<span class="sd">Chen, J., Du, Y., He, Y., Segars, W. P., Li, Y., &amp; Frey, E. C. (2021).</span>
+<span class="sd">TransMorph: Transformer for unsupervised medical image registration.</span>
+<span class="sd">arXiv preprint arXiv:2111.10480.</span>
+<span class="sd">Swin-Transformer code retrieved from:</span>
+<span class="sd">https://github.com/SwinTransformer/Swin-Transformer-Semantic-Segmentation</span>
+<span class="sd">Original paper:</span>
+<span class="sd">Liu, Z., Lin, Y., Cao, Y., Hu, H., Wei, Y., Zhang, Z., ... &amp; Guo, B. (2021).</span>
+<span class="sd">Swin transformer: Hierarchical vision transformer using shifted windows.</span>
+<span class="sd">arXiv preprint arXiv:2103.14030.</span>
+<span class="sd">Modified and tested by:</span>
+<span class="sd">Junyu Chen</span>
+<span class="sd">jchen245@jhmi.edu</span>
+<span class="sd">Johns Hopkins University</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
+<span class="kn">from</span> <span class="nn">torch.distributions.normal</span> <span class="kn">import</span> <span class="n">Normal</span>
+<span class="kn">import</span> <span class="nn">MIR.models.configs_TransMorph</span> <span class="k">as</span> <span class="nn">configs</span>
+<span class="kn">import</span> <span class="nn">MIR.models.Swin_Transformer</span> <span class="k">as</span> <span class="nn">swin</span>
+<span class="kn">import</span> <span class="nn">MIR.models.registration_utils</span> <span class="k">as</span> <span class="nn">utils</span>
+<span class="kn">import</span> <span class="nn">MIR.models.Deformable_Swin_Transformer</span> <span class="k">as</span> <span class="nn">dswin</span>
+<span class="kn">import</span> <span class="nn">MIR.models.Deformable_Swin_Transformer_v2</span> <span class="k">as</span> <span class="nn">dswin_v2</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<div class="viewcode-block" id="Conv3dReLU"><a class="viewcode-back" href="../../../api.html#MIR.models.Conv3dReLU">[docs]</a><span class="k">class</span> <span class="nc">Conv3dReLU</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">in_channels</span><span class="p">,</span>
+            <span class="n">out_channels</span><span class="p">,</span>
+            <span class="n">kernel_size</span><span class="p">,</span>
+            <span class="n">padding</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+            <span class="n">stride</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+            <span class="n">use_batchnorm</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="n">conv</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Conv3d</span><span class="p">(</span>
+            <span class="n">in_channels</span><span class="p">,</span>
+            <span class="n">out_channels</span><span class="p">,</span>
+            <span class="n">kernel_size</span><span class="p">,</span>
+            <span class="n">stride</span><span class="o">=</span><span class="n">stride</span><span class="p">,</span>
+            <span class="n">padding</span><span class="o">=</span><span class="n">padding</span><span class="p">,</span>
+            <span class="n">bias</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">relu</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">LeakyReLU</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">use_batchnorm</span><span class="p">:</span>
+            <span class="n">nm</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">InstanceNorm3d</span><span class="p">(</span><span class="n">out_channels</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">nm</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">BatchNorm3d</span><span class="p">(</span><span class="n">out_channels</span><span class="p">)</span>
+
+        <span class="nb">super</span><span class="p">(</span><span class="n">Conv3dReLU</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">conv</span><span class="p">,</span> <span class="n">nm</span><span class="p">,</span> <span class="n">relu</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DecoderBlock"><a class="viewcode-back" href="../../../api.html#MIR.models.DecoderBlock">[docs]</a><span class="k">class</span> <span class="nc">DecoderBlock</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">in_channels</span><span class="p">,</span>
+            <span class="n">out_channels</span><span class="p">,</span>
+            <span class="n">skip_channels</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+            <span class="n">use_batchnorm</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">conv1</span> <span class="o">=</span> <span class="n">Conv3dReLU</span><span class="p">(</span>
+            <span class="n">in_channels</span> <span class="o">+</span> <span class="n">skip_channels</span><span class="p">,</span>
+            <span class="n">out_channels</span><span class="p">,</span>
+            <span class="n">kernel_size</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+            <span class="n">padding</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+            <span class="n">use_batchnorm</span><span class="o">=</span><span class="n">use_batchnorm</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">conv2</span> <span class="o">=</span> <span class="n">Conv3dReLU</span><span class="p">(</span>
+            <span class="n">out_channels</span><span class="p">,</span>
+            <span class="n">out_channels</span><span class="p">,</span>
+            <span class="n">kernel_size</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+            <span class="n">padding</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+            <span class="n">use_batchnorm</span><span class="o">=</span><span class="n">use_batchnorm</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">up</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Upsample</span><span class="p">(</span><span class="n">scale_factor</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;trilinear&#39;</span><span class="p">,</span> <span class="n">align_corners</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+<div class="viewcode-block" id="DecoderBlock.forward"><a class="viewcode-back" href="../../../api.html#MIR.models.DecoderBlock.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">skip</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">up</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">skip</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">([</span><span class="n">x</span><span class="p">,</span> <span class="n">skip</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conv1</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conv2</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">x</span></div></div>
+
+<div class="viewcode-block" id="RegistrationHead"><a class="viewcode-back" href="../../../api.html#MIR.models.RegistrationHead">[docs]</a><span class="k">class</span> <span class="nc">RegistrationHead</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">in_channels</span><span class="p">,</span> <span class="n">out_channels</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">upsampling</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">conv3d</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Conv3d</span><span class="p">(</span><span class="n">in_channels</span><span class="p">,</span> <span class="n">out_channels</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="n">kernel_size</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="n">kernel_size</span> <span class="o">//</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">conv3d</span><span class="o">.</span><span class="n">weight</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">Normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">1e-5</span><span class="p">)</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">conv3d</span><span class="o">.</span><span class="n">weight</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
+        <span class="n">conv3d</span><span class="o">.</span><span class="n">bias</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">conv3d</span><span class="o">.</span><span class="n">bias</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">conv3d</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TransMorph"><a class="viewcode-back" href="../../../api.html#MIR.models.TransMorph">[docs]</a><span class="k">class</span> <span class="nc">TransMorph</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    TransMorph model</span>
+<span class="sd">    Args:</span>
+<span class="sd">        config: Configuration object containing model parameters</span>
+<span class="sd">        SVF: Boolean indicating whether to use SVF (Time Stationary Velocity Field) integration</span>
+<span class="sd">        SVF_steps: Number of steps for SVF integration</span>
+<span class="sd">        swin_type: Type of Swin Transformer to use (&#39;swin&#39; or &#39;dswin&#39;)</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">SVF</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">SVF_steps</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span> <span class="n">swin_type</span><span class="o">=</span><span class="s1">&#39;swin&#39;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Original TransMorph Model</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">TransMorph</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="n">if_convskip</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">if_convskip</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">if_convskip</span> <span class="o">=</span> <span class="n">if_convskip</span>
+        <span class="n">if_transskip</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">if_transskip</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">if_transskip</span> <span class="o">=</span> <span class="n">if_transskip</span>
+        <span class="n">embed_dim</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">embed_dim</span>
+        <span class="k">if</span> <span class="n">swin_type</span> <span class="o">==</span> <span class="s1">&#39;swin&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">transformer</span> <span class="o">=</span> <span class="n">swin</span><span class="o">.</span><span class="n">SwinTransformer</span><span class="p">(</span><span class="n">patch_size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">patch_size</span><span class="p">,</span>
+                                           <span class="n">in_chans</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">in_chans</span><span class="p">,</span>
+                                           <span class="n">embed_dim</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">embed_dim</span><span class="p">,</span>
+                                           <span class="n">depths</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">depths</span><span class="p">,</span>
+                                           <span class="n">num_heads</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">num_heads</span><span class="p">,</span>
+                                           <span class="n">window_size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">window_size</span><span class="p">,</span>
+                                           <span class="n">mlp_ratio</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">mlp_ratio</span><span class="p">,</span>
+                                           <span class="n">qkv_bias</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">qkv_bias</span><span class="p">,</span>
+                                           <span class="n">drop_rate</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">drop_rate</span><span class="p">,</span>
+                                           <span class="n">drop_path_rate</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">drop_path_rate</span><span class="p">,</span>
+                                           <span class="n">ape</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">ape</span><span class="p">,</span>
+                                           <span class="n">spe</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">spe</span><span class="p">,</span>
+                                           <span class="n">rpe</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">rpe</span><span class="p">,</span>
+                                           <span class="n">patch_norm</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">patch_norm</span><span class="p">,</span>
+                                           <span class="n">use_checkpoint</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">use_checkpoint</span><span class="p">,</span>
+                                           <span class="n">out_indices</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">out_indices</span><span class="p">,</span>
+                                           <span class="n">pat_merg_rf</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">pat_merg_rf</span><span class="p">,</span>
+                                           <span class="p">)</span>
+        <span class="k">elif</span> <span class="n">swin_type</span> <span class="o">==</span> <span class="s1">&#39;dswin&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">transformer</span> <span class="o">=</span> <span class="n">dswin</span><span class="o">.</span><span class="n">DefSwinTransformer</span><span class="p">(</span><span class="n">patch_size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">patch_size</span><span class="p">,</span>
+                                           <span class="n">in_chans</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">in_chans</span><span class="p">,</span>
+                                           <span class="n">embed_dim</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">embed_dim</span><span class="p">,</span>
+                                           <span class="n">depths</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">depths</span><span class="p">,</span>
+                                           <span class="n">num_heads</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">num_heads</span><span class="p">,</span>
+                                           <span class="n">window_size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">window_size</span><span class="p">,</span>
+                                           <span class="n">mlp_ratio</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">mlp_ratio</span><span class="p">,</span>
+                                           <span class="n">qkv_bias</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">qkv_bias</span><span class="p">,</span>
+                                           <span class="n">drop_rate</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">drop_rate</span><span class="p">,</span>
+                                           <span class="n">drop_path_rate</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">drop_path_rate</span><span class="p">,</span>
+                                           <span class="n">ape</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">ape</span><span class="p">,</span>
+                                           <span class="n">spe</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">spe</span><span class="p">,</span>
+                                           <span class="n">rpe</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">rpe</span><span class="p">,</span>
+                                           <span class="n">patch_norm</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">patch_norm</span><span class="p">,</span>
+                                           <span class="n">use_checkpoint</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">use_checkpoint</span><span class="p">,</span>
+                                           <span class="n">out_indices</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">out_indices</span><span class="p">,</span>
+                                           <span class="n">pat_merg_rf</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">pat_merg_rf</span><span class="p">,</span>
+                                           <span class="n">dwin_size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">dwin_kernel_size</span><span class="p">,</span>
+                                           <span class="n">img_size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">img_size</span><span class="p">,</span>
+                                           <span class="p">)</span>
+        <span class="k">elif</span> <span class="n">swin_type</span> <span class="o">==</span> <span class="s1">&#39;dswinv2&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">transformer</span> <span class="o">=</span> <span class="n">dswin_v2</span><span class="o">.</span><span class="n">DefSwinTransformerV2</span><span class="p">(</span><span class="n">patch_size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">patch_size</span><span class="p">,</span>
+                                           <span class="n">in_chans</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">in_chans</span><span class="p">,</span>
+                                           <span class="n">embed_dim</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">embed_dim</span><span class="p">,</span>
+                                           <span class="n">depths</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">depths</span><span class="p">,</span>
+                                           <span class="n">num_heads</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">num_heads</span><span class="p">,</span>
+                                           <span class="n">window_size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">window_size</span><span class="p">,</span>
+                                           <span class="n">mlp_ratio</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">mlp_ratio</span><span class="p">,</span>
+                                           <span class="n">qkv_bias</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">qkv_bias</span><span class="p">,</span>
+                                           <span class="n">drop_rate</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">drop_rate</span><span class="p">,</span>
+                                           <span class="n">drop_path_rate</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">drop_path_rate</span><span class="p">,</span>
+                                           <span class="n">ape</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">ape</span><span class="p">,</span>
+                                           <span class="n">spe</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">spe</span><span class="p">,</span>
+                                           <span class="n">rpe</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">rpe</span><span class="p">,</span>
+                                           <span class="n">patch_norm</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">patch_norm</span><span class="p">,</span>
+                                           <span class="n">use_checkpoint</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">use_checkpoint</span><span class="p">,</span>
+                                           <span class="n">out_indices</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">out_indices</span><span class="p">,</span>
+                                           <span class="n">pat_merg_rf</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">pat_merg_rf</span><span class="p">,</span>
+                                           <span class="n">dwin_size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">dwin_kernel_size</span><span class="p">,</span>
+                                           <span class="n">img_size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">img_size</span><span class="p">,</span>
+                                           <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Unknown Transformer type: </span><span class="si">{</span><span class="n">swin_type</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">swin_type</span> <span class="o">=</span> <span class="n">swin_type</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">up0</span> <span class="o">=</span> <span class="n">DecoderBlock</span><span class="p">(</span><span class="n">embed_dim</span><span class="o">*</span><span class="mi">4</span><span class="p">,</span> <span class="n">embed_dim</span><span class="o">*</span><span class="mi">2</span><span class="p">,</span> <span class="n">skip_channels</span><span class="o">=</span><span class="n">embed_dim</span><span class="o">*</span><span class="mi">2</span> <span class="k">if</span> <span class="n">if_transskip</span> <span class="k">else</span> <span class="mi">0</span><span class="p">,</span> <span class="n">use_batchnorm</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">up1</span> <span class="o">=</span> <span class="n">DecoderBlock</span><span class="p">(</span><span class="n">embed_dim</span><span class="o">*</span><span class="mi">2</span><span class="p">,</span> <span class="n">embed_dim</span><span class="p">,</span> <span class="n">skip_channels</span><span class="o">=</span><span class="n">embed_dim</span> <span class="k">if</span> <span class="n">if_transskip</span> <span class="k">else</span> <span class="mi">0</span><span class="p">,</span> <span class="n">use_batchnorm</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>  <span class="c1"># 384, 20, 20, 64</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">up2</span> <span class="o">=</span> <span class="n">DecoderBlock</span><span class="p">(</span><span class="n">embed_dim</span><span class="p">,</span> <span class="n">embed_dim</span><span class="o">//</span><span class="mi">2</span><span class="p">,</span> <span class="n">skip_channels</span><span class="o">=</span><span class="n">embed_dim</span><span class="o">//</span><span class="mi">2</span> <span class="k">if</span> <span class="n">if_transskip</span> <span class="k">else</span> <span class="mi">0</span><span class="p">,</span> <span class="n">use_batchnorm</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>  <span class="c1"># 384, 40, 40, 64</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">up3</span> <span class="o">=</span> <span class="n">DecoderBlock</span><span class="p">(</span><span class="n">embed_dim</span><span class="o">//</span><span class="mi">2</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">reg_head_chan</span><span class="p">,</span> <span class="n">skip_channels</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">reg_head_chan</span> <span class="k">if</span> <span class="n">if_convskip</span> <span class="k">else</span> <span class="mi">0</span><span class="p">,</span> <span class="n">use_batchnorm</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>  <span class="c1"># 384, 80, 80, 128</span>
+        <span class="c1">#self.up4 = DecoderBlock(embed_dim//2, config.reg_head_chan, skip_channels=config.reg_head_chan if if_convskip else 0, use_batchnorm=False)  # 384, 160, 160, 256</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">c1</span> <span class="o">=</span> <span class="n">Conv3dReLU</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">embed_dim</span><span class="o">//</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">use_batchnorm</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">c2</span> <span class="o">=</span> <span class="n">Conv3dReLU</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">reg_head_chan</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">use_batchnorm</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reg_head</span> <span class="o">=</span> <span class="n">RegistrationHead</span><span class="p">(</span>
+            <span class="n">in_channels</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">reg_head_chan</span><span class="p">,</span>
+            <span class="n">out_channels</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+            <span class="n">kernel_size</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">spatial_trans</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">SpatialTransformer</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">img_size</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">avg_pool</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">AvgPool3d</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SVF</span> <span class="o">=</span> <span class="n">SVF</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">SVF</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">vec_int</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">VecInt</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">img_size</span><span class="p">,</span> <span class="n">SVF_steps</span><span class="p">)</span>
+
+<div class="viewcode-block" id="TransMorph.forward"><a class="viewcode-back" href="../../../api.html#MIR.models.TransMorph.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Forward pass for the TransMorph model.</span>
+<span class="sd">        Args:</span>
+<span class="sd">            inputs: Tuple of moving and fixed images (mov, fix).</span>
+<span class="sd">        Returns:</span>
+<span class="sd">            flow: The computed flow field for image registration.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">mov</span><span class="p">,</span> <span class="n">fix</span> <span class="o">=</span> <span class="n">inputs</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">mov</span><span class="p">,</span> <span class="n">fix</span><span class="p">),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">if_convskip</span><span class="p">:</span>
+            <span class="n">x_s1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">avg_pool</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+            <span class="n">f3</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">c1</span><span class="p">(</span><span class="n">x_s1</span><span class="p">)</span>
+            <span class="n">f4</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">c2</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">f3</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">f4</span> <span class="o">=</span> <span class="kc">None</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">swin_type</span> <span class="o">==</span> <span class="s1">&#39;swin&#39;</span><span class="p">:</span>
+            <span class="n">out_feats</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">transformer</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">out_feats</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">transformer</span><span class="p">((</span><span class="n">mov</span><span class="p">,</span> <span class="n">fix</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">if_transskip</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">swin_type</span> <span class="o">==</span> <span class="s1">&#39;swin&#39;</span><span class="p">:</span>
+                <span class="n">f1</span> <span class="o">=</span> <span class="n">out_feats</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span>
+                <span class="n">f2</span> <span class="o">=</span> <span class="n">out_feats</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">mov_f1</span><span class="p">,</span> <span class="n">fix_f1</span> <span class="o">=</span> <span class="n">out_feats</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span>
+                <span class="n">f1</span> <span class="o">=</span> <span class="p">(</span><span class="n">mov_f1</span> <span class="o">+</span> <span class="n">fix_f1</span><span class="p">)</span>
+                <span class="n">mov_f2</span><span class="p">,</span> <span class="n">fix_f2</span> <span class="o">=</span> <span class="n">out_feats</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">]</span>
+                <span class="n">f2</span> <span class="o">=</span> <span class="p">(</span><span class="n">mov_f2</span> <span class="o">+</span> <span class="n">fix_f2</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">f1</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">f2</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">f3</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">swin_type</span> <span class="o">==</span> <span class="s1">&#39;swin&#39;</span><span class="p">:</span>
+            <span class="n">f0</span> <span class="o">=</span> <span class="n">out_feats</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">mov_f0</span><span class="p">,</span> <span class="n">fix_f0</span> <span class="o">=</span> <span class="n">out_feats</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">f0</span> <span class="o">=</span> <span class="p">(</span><span class="n">mov_f0</span> <span class="o">+</span> <span class="n">fix_f0</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">up0</span><span class="p">(</span><span class="n">f0</span><span class="p">,</span> <span class="n">f1</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">up1</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">f2</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">up2</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">f3</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">up3</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">f4</span><span class="p">)</span>
+        <span class="n">flow</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">reg_head</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">SVF</span><span class="p">:</span>
+            <span class="n">flow</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">vec_int</span><span class="p">(</span><span class="n">flow</span><span class="p">)</span>
+            <span class="n">flow</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">clamp</span><span class="p">(</span><span class="n">flow</span><span class="p">,</span> <span class="o">-</span><span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">flow</span></div></div>
+
+<div class="viewcode-block" id="TransMorphTVF"><a class="viewcode-back" href="../../../api.html#MIR.models.TransMorphTVF">[docs]</a><span class="k">class</span> <span class="nc">TransMorphTVF</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39; </span>
+<span class="sd">    TransMorph TVF</span>
+<span class="sd">    Args:</span>
+<span class="sd">        config: Configuration object containing model parameters</span>
+<span class="sd">        time_steps: Number of time steps for progressive registration</span>
+<span class="sd">        SVF: Boolean indicating whether to use SVF (Time Stationary Velocity Field) integration</span>
+<span class="sd">        SVF_steps: Number of steps for SVF integration</span>
+<span class="sd">        composition: Type of composition for flow integration (&#39;composition&#39; or &#39;addition&#39;)</span>
+<span class="sd">        swin_type: Type of Swin Transformer to use (&#39;swin&#39; or &#39;dswin&#39;)</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">time_steps</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span> <span class="n">SVF</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">SVF_steps</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span> <span class="n">composition</span><span class="o">=</span><span class="s1">&#39;composition&#39;</span><span class="p">,</span> <span class="n">swin_type</span><span class="o">=</span><span class="s1">&#39;swin&#39;</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">TransMorphTVF</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="n">if_convskip</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">if_convskip</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">if_convskip</span> <span class="o">=</span> <span class="n">if_convskip</span>
+        <span class="n">if_transskip</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">if_transskip</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">if_transskip</span> <span class="o">=</span> <span class="n">if_transskip</span>
+        <span class="n">embed_dim</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">embed_dim</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">time_steps</span> <span class="o">=</span> <span class="n">time_steps</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">img_size</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">img_size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">composition</span> <span class="o">=</span> <span class="n">composition</span>
+        <span class="k">if</span> <span class="n">swin_type</span> <span class="o">==</span> <span class="s1">&#39;swin&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">transformer</span> <span class="o">=</span> <span class="n">swin</span><span class="o">.</span><span class="n">SwinTransformer</span><span class="p">(</span><span class="n">patch_size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">patch_size</span><span class="p">,</span>
+                                           <span class="n">in_chans</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">in_chans</span><span class="p">,</span>
+                                           <span class="n">embed_dim</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">embed_dim</span><span class="p">,</span>
+                                           <span class="n">depths</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">depths</span><span class="p">,</span>
+                                           <span class="n">num_heads</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">num_heads</span><span class="p">,</span>
+                                           <span class="n">window_size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">window_size</span><span class="p">,</span>
+                                           <span class="n">mlp_ratio</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">mlp_ratio</span><span class="p">,</span>
+                                           <span class="n">qkv_bias</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">qkv_bias</span><span class="p">,</span>
+                                           <span class="n">drop_rate</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">drop_rate</span><span class="p">,</span>
+                                           <span class="n">drop_path_rate</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">drop_path_rate</span><span class="p">,</span>
+                                           <span class="n">ape</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">ape</span><span class="p">,</span>
+                                           <span class="n">spe</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">spe</span><span class="p">,</span>
+                                           <span class="n">rpe</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">rpe</span><span class="p">,</span>
+                                           <span class="n">patch_norm</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">patch_norm</span><span class="p">,</span>
+                                           <span class="n">use_checkpoint</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">use_checkpoint</span><span class="p">,</span>
+                                           <span class="n">out_indices</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">out_indices</span><span class="p">,</span>
+                                           <span class="n">pat_merg_rf</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">pat_merg_rf</span><span class="p">,</span>
+                                           <span class="p">)</span>
+        <span class="k">elif</span> <span class="n">swin_type</span> <span class="o">==</span> <span class="s1">&#39;dswin&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">transformer</span> <span class="o">=</span> <span class="n">dswin</span><span class="o">.</span><span class="n">DefSwinTransformer</span><span class="p">(</span><span class="n">patch_size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">patch_size</span><span class="p">,</span>
+                                           <span class="n">in_chans</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">in_chans</span><span class="p">,</span>
+                                           <span class="n">embed_dim</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">embed_dim</span><span class="p">,</span>
+                                           <span class="n">depths</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">depths</span><span class="p">,</span>
+                                           <span class="n">num_heads</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">num_heads</span><span class="p">,</span>
+                                           <span class="n">window_size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">window_size</span><span class="p">,</span>
+                                           <span class="n">mlp_ratio</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">mlp_ratio</span><span class="p">,</span>
+                                           <span class="n">qkv_bias</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">qkv_bias</span><span class="p">,</span>
+                                           <span class="n">drop_rate</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">drop_rate</span><span class="p">,</span>
+                                           <span class="n">drop_path_rate</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">drop_path_rate</span><span class="p">,</span>
+                                           <span class="n">ape</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">ape</span><span class="p">,</span>
+                                           <span class="n">spe</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">spe</span><span class="p">,</span>
+                                           <span class="n">rpe</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">rpe</span><span class="p">,</span>
+                                           <span class="n">patch_norm</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">patch_norm</span><span class="p">,</span>
+                                           <span class="n">use_checkpoint</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">use_checkpoint</span><span class="p">,</span>
+                                           <span class="n">out_indices</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">out_indices</span><span class="p">,</span>
+                                           <span class="n">pat_merg_rf</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">pat_merg_rf</span><span class="p">,</span>
+                                           <span class="n">dwin_size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">dwin_kernel_size</span><span class="p">,</span>
+                                           <span class="n">img_size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">img_size</span><span class="p">,</span>
+                                           <span class="p">)</span>
+        <span class="k">elif</span> <span class="n">swin_type</span> <span class="o">==</span> <span class="s1">&#39;dswinv2&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">transformer</span> <span class="o">=</span> <span class="n">dswin_v2</span><span class="o">.</span><span class="n">DefSwinTransformerV2</span><span class="p">(</span><span class="n">patch_size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">patch_size</span><span class="p">,</span>
+                                           <span class="n">in_chans</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">in_chans</span><span class="p">,</span>
+                                           <span class="n">embed_dim</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">embed_dim</span><span class="p">,</span>
+                                           <span class="n">depths</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">depths</span><span class="p">,</span>
+                                           <span class="n">num_heads</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">num_heads</span><span class="p">,</span>
+                                           <span class="n">window_size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">window_size</span><span class="p">,</span>
+                                           <span class="n">mlp_ratio</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">mlp_ratio</span><span class="p">,</span>
+                                           <span class="n">qkv_bias</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">qkv_bias</span><span class="p">,</span>
+                                           <span class="n">drop_rate</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">drop_rate</span><span class="p">,</span>
+                                           <span class="n">drop_path_rate</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">drop_path_rate</span><span class="p">,</span>
+                                           <span class="n">ape</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">ape</span><span class="p">,</span>
+                                           <span class="n">spe</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">spe</span><span class="p">,</span>
+                                           <span class="n">rpe</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">rpe</span><span class="p">,</span>
+                                           <span class="n">patch_norm</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">patch_norm</span><span class="p">,</span>
+                                           <span class="n">use_checkpoint</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">use_checkpoint</span><span class="p">,</span>
+                                           <span class="n">out_indices</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">out_indices</span><span class="p">,</span>
+                                           <span class="n">pat_merg_rf</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">pat_merg_rf</span><span class="p">,</span>
+                                           <span class="n">dwin_size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">dwin_kernel_size</span><span class="p">,</span>
+                                           <span class="n">img_size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">img_size</span><span class="p">,</span>
+                                           <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Unknown Transformer type: </span><span class="si">{</span><span class="n">swin_type</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">swin_type</span> <span class="o">=</span> <span class="n">swin_type</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">up0</span> <span class="o">=</span> <span class="n">DecoderBlock</span><span class="p">(</span><span class="n">embed_dim</span> <span class="o">*</span> <span class="mi">4</span><span class="p">,</span> <span class="n">embed_dim</span> <span class="o">*</span> <span class="mi">2</span><span class="p">,</span> <span class="n">skip_channels</span><span class="o">=</span><span class="n">embed_dim</span> <span class="o">*</span> <span class="mi">2</span> <span class="k">if</span> <span class="n">if_transskip</span> <span class="k">else</span> <span class="mi">0</span><span class="p">,</span>
+                                <span class="n">use_batchnorm</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">up1</span> <span class="o">=</span> <span class="n">DecoderBlock</span><span class="p">(</span><span class="n">embed_dim</span> <span class="o">*</span> <span class="mi">2</span><span class="p">,</span> <span class="n">embed_dim</span><span class="p">,</span> <span class="n">skip_channels</span><span class="o">=</span><span class="n">embed_dim</span> <span class="k">if</span> <span class="n">if_transskip</span> <span class="k">else</span> <span class="mi">0</span><span class="p">,</span>
+                                <span class="n">use_batchnorm</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>  <span class="c1"># 384, 20, 20, 64</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">up2</span> <span class="o">=</span> <span class="n">DecoderBlock</span><span class="p">(</span><span class="n">embed_dim</span><span class="p">,</span> <span class="n">embed_dim</span><span class="o">//</span><span class="mi">2</span><span class="p">,</span> <span class="n">skip_channels</span><span class="o">=</span><span class="n">embed_dim</span><span class="o">//</span><span class="mi">2</span> <span class="k">if</span> <span class="n">if_transskip</span> <span class="k">else</span> <span class="mi">0</span><span class="p">,</span>
+                                <span class="n">use_batchnorm</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>  <span class="c1"># 384, 20, 20, 64</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">c1</span> <span class="o">=</span> <span class="n">Conv3dReLU</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">embed_dim</span><span class="o">//</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">avg_pool</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">AvgPool3d</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reg_heads</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">ModuleList</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">up3s</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">ModuleList</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cs</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">ModuleList</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">time_steps</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Conv3dReLU</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">embed_dim</span> <span class="o">//</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">reg_heads</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">RegistrationHead</span><span class="p">(</span><span class="n">in_channels</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">reg_head_chan</span><span class="p">,</span> <span class="n">out_channels</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">up3s</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">DecoderBlock</span><span class="p">(</span><span class="n">embed_dim</span><span class="o">//</span><span class="mi">2</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">reg_head_chan</span><span class="p">,</span> <span class="n">skip_channels</span><span class="o">=</span><span class="n">embed_dim</span> <span class="o">//</span> <span class="mi">2</span> <span class="k">if</span> <span class="n">if_convskip</span> <span class="k">else</span> <span class="mi">0</span><span class="p">,</span>
+                                   <span class="n">use_batchnorm</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">spatial_trans_</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">SpatialTransformer</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">img_size</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">spatial_trans</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">SpatialTransformer</span><span class="p">((</span><span class="n">config</span><span class="o">.</span><span class="n">img_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="mi">2</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">img_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="mi">2</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">img_size</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">*</span><span class="mi">2</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">upsamp</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Upsample</span><span class="p">(</span><span class="n">scale_factor</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;trilinear&quot;</span><span class="p">,</span> <span class="n">align_corners</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">reg_head</span> <span class="o">=</span> <span class="n">RegistrationHead</span><span class="p">(</span>
+            <span class="n">in_channels</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">reg_head_chan</span><span class="p">,</span>
+            <span class="n">out_channels</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+            <span class="n">kernel_size</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SVF</span> <span class="o">=</span> <span class="n">SVF</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">SVF</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">vec_int</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">VecInt</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">img_size</span><span class="p">,</span> <span class="n">SVF_steps</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eps</span> <span class="o">=</span> <span class="mf">1e-6</span>
+
+<div class="viewcode-block" id="TransMorphTVF.forward"><a class="viewcode-back" href="../../../api.html#MIR.models.TransMorphTVF.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Forward pass for the TransMorphTVF model.</span>
+<span class="sd">        Args:</span>
+<span class="sd">            inputs: Tuple of moving and fixed images (mov, fix).</span>
+<span class="sd">        Returns:</span>
+<span class="sd">            flow: The computed flow field for image registration.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">mov</span><span class="p">,</span> <span class="n">fix</span> <span class="o">=</span> <span class="n">inputs</span>
+        <span class="n">x_cat</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">mov</span><span class="p">,</span> <span class="n">fix</span><span class="p">),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">x_s1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">avg_pool</span><span class="p">(</span><span class="n">x_cat</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">swin_type</span> <span class="o">==</span> <span class="s1">&#39;swin&#39;</span><span class="p">:</span>
+            <span class="n">out_feats</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">transformer</span><span class="p">(</span><span class="n">x_cat</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">out_feats</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">transformer</span><span class="p">((</span><span class="n">mov</span><span class="p">,</span> <span class="n">fix</span><span class="p">))</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">if_convskip</span><span class="p">:</span>
+            <span class="n">f3</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">c1</span><span class="p">(</span><span class="n">x_s1</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">f3</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">if_transskip</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">swin_type</span> <span class="o">==</span> <span class="s1">&#39;swin&#39;</span><span class="p">:</span>
+                <span class="n">f1</span> <span class="o">=</span> <span class="n">out_feats</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span>
+                <span class="n">f2</span> <span class="o">=</span> <span class="n">out_feats</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">mov_f1</span><span class="p">,</span> <span class="n">fix_f1</span> <span class="o">=</span> <span class="n">out_feats</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span>
+                <span class="n">f1</span> <span class="o">=</span> <span class="p">(</span><span class="n">mov_f1</span> <span class="o">+</span> <span class="n">fix_f1</span><span class="p">)</span>
+                <span class="n">mov_f2</span><span class="p">,</span> <span class="n">fix_f2</span> <span class="o">=</span> <span class="n">out_feats</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">]</span>
+                <span class="n">f2</span> <span class="o">=</span> <span class="p">(</span><span class="n">mov_f2</span> <span class="o">+</span> <span class="n">fix_f2</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">f1</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">f2</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">swin_type</span> <span class="o">==</span> <span class="s1">&#39;swin&#39;</span><span class="p">:</span>
+            <span class="n">f0</span> <span class="o">=</span> <span class="n">out_feats</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">mov_f0</span><span class="p">,</span> <span class="n">fix_f0</span> <span class="o">=</span> <span class="n">out_feats</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">f0</span> <span class="o">=</span> <span class="p">(</span><span class="n">mov_f0</span> <span class="o">+</span> <span class="n">fix_f0</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">up0</span><span class="p">(</span><span class="n">f0</span><span class="p">,</span> <span class="n">f1</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">up1</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">f2</span><span class="p">)</span>
+        <span class="n">xx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">up2</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">f3</span><span class="p">)</span>
+        <span class="n">def_x</span> <span class="o">=</span> <span class="n">mov</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+        <span class="n">flow_previous</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">mov</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">3</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">img_size</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">img_size</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">img_size</span><span class="p">[</span><span class="mi">2</span><span class="p">]))</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">mov</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">flows</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c1"># flow integration</span>
+        <span class="n">xs</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">time_steps</span><span class="p">):</span>
+            <span class="n">f_out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cs</span><span class="p">[</span><span class="n">t</span><span class="p">](</span><span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">def_x</span><span class="p">,</span> <span class="n">fix</span><span class="p">),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">up3s</span><span class="p">[</span><span class="n">t</span><span class="p">](</span><span class="n">xx</span><span class="p">,</span> <span class="n">f_out</span><span class="p">)</span>
+            <span class="n">xs</span> <span class="o">+=</span> <span class="n">x</span>
+            <span class="n">flow</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">reg_heads</span><span class="p">[</span><span class="n">t</span><span class="p">](</span><span class="n">x</span><span class="p">)</span>
+            <span class="n">flows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">flow</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">composition</span> <span class="o">==</span> <span class="s1">&#39;composition&#39;</span><span class="p">:</span>
+                <span class="n">flow_new</span> <span class="o">=</span> <span class="n">flow_previous</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">spatial_trans_</span><span class="p">(</span><span class="n">flow</span><span class="p">,</span> <span class="n">flow_previous</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># essentially addition</span>
+                <span class="n">flow_new</span> <span class="o">=</span> <span class="n">flow_previous</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">spatial_trans_</span><span class="p">(</span><span class="n">flow</span><span class="p">,</span> <span class="n">flow</span><span class="p">)</span>
+            <span class="n">def_x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">spatial_trans_</span><span class="p">(</span><span class="n">mov</span><span class="p">,</span> <span class="n">flow_new</span><span class="p">)</span>
+            <span class="n">flow_previous</span> <span class="o">=</span> <span class="n">flow_new</span>
+        <span class="n">flow</span> <span class="o">=</span> <span class="n">flow_new</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">SVF</span><span class="p">:</span>
+            <span class="n">flow</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">vec_int</span><span class="p">(</span><span class="n">flow</span><span class="p">)</span>
+            <span class="n">flow</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">clamp</span><span class="p">(</span><span class="n">flow</span><span class="p">,</span> <span class="o">-</span><span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">flow</span></div></div>
+    
+<div class="viewcode-block" id="TransMorphTVFSPR"><a class="viewcode-back" href="../../../api.html#MIR.models.TransMorphTVFSPR">[docs]</a><span class="k">class</span> <span class="nc">TransMorphTVFSPR</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;TransMorph TVF with Spatially-varying regularization</span>
+<span class="sd">    Args:</span>
+<span class="sd">        config: Configuration object containing model parameters</span>
+<span class="sd">        time_steps: Number of time steps for progressive registration</span>
+<span class="sd">        SVF: Boolean indicating whether to use SVF (Time Stationary Velocity Field) integration</span>
+<span class="sd">        SVF_steps: Number of steps for SVF integration</span>
+<span class="sd">        composition: Type of composition for flow integration (&#39;composition&#39; or &#39;addition&#39;)</span>
+<span class="sd">        swin_type: Type of Swin Transformer to use (&#39;swin&#39; or &#39;dswin&#39;)</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">SVF</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">time_steps</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span> <span class="n">SVF_steps</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span> <span class="n">composition</span><span class="o">=</span><span class="s1">&#39;composition&#39;</span><span class="p">,</span> <span class="n">swin_type</span><span class="o">=</span><span class="s1">&#39;swin&#39;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Multi-resolution TransMorph</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">TransMorphTVFSPR</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="n">if_convskip</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">if_convskip</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">if_convskip</span> <span class="o">=</span> <span class="n">if_convskip</span>
+        <span class="n">if_transskip</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">if_transskip</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">if_transskip</span> <span class="o">=</span> <span class="n">if_transskip</span>
+        <span class="n">embed_dim</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">embed_dim</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">time_steps</span> <span class="o">=</span> <span class="n">time_steps</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">img_size</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">img_size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">composition</span> <span class="o">=</span> <span class="n">composition</span>
+        <span class="k">if</span> <span class="n">swin_type</span> <span class="o">==</span> <span class="s1">&#39;swin&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">transformer</span> <span class="o">=</span> <span class="n">swin</span><span class="o">.</span><span class="n">SwinTransformer</span><span class="p">(</span><span class="n">patch_size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">patch_size</span><span class="p">,</span>
+                                           <span class="n">in_chans</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">in_chans</span><span class="p">,</span>
+                                           <span class="n">embed_dim</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">embed_dim</span><span class="p">,</span>
+                                           <span class="n">depths</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">depths</span><span class="p">,</span>
+                                           <span class="n">num_heads</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">num_heads</span><span class="p">,</span>
+                                           <span class="n">window_size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">window_size</span><span class="p">,</span>
+                                           <span class="n">mlp_ratio</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">mlp_ratio</span><span class="p">,</span>
+                                           <span class="n">qkv_bias</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">qkv_bias</span><span class="p">,</span>
+                                           <span class="n">drop_rate</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">drop_rate</span><span class="p">,</span>
+                                           <span class="n">drop_path_rate</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">drop_path_rate</span><span class="p">,</span>
+                                           <span class="n">ape</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">ape</span><span class="p">,</span>
+                                           <span class="n">spe</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">spe</span><span class="p">,</span>
+                                           <span class="n">rpe</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">rpe</span><span class="p">,</span>
+                                           <span class="n">patch_norm</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">patch_norm</span><span class="p">,</span>
+                                           <span class="n">use_checkpoint</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">use_checkpoint</span><span class="p">,</span>
+                                           <span class="n">out_indices</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">out_indices</span><span class="p">,</span>
+                                           <span class="n">pat_merg_rf</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">pat_merg_rf</span><span class="p">,</span>
+                                           <span class="p">)</span>
+        <span class="k">elif</span> <span class="n">swin_type</span> <span class="o">==</span> <span class="s1">&#39;dswin&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">transformer</span> <span class="o">=</span> <span class="n">dswin</span><span class="o">.</span><span class="n">DefSwinTransformer</span><span class="p">(</span><span class="n">patch_size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">patch_size</span><span class="p">,</span>
+                                           <span class="n">in_chans</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">in_chans</span><span class="p">,</span>
+                                           <span class="n">embed_dim</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">embed_dim</span><span class="p">,</span>
+                                           <span class="n">depths</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">depths</span><span class="p">,</span>
+                                           <span class="n">num_heads</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">num_heads</span><span class="p">,</span>
+                                           <span class="n">window_size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">window_size</span><span class="p">,</span>
+                                           <span class="n">mlp_ratio</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">mlp_ratio</span><span class="p">,</span>
+                                           <span class="n">qkv_bias</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">qkv_bias</span><span class="p">,</span>
+                                           <span class="n">drop_rate</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">drop_rate</span><span class="p">,</span>
+                                           <span class="n">drop_path_rate</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">drop_path_rate</span><span class="p">,</span>
+                                           <span class="n">ape</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">ape</span><span class="p">,</span>
+                                           <span class="n">spe</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">spe</span><span class="p">,</span>
+                                           <span class="n">rpe</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">rpe</span><span class="p">,</span>
+                                           <span class="n">patch_norm</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">patch_norm</span><span class="p">,</span>
+                                           <span class="n">use_checkpoint</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">use_checkpoint</span><span class="p">,</span>
+                                           <span class="n">out_indices</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">out_indices</span><span class="p">,</span>
+                                           <span class="n">pat_merg_rf</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">pat_merg_rf</span><span class="p">,</span>
+                                           <span class="n">dwin_size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">dwin_kernel_size</span><span class="p">,</span>
+                                           <span class="n">img_size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">img_size</span><span class="p">,</span>
+                                           <span class="p">)</span>
+        <span class="k">elif</span> <span class="n">swin_type</span> <span class="o">==</span> <span class="s1">&#39;dswinv2&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">transformer</span> <span class="o">=</span> <span class="n">dswin_v2</span><span class="o">.</span><span class="n">DefSwinTransformerV2</span><span class="p">(</span><span class="n">patch_size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">patch_size</span><span class="p">,</span>
+                                           <span class="n">in_chans</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">in_chans</span><span class="p">,</span>
+                                           <span class="n">embed_dim</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">embed_dim</span><span class="p">,</span>
+                                           <span class="n">depths</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">depths</span><span class="p">,</span>
+                                           <span class="n">num_heads</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">num_heads</span><span class="p">,</span>
+                                           <span class="n">window_size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">window_size</span><span class="p">,</span>
+                                           <span class="n">mlp_ratio</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">mlp_ratio</span><span class="p">,</span>
+                                           <span class="n">qkv_bias</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">qkv_bias</span><span class="p">,</span>
+                                           <span class="n">drop_rate</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">drop_rate</span><span class="p">,</span>
+                                           <span class="n">drop_path_rate</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">drop_path_rate</span><span class="p">,</span>
+                                           <span class="n">ape</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">ape</span><span class="p">,</span>
+                                           <span class="n">spe</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">spe</span><span class="p">,</span>
+                                           <span class="n">rpe</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">rpe</span><span class="p">,</span>
+                                           <span class="n">patch_norm</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">patch_norm</span><span class="p">,</span>
+                                           <span class="n">use_checkpoint</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">use_checkpoint</span><span class="p">,</span>
+                                           <span class="n">out_indices</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">out_indices</span><span class="p">,</span>
+                                           <span class="n">pat_merg_rf</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">pat_merg_rf</span><span class="p">,</span>
+                                           <span class="n">dwin_size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">dwin_kernel_size</span><span class="p">,</span>
+                                           <span class="n">img_size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">img_size</span><span class="p">,</span>
+                                           <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Unknown Transformer type: </span><span class="si">{</span><span class="n">swin_type</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">swin_type</span> <span class="o">=</span> <span class="n">swin_type</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">up0</span> <span class="o">=</span> <span class="n">DecoderBlock</span><span class="p">(</span><span class="n">embed_dim</span> <span class="o">*</span> <span class="mi">4</span><span class="p">,</span> <span class="n">embed_dim</span> <span class="o">*</span> <span class="mi">2</span><span class="p">,</span> <span class="n">skip_channels</span><span class="o">=</span><span class="n">embed_dim</span> <span class="o">*</span> <span class="mi">2</span> <span class="k">if</span> <span class="n">if_transskip</span> <span class="k">else</span> <span class="mi">0</span><span class="p">,</span>
+                                <span class="n">use_batchnorm</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">up1</span> <span class="o">=</span> <span class="n">DecoderBlock</span><span class="p">(</span><span class="n">embed_dim</span> <span class="o">*</span> <span class="mi">2</span><span class="p">,</span> <span class="n">embed_dim</span><span class="p">,</span> <span class="n">skip_channels</span><span class="o">=</span><span class="n">embed_dim</span> <span class="k">if</span> <span class="n">if_transskip</span> <span class="k">else</span> <span class="mi">0</span><span class="p">,</span>
+                                <span class="n">use_batchnorm</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>  <span class="c1"># 384, 20, 20, 64</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">up2</span> <span class="o">=</span> <span class="n">DecoderBlock</span><span class="p">(</span><span class="n">embed_dim</span><span class="p">,</span> <span class="n">embed_dim</span><span class="o">//</span><span class="mi">2</span><span class="p">,</span> <span class="n">skip_channels</span><span class="o">=</span><span class="n">embed_dim</span><span class="o">//</span><span class="mi">2</span> <span class="k">if</span> <span class="n">if_transskip</span> <span class="k">else</span> <span class="mi">0</span><span class="p">,</span>
+                                <span class="n">use_batchnorm</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>  <span class="c1"># 384, 20, 20, 64</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">c1</span> <span class="o">=</span> <span class="n">Conv3dReLU</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">embed_dim</span><span class="o">//</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">use_batchnorm</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">avg_pool</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">AvgPool3d</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reg_heads</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">ModuleList</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">up3s</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">ModuleList</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cs</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">ModuleList</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">time_steps</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Conv3dReLU</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">embed_dim</span> <span class="o">//</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">use_batchnorm</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">reg_heads</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">RegistrationHead</span><span class="p">(</span><span class="n">in_channels</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">reg_head_chan</span><span class="p">,</span> <span class="n">out_channels</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">up3s</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">DecoderBlock</span><span class="p">(</span><span class="n">embed_dim</span><span class="o">//</span><span class="mi">2</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">reg_head_chan</span><span class="p">,</span> <span class="n">skip_channels</span><span class="o">=</span><span class="n">embed_dim</span> <span class="o">//</span> <span class="mi">2</span> <span class="k">if</span> <span class="n">if_convskip</span> <span class="k">else</span> <span class="mi">0</span><span class="p">,</span>
+                                   <span class="n">use_batchnorm</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">spatial_trans_half</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">SpatialTransformer</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">img_size</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">spatial_trans</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">SpatialTransformer</span><span class="p">(</span>
+            <span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">img_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="mi">2</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">img_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="mi">2</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">img_size</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">*</span> <span class="mi">2</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reg_head</span> <span class="o">=</span> <span class="n">RegistrationHead</span><span class="p">(</span>
+            <span class="n">in_channels</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">reg_head_chan</span><span class="p">,</span>
+            <span class="n">out_channels</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+            <span class="n">kernel_size</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">SVF</span> <span class="o">=</span> <span class="n">SVF</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">SVF</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">integrate</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">VecInt</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">img_size</span><span class="p">,</span> <span class="n">SVF_steps</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sigma_0</span> <span class="o">=</span> <span class="n">Conv3dReLU</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">reg_head_chan</span><span class="p">,</span> <span class="n">embed_dim</span> <span class="o">//</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span> <span class="o">//</span> <span class="mi">2</span><span class="p">,</span>
+                                   <span class="n">use_batchnorm</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sigma_1</span> <span class="o">=</span> <span class="n">Conv3dReLU</span><span class="p">(</span><span class="n">embed_dim</span> <span class="o">//</span> <span class="mi">2</span><span class="p">,</span> <span class="n">embed_dim</span> <span class="o">//</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span> <span class="o">//</span> <span class="mi">2</span><span class="p">,</span>
+                                   <span class="n">use_batchnorm</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sigma_2</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Conv3d</span><span class="p">(</span><span class="n">embed_dim</span> <span class="o">//</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">kernel_size</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reg_head</span> <span class="o">=</span> <span class="n">RegistrationHead</span><span class="p">(</span>
+            <span class="n">in_channels</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">reg_head_chan</span><span class="p">,</span>
+            <span class="n">out_channels</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+            <span class="n">kernel_size</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">wts_act</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sigmoid</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eps</span> <span class="o">=</span> <span class="mf">1e-6</span>
+
+<div class="viewcode-block" id="TransMorphTVFSPR.forward"><a class="viewcode-back" href="../../../api.html#MIR.models.TransMorphTVFSPR.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Forward pass for the TransMorphTVFSPR model.</span>
+<span class="sd">        Args:</span>
+<span class="sd">            inputs: Tuple of moving and fixed images (mov, fix).</span>
+<span class="sd">        Returns:</span>
+<span class="sd">            flow: The computed flow field for image registration.</span>
+<span class="sd">            x_weight: The spatial weights for regularization.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">mov</span><span class="p">,</span> <span class="n">fix</span> <span class="o">=</span> <span class="n">inputs</span>
+        <span class="n">x_cat</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">mov</span><span class="p">,</span> <span class="n">fix</span><span class="p">),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">x_s1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">avg_pool</span><span class="p">(</span><span class="n">x_cat</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">swin_type</span> <span class="o">==</span> <span class="s1">&#39;swin&#39;</span><span class="p">:</span>
+            <span class="n">out_feats</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">transformer</span><span class="p">(</span><span class="n">x_cat</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">out_feats</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">transformer</span><span class="p">((</span><span class="n">mov</span><span class="p">,</span> <span class="n">fix</span><span class="p">))</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">if_convskip</span><span class="p">:</span>
+            <span class="n">f3</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">c1</span><span class="p">(</span><span class="n">x_s1</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">f3</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">if_transskip</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">swin_type</span> <span class="o">==</span> <span class="s1">&#39;swin&#39;</span><span class="p">:</span>
+                <span class="n">f1</span> <span class="o">=</span> <span class="n">out_feats</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span>
+                <span class="n">f2</span> <span class="o">=</span> <span class="n">out_feats</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">mov_f1</span><span class="p">,</span> <span class="n">fix_f1</span> <span class="o">=</span> <span class="n">out_feats</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span>
+                <span class="n">f1</span> <span class="o">=</span> <span class="p">(</span><span class="n">mov_f1</span> <span class="o">+</span> <span class="n">fix_f1</span><span class="p">)</span>
+                <span class="n">mov_f2</span><span class="p">,</span> <span class="n">fix_f2</span> <span class="o">=</span> <span class="n">out_feats</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">]</span>
+                <span class="n">f2</span> <span class="o">=</span> <span class="p">(</span><span class="n">mov_f2</span> <span class="o">+</span> <span class="n">fix_f2</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">f1</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">f2</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">swin_type</span> <span class="o">==</span> <span class="s1">&#39;swin&#39;</span><span class="p">:</span>
+            <span class="n">f0</span> <span class="o">=</span> <span class="n">out_feats</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">mov_f0</span><span class="p">,</span> <span class="n">fix_f0</span> <span class="o">=</span> <span class="n">out_feats</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">f0</span> <span class="o">=</span> <span class="p">(</span><span class="n">mov_f0</span> <span class="o">+</span> <span class="n">fix_f0</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">up0</span><span class="p">(</span><span class="n">f0</span><span class="p">,</span> <span class="n">f1</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">up1</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">f2</span><span class="p">)</span>
+        <span class="n">xx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">up2</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">f3</span><span class="p">)</span>
+        <span class="n">def_x</span> <span class="o">=</span> <span class="n">mov</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+        <span class="n">flow_previous</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">mov</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">3</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">img_size</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">img_size</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">img_size</span><span class="p">[</span><span class="mi">2</span><span class="p">]))</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">mov</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">flows</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c1"># flow integration</span>
+        <span class="n">xs</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">time_steps</span><span class="p">):</span>
+            <span class="n">f_out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cs</span><span class="p">[</span><span class="n">t</span><span class="p">](</span><span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">def_x</span><span class="p">,</span> <span class="n">fix</span><span class="p">),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">up3s</span><span class="p">[</span><span class="n">t</span><span class="p">](</span><span class="n">xx</span><span class="p">,</span> <span class="n">f_out</span><span class="p">)</span>
+            <span class="n">xs</span> <span class="o">+=</span> <span class="n">x</span>
+            <span class="n">flow</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">reg_heads</span><span class="p">[</span><span class="n">t</span><span class="p">](</span><span class="n">x</span><span class="p">)</span>
+            <span class="n">flows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">flow</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">composition</span> <span class="o">==</span> <span class="s1">&#39;composition&#39;</span><span class="p">:</span>
+                <span class="n">flow_new</span> <span class="o">=</span> <span class="n">flow_previous</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">spatial_trans_half</span><span class="p">(</span><span class="n">flow</span><span class="p">,</span> <span class="n">flow_previous</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># essentially addition</span>
+                <span class="n">flow_new</span> <span class="o">=</span> <span class="n">flow_previous</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">spatial_trans_half</span><span class="p">(</span><span class="n">flow</span><span class="p">,</span> <span class="n">flow</span><span class="p">)</span>
+            <span class="n">def_x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">spatial_trans_half</span><span class="p">(</span><span class="n">mov</span><span class="p">,</span> <span class="n">flow_new</span><span class="p">)</span>
+            <span class="n">flow_previous</span> <span class="o">=</span> <span class="n">flow_new</span>
+        <span class="n">flow</span> <span class="o">=</span> <span class="n">flow_new</span>
+
+        <span class="n">x_weight</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sigma_0</span><span class="p">(</span><span class="n">xs</span><span class="p">)</span>
+        <span class="n">x_weight</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sigma_1</span><span class="p">(</span><span class="n">x_weight</span><span class="p">)</span>
+        <span class="n">x_weight</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sigma_2</span><span class="p">(</span><span class="n">x_weight</span><span class="p">)</span>
+        <span class="n">x_weight</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">wts_act</span><span class="p">(</span><span class="n">x_weight</span><span class="p">)</span>
+        <span class="n">x_weight</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">clamp</span><span class="p">(</span><span class="n">x_weight</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">eps</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">SVF</span><span class="p">:</span>
+            <span class="n">pos_flow</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">integrate</span><span class="p">(</span><span class="n">flow</span><span class="p">)</span>
+            <span class="n">pos_flow</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">clamp</span><span class="p">(</span><span class="n">pos_flow</span><span class="p">,</span> <span class="o">-</span><span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+            <span class="n">neg_flow</span> <span class="o">=</span> <span class="o">-</span><span class="n">flow</span>
+            <span class="n">neg_flow</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">integrate</span><span class="p">(</span><span class="n">neg_flow</span><span class="p">)</span>
+            <span class="n">neg_flow</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">clamp</span><span class="p">(</span><span class="n">neg_flow</span><span class="p">,</span> <span class="o">-</span><span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">pos_flow</span><span class="p">,</span> <span class="n">neg_flow</span><span class="p">,</span> <span class="n">x_weight</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">flow</span><span class="p">,</span> <span class="n">x_weight</span></div></div>
+
+<div class="viewcode-block" id="TransMorphAffine"><a class="viewcode-back" href="../../../api.html#MIR.models.TransMorphAffine">[docs]</a><span class="k">class</span> <span class="nc">TransMorphAffine</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    TransMorph Affine</span>
+<span class="sd">    Args:</span>
+<span class="sd">        config: Configuration object containing model parameters</span>
+<span class="sd">        swin_type: Type of Swin Transformer to use (&#39;swin&#39; or &#39;dswin&#39;)</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">swin_type</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">TransMorphAffine</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="n">out_size</span> <span class="o">=</span> <span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">img_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">//</span><span class="mi">16</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">img_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">//</span><span class="mi">16</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">img_size</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">//</span><span class="mi">16</span><span class="p">)</span>
+        <span class="n">embed_dim</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">embed_dim</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">img_size</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">img_size</span>
+        <span class="k">if</span> <span class="n">swin_type</span> <span class="o">==</span> <span class="s1">&#39;swin&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">transformer</span> <span class="o">=</span> <span class="n">swin</span><span class="o">.</span><span class="n">SwinTransformer</span><span class="p">(</span><span class="n">patch_size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">patch_size</span><span class="p">,</span>
+                                            <span class="n">in_chans</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">in_chans</span><span class="p">,</span>
+                                            <span class="n">embed_dim</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">embed_dim</span><span class="p">,</span>
+                                            <span class="n">depths</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">depths</span><span class="p">,</span>
+                                            <span class="n">num_heads</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">num_heads</span><span class="p">,</span>
+                                            <span class="n">window_size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">window_size</span><span class="p">,</span>
+                                            <span class="n">mlp_ratio</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">mlp_ratio</span><span class="p">,</span>
+                                            <span class="n">qkv_bias</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">qkv_bias</span><span class="p">,</span>
+                                            <span class="n">drop_rate</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">drop_rate</span><span class="p">,</span>
+                                            <span class="n">drop_path_rate</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">drop_path_rate</span><span class="p">,</span>
+                                            <span class="n">ape</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">ape</span><span class="p">,</span>
+                                            <span class="n">spe</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">spe</span><span class="p">,</span>
+                                            <span class="n">rpe</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">rpe</span><span class="p">,</span>
+                                            <span class="n">patch_norm</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">patch_norm</span><span class="p">,</span>
+                                            <span class="n">use_checkpoint</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">use_checkpoint</span><span class="p">,</span>
+                                            <span class="n">out_indices</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">out_indices</span><span class="p">,</span>
+                                            <span class="n">pat_merg_rf</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">pat_merg_rf</span><span class="p">,</span>
+                                            <span class="p">)</span>
+        <span class="k">elif</span> <span class="n">swin_type</span> <span class="o">==</span> <span class="s1">&#39;dswin&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">transformer</span> <span class="o">=</span> <span class="n">dswin</span><span class="o">.</span><span class="n">DefSwinTransformer</span><span class="p">(</span><span class="n">patch_size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">patch_size</span><span class="p">,</span>
+                                            <span class="n">in_chans</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">in_chans</span><span class="p">,</span>
+                                            <span class="n">embed_dim</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">embed_dim</span><span class="p">,</span>
+                                            <span class="n">depths</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">depths</span><span class="p">,</span>
+                                            <span class="n">num_heads</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">num_heads</span><span class="p">,</span>
+                                            <span class="n">window_size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">window_size</span><span class="p">,</span>
+                                            <span class="n">mlp_ratio</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">mlp_ratio</span><span class="p">,</span>
+                                            <span class="n">qkv_bias</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">qkv_bias</span><span class="p">,</span>
+                                            <span class="n">drop_rate</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">drop_rate</span><span class="p">,</span>
+                                            <span class="n">drop_path_rate</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">drop_path_rate</span><span class="p">,</span>
+                                            <span class="n">ape</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">ape</span><span class="p">,</span>
+                                            <span class="n">spe</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">spe</span><span class="p">,</span>
+                                            <span class="n">rpe</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">rpe</span><span class="p">,</span>
+                                            <span class="n">patch_norm</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">patch_norm</span><span class="p">,</span>
+                                            <span class="n">use_checkpoint</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">use_checkpoint</span><span class="p">,</span>
+                                            <span class="n">out_indices</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">out_indices</span><span class="p">,</span>
+                                            <span class="n">pat_merg_rf</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">pat_merg_rf</span><span class="p">,</span>
+                                            <span class="n">dwin_size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">dwin_kernel_size</span><span class="p">,</span>
+                                            <span class="n">img_size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">img_size</span><span class="p">,</span>
+                                            <span class="p">)</span>
+        <span class="k">elif</span> <span class="n">swin_type</span> <span class="o">==</span> <span class="s1">&#39;dswinv2&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">transformer</span> <span class="o">=</span> <span class="n">dswin_v2</span><span class="o">.</span><span class="n">DefSwinTransformerV2</span><span class="p">(</span><span class="n">patch_size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">patch_size</span><span class="p">,</span>
+                                            <span class="n">in_chans</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">in_chans</span><span class="p">,</span>
+                                            <span class="n">embed_dim</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">embed_dim</span><span class="p">,</span>
+                                            <span class="n">depths</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">depths</span><span class="p">,</span>
+                                            <span class="n">num_heads</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">num_heads</span><span class="p">,</span>
+                                            <span class="n">window_size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">window_size</span><span class="p">,</span>
+                                            <span class="n">mlp_ratio</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">mlp_ratio</span><span class="p">,</span>
+                                            <span class="n">qkv_bias</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">qkv_bias</span><span class="p">,</span>
+                                            <span class="n">drop_rate</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">drop_rate</span><span class="p">,</span>
+                                            <span class="n">drop_path_rate</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">drop_path_rate</span><span class="p">,</span>
+                                            <span class="n">ape</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">ape</span><span class="p">,</span>
+                                            <span class="n">spe</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">spe</span><span class="p">,</span>
+                                            <span class="n">rpe</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">rpe</span><span class="p">,</span>
+                                            <span class="n">patch_norm</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">patch_norm</span><span class="p">,</span>
+                                            <span class="n">use_checkpoint</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">use_checkpoint</span><span class="p">,</span>
+                                            <span class="n">out_indices</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">out_indices</span><span class="p">,</span>
+                                            <span class="n">pat_merg_rf</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">pat_merg_rf</span><span class="p">,</span>
+                                            <span class="n">dwin_size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">dwin_kernel_size</span><span class="p">,</span>
+                                            <span class="n">img_size</span><span class="o">=</span><span class="n">config</span><span class="o">.</span><span class="n">img_size</span><span class="p">,</span>
+                                            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Unknown Transformer type: </span><span class="si">{</span><span class="n">swin_type</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">swin_type</span> <span class="o">=</span> <span class="n">swin_type</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">aff_mlp</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">()</span>
+        <span class="n">aff_head</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">embed_dim</span> <span class="o">*</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">out_size</span><span class="p">),</span> <span class="mi">100</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">aff_mlp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">aff_head</span><span class="p">)</span>
+        <span class="n">relu_aff</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">LeakyReLU</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">aff_mlp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">relu_aff</span><span class="p">)</span>
+        <span class="n">aff_head_f</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+        <span class="n">aff_head_f</span><span class="o">.</span><span class="n">weight</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">Normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">1e-3</span><span class="p">)</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">aff_head_f</span><span class="o">.</span><span class="n">weight</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
+        <span class="n">aff_head_f</span><span class="o">.</span><span class="n">bias</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">Normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">1e-3</span><span class="p">)</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">aff_head_f</span><span class="o">.</span><span class="n">bias</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">aff_mlp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">aff_head_f</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">scl_mlp</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">()</span>
+        <span class="n">scl_head</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">embed_dim</span> <span class="o">*</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">out_size</span><span class="p">),</span> <span class="mi">100</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scl_mlp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">scl_head</span><span class="p">)</span>
+        <span class="n">relu_scl</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">LeakyReLU</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scl_mlp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">relu_scl</span><span class="p">)</span>
+        <span class="n">scl_head_f</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+        <span class="n">scl_head_f</span><span class="o">.</span><span class="n">weight</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">Normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">1e-2</span><span class="p">)</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">scl_head_f</span><span class="o">.</span><span class="n">weight</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
+        <span class="n">scl_head_f</span><span class="o">.</span><span class="n">bias</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">Normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">1e-2</span><span class="p">)</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">scl_head_f</span><span class="o">.</span><span class="n">bias</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scl_mlp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">scl_head_f</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">trans_mlp</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">()</span>
+        <span class="n">trans_head</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">embed_dim</span> <span class="o">*</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">out_size</span><span class="p">),</span> <span class="mi">100</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">trans_mlp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">trans_head</span><span class="p">)</span>
+        <span class="n">relu_trans</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">LeakyReLU</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">trans_mlp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">relu_trans</span><span class="p">)</span>
+        <span class="n">trans_head_f</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+        <span class="n">trans_head_f</span><span class="o">.</span><span class="n">weight</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">Normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">1e-2</span><span class="p">)</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">trans_head_f</span><span class="o">.</span><span class="n">weight</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
+        <span class="n">trans_head_f</span><span class="o">.</span><span class="n">bias</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">Normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">1e-4</span><span class="p">)</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">trans_head_f</span><span class="o">.</span><span class="n">bias</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">trans_mlp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">trans_head_f</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">shear_mlp</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">()</span>
+        <span class="n">shear_head</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">embed_dim</span> <span class="o">*</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">(</span><span class="n">out_size</span><span class="p">),</span> <span class="mi">100</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shear_mlp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">shear_head</span><span class="p">)</span>
+        <span class="n">relu_shear</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">LeakyReLU</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shear_mlp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">relu_shear</span><span class="p">)</span>
+        <span class="n">shear_head_f</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">6</span><span class="p">)</span>
+        <span class="n">shear_head_f</span><span class="o">.</span><span class="n">weight</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">Normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">1e-2</span><span class="p">)</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">shear_head_f</span><span class="o">.</span><span class="n">weight</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
+        <span class="n">shear_head_f</span><span class="o">.</span><span class="n">bias</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">Normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">1e-4</span><span class="p">)</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">shear_head_f</span><span class="o">.</span><span class="n">bias</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shear_mlp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">shear_head_f</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inst_norm</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">InstanceNorm3d</span><span class="p">(</span><span class="n">embed_dim</span> <span class="o">*</span> <span class="mi">4</span><span class="p">)</span>
+<div class="viewcode-block" id="TransMorphAffine.softplus"><a class="viewcode-back" href="../../../api.html#MIR.models.TransMorphAffine.softplus">[docs]</a>    <span class="k">def</span> <span class="nf">softplus</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>  <span class="c1"># Softplus</span>
+        <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">torch</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">x</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="TransMorphAffine.forward"><a class="viewcode-back" href="../../../api.html#MIR.models.TransMorphAffine.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">):</span>
+        <span class="n">mov</span><span class="p">,</span> <span class="n">fix</span> <span class="o">=</span> <span class="n">inputs</span>
+        <span class="n">x_cat</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">mov</span><span class="p">,</span> <span class="n">fix</span><span class="p">),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">swin_type</span> <span class="o">==</span> <span class="s1">&#39;swin&#39;</span><span class="p">:</span>
+            <span class="n">out_feats</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">transformer</span><span class="p">(</span><span class="n">x_cat</span><span class="p">)</span>
+            <span class="n">f0</span> <span class="o">=</span> <span class="n">out_feats</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">out_feats</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">transformer</span><span class="p">((</span><span class="n">mov</span><span class="p">,</span> <span class="n">fix</span><span class="p">))</span>
+            <span class="n">mov_f0</span><span class="p">,</span> <span class="n">fix_f0</span> <span class="o">=</span> <span class="n">out_feats</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">f0</span> <span class="o">=</span> <span class="p">(</span><span class="n">mov_f0</span> <span class="o">+</span> <span class="n">fix_f0</span><span class="p">)</span>
+        
+        <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inst_norm</span><span class="p">(</span><span class="n">f0</span><span class="p">)</span>
+        <span class="n">x5</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">flatten</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">start_dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="n">aff_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">aff_mlp</span><span class="p">(</span><span class="n">x5</span><span class="p">)</span><span class="o">*</span><span class="mf">0.1</span>
+        <span class="n">scl_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">scl_mlp</span><span class="p">(</span><span class="n">x5</span><span class="p">)</span><span class="o">*</span><span class="mf">0.1</span>
+        <span class="n">trans_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">trans_mlp</span><span class="p">(</span><span class="n">x5</span><span class="p">)</span><span class="o">*</span><span class="mf">0.1</span>
+        <span class="n">shr_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">shear_mlp</span><span class="p">(</span><span class="n">x5</span><span class="p">)</span><span class="o">*</span><span class="mf">0.1</span>
+        <span class="n">trans</span> <span class="o">=</span> <span class="n">trans_</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+        <span class="n">aff</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">clamp</span><span class="p">(</span><span class="n">aff_</span><span class="p">,</span> <span class="nb">min</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="nb">max</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>
+        <span class="n">scl</span> <span class="o">=</span> <span class="n">scl_</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="n">scl</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">clamp</span><span class="p">(</span><span class="n">scl</span><span class="p">,</span> <span class="nb">min</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="nb">max</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+        <span class="n">shr</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">clamp</span><span class="p">(</span><span class="n">shr_</span><span class="p">,</span> <span class="nb">min</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="nb">max</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>  <span class="c1"># shr = torch.tanh(shr) * np.pi</span>
+        <span class="k">return</span> <span class="n">aff</span><span class="p">,</span> <span class="n">scl</span><span class="p">,</span> <span class="n">trans</span><span class="p">,</span> <span class="n">shr</span><span class="c1">#, aff_, scl_, trans_, shr_</span></div></div>
+
+<span class="n">CONFIGS</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;TransMorph-3-LVL&#39;</span><span class="p">:</span> <span class="n">configs</span><span class="o">.</span><span class="n">get_3DTransMorph3Lvl_config</span><span class="p">(),</span>
+    <span class="s1">&#39;TransMorph-3-LVL-DWin&#39;</span><span class="p">:</span> <span class="n">configs</span><span class="o">.</span><span class="n">get_3DTransMorphDWin3Lvl_config</span><span class="p">(),</span>
+    <span class="s1">&#39;TransMorph&#39;</span><span class="p">:</span> <span class="n">configs</span><span class="o">.</span><span class="n">get_3DTransMorph_config</span><span class="p">()</span>
+<span class="p">}</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

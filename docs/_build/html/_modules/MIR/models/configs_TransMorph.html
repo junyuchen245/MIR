@@ -1,0 +1,531 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MIR.models.configs_TransMorph &mdash; MIR 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js?v=f6245a2f"></script>
+      <script src="../../../_static/doctools.js?v=888ff710"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            MIR
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">MIR</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">MIR.models.configs_TransMorph</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for MIR.models.configs_TransMorph</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">ml_collections</span>
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">********************************************************</span>
+<span class="sd">                   Swin Transformer</span>
+<span class="sd">********************************************************</span>
+<span class="sd">if_transskip (bool): Enable skip connections from Transformer Blocks</span>
+<span class="sd">if_convskip (bool): Enable skip connections from Convolutional Blocks</span>
+<span class="sd">patch_size (int | tuple(int)): Patch size. Default: 4</span>
+<span class="sd">in_chans (int): Number of input image channels. Default: 2 (for moving and fixed images)</span>
+<span class="sd">embed_dim (int): Patch embedding dimension. Default: 96</span>
+<span class="sd">depths (tuple(int)): Depth of each Swin Transformer layer.</span>
+<span class="sd">num_heads (tuple(int)): Number of attention heads in different layers.</span>
+<span class="sd">window_size (tuple(int)): Image size should be divisible by window size, </span>
+<span class="sd">                     e.g., if image has a size of (160, 192, 224), then the window size can be (5, 6, 7)</span>
+<span class="sd">mlp_ratio (float): Ratio of mlp hidden dim to embedding dim. Default: 4</span>
+<span class="sd">pat_merg_rf (int): Embed_dim reduction factor in patch merging, e.g., N*C-&gt;N/4*C if set to four. Default: 4. </span>
+<span class="sd">qkv_bias (bool): If True, add a learnable bias to query, key, value. Default: True</span>
+<span class="sd">drop_rate (float): Dropout rate. Default: 0</span>
+<span class="sd">drop_path_rate (float): Stochastic depth rate. Default: 0.1</span>
+<span class="sd">ape (bool): Enable learnable position embedding. Default: False</span>
+<span class="sd">spe (bool): Enable sinusoidal position embedding. Default: False</span>
+<span class="sd">patch_norm (bool): If True, add normalization after patch embedding. Default: True</span>
+<span class="sd">use_checkpoint (bool): Whether to use checkpointing to save memory. Default: False </span>
+<span class="sd">                       (Carried over from Swin Transformer, it is not needed)</span>
+<span class="sd">out_indices (tuple(int)): Indices of Transformer blocks to output features. Default: (0, 1, 2, 3)</span>
+<span class="sd">reg_head_chan (int): Number of channels in the registration head (i.e., the final convolutional layer) </span>
+<span class="sd">img_size (int | tuple(int)): Input image size, e.g., (160, 192, 224)</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<div class="viewcode-block" id="get_3DTransMorphDWin3Lvl_config"><a class="viewcode-back" href="../../../api.html#MIR.models.get_3DTransMorphDWin3Lvl_config">[docs]</a><span class="k">def</span> <span class="nf">get_3DTransMorphDWin3Lvl_config</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Trainable params: 15,201,579</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">ml_collections</span><span class="o">.</span><span class="n">ConfigDict</span><span class="p">()</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">if_transskip</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">if_convskip</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">patch_size</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">in_chans</span> <span class="o">=</span> <span class="mi">2</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">embed_dim</span> <span class="o">=</span> <span class="mi">96</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">depths</span> <span class="o">=</span> <span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">num_heads</span> <span class="o">=</span> <span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">8</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">window_size</span> <span class="o">=</span> <span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">mlp_ratio</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">pat_merg_rf</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">qkv_bias</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">drop_rate</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">drop_path_rate</span> <span class="o">=</span> <span class="mf">0.3</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">ape</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">spe</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">rpe</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">patch_norm</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">use_checkpoint</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">out_indices</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">reg_head_chan</span> <span class="o">=</span> <span class="mi">16</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">img_size</span> <span class="o">=</span> <span class="p">(</span><span class="mi">160</span><span class="p">,</span> <span class="mi">192</span><span class="p">,</span> <span class="mi">224</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">dwin_kernel_size</span> <span class="o">=</span> <span class="p">(</span><span class="mi">7</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">config</span></div>
+
+<div class="viewcode-block" id="get_3DTransMorph3Lvl_config"><a class="viewcode-back" href="../../../api.html#MIR.models.get_3DTransMorph3Lvl_config">[docs]</a><span class="k">def</span> <span class="nf">get_3DTransMorph3Lvl_config</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Trainable params: 15,201,579</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">ml_collections</span><span class="o">.</span><span class="n">ConfigDict</span><span class="p">()</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">if_transskip</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">if_convskip</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">patch_size</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">in_chans</span> <span class="o">=</span> <span class="mi">2</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">embed_dim</span> <span class="o">=</span> <span class="mi">96</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">depths</span> <span class="o">=</span> <span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">num_heads</span> <span class="o">=</span> <span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">8</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">window_size</span> <span class="o">=</span> <span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">mlp_ratio</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">pat_merg_rf</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">qkv_bias</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">drop_rate</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">drop_path_rate</span> <span class="o">=</span> <span class="mf">0.3</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">ape</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">spe</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">rpe</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">patch_norm</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">use_checkpoint</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">out_indices</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">reg_head_chan</span> <span class="o">=</span> <span class="mi">16</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">img_size</span> <span class="o">=</span> <span class="p">(</span><span class="mi">160</span><span class="p">,</span> <span class="mi">192</span><span class="p">,</span> <span class="mi">224</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">config</span></div>
+
+<span class="k">def</span> <span class="nf">get_3DTransMorphAutoPET3Lvl_config</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Trainable params: 15,201,579</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">ml_collections</span><span class="o">.</span><span class="n">ConfigDict</span><span class="p">()</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">if_transskip</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">if_convskip</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">patch_size</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">in_chans</span> <span class="o">=</span> <span class="mi">2</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">embed_dim</span> <span class="o">=</span> <span class="mi">128</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">dwin_kernel_size</span> <span class="o">=</span> <span class="p">(</span><span class="mi">7</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">depths</span> <span class="o">=</span> <span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">num_heads</span> <span class="o">=</span> <span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">8</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">window_size</span> <span class="o">=</span> <span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">mlp_ratio</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">pat_merg_rf</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">qkv_bias</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">drop_rate</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">drop_path_rate</span> <span class="o">=</span> <span class="mf">0.3</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">ape</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">spe</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">rpe</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">patch_norm</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">use_checkpoint</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">out_indices</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">reg_head_chan</span> <span class="o">=</span> <span class="mi">16</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">img_size</span> <span class="o">=</span> <span class="p">(</span><span class="mi">160</span><span class="p">,</span> <span class="mi">192</span><span class="p">,</span> <span class="mi">224</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">config</span>
+
+<div class="viewcode-block" id="get_3DTransMorph_config"><a class="viewcode-back" href="../../../api.html#MIR.models.get_3DTransMorph_config">[docs]</a><span class="k">def</span> <span class="nf">get_3DTransMorph_config</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Trainable params: 15,201,579</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">ml_collections</span><span class="o">.</span><span class="n">ConfigDict</span><span class="p">()</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">if_transskip</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">if_convskip</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">patch_size</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">in_chans</span> <span class="o">=</span> <span class="mi">2</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">embed_dim</span> <span class="o">=</span> <span class="mi">96</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">depths</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">num_heads</span> <span class="o">=</span> <span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">8</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">window_size</span> <span class="o">=</span> <span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">7</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">mlp_ratio</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">pat_merg_rf</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">qkv_bias</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">drop_rate</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">drop_path_rate</span> <span class="o">=</span> <span class="mf">0.3</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">ape</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">spe</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">rpe</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">patch_norm</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">use_checkpoint</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">out_indices</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">reg_head_chan</span> <span class="o">=</span> <span class="mi">16</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">img_size</span> <span class="o">=</span> <span class="p">(</span><span class="mi">160</span><span class="p">,</span> <span class="mi">192</span><span class="p">,</span> <span class="mi">224</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">config</span></div>
+
+<div class="viewcode-block" id="get_3DTransMorphNoRelativePosEmbd_config"><a class="viewcode-back" href="../../../api.html#MIR.models.get_3DTransMorphNoRelativePosEmbd_config">[docs]</a><span class="k">def</span> <span class="nf">get_3DTransMorphNoRelativePosEmbd_config</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Trainable params: 15,201,579</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">ml_collections</span><span class="o">.</span><span class="n">ConfigDict</span><span class="p">()</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">if_transskip</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">if_convskip</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">patch_size</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">in_chans</span> <span class="o">=</span> <span class="mi">2</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">embed_dim</span> <span class="o">=</span> <span class="mi">96</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">depths</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">num_heads</span> <span class="o">=</span> <span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">8</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">window_size</span> <span class="o">=</span> <span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">7</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">mlp_ratio</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">pat_merg_rf</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">qkv_bias</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">drop_rate</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">drop_path_rate</span> <span class="o">=</span> <span class="mf">0.3</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">ape</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">spe</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">rpe</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">patch_norm</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">use_checkpoint</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">out_indices</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">reg_head_chan</span> <span class="o">=</span> <span class="mi">16</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">img_size</span> <span class="o">=</span> <span class="p">(</span><span class="mi">160</span><span class="p">,</span> <span class="mi">192</span><span class="p">,</span> <span class="mi">224</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">config</span></div>
+
+<div class="viewcode-block" id="get_3DTransMorphSin_config"><a class="viewcode-back" href="../../../api.html#MIR.models.get_3DTransMorphSin_config">[docs]</a><span class="k">def</span> <span class="nf">get_3DTransMorphSin_config</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    TransMorph with Sinusoidal Positional Embedding</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">ml_collections</span><span class="o">.</span><span class="n">ConfigDict</span><span class="p">()</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">if_transskip</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">if_convskip</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">patch_size</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">in_chans</span> <span class="o">=</span> <span class="mi">2</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">embed_dim</span> <span class="o">=</span> <span class="mi">96</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">depths</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">num_heads</span> <span class="o">=</span> <span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">8</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">window_size</span> <span class="o">=</span> <span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">7</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">mlp_ratio</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">pat_merg_rf</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">qkv_bias</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">drop_rate</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">drop_path_rate</span> <span class="o">=</span> <span class="mf">0.3</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">ape</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">spe</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">rpe</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">patch_norm</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">use_checkpoint</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">out_indices</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">reg_head_chan</span> <span class="o">=</span> <span class="mi">16</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">img_size</span> <span class="o">=</span> <span class="p">(</span><span class="mi">160</span><span class="p">,</span> <span class="mi">192</span><span class="p">,</span> <span class="mi">224</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">pos_embed_method</span> <span class="o">=</span> <span class="s1">&#39;relative&#39;</span>
+    <span class="k">return</span> <span class="n">config</span></div>
+
+<div class="viewcode-block" id="get_3DTransMorphLrn_config"><a class="viewcode-back" href="../../../api.html#MIR.models.get_3DTransMorphLrn_config">[docs]</a><span class="k">def</span> <span class="nf">get_3DTransMorphLrn_config</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    TransMorph with Learnable Positional Embedding</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">ml_collections</span><span class="o">.</span><span class="n">ConfigDict</span><span class="p">()</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">if_transskip</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">if_convskip</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">patch_size</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">in_chans</span> <span class="o">=</span> <span class="mi">2</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">embed_dim</span> <span class="o">=</span> <span class="mi">96</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">depths</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">num_heads</span> <span class="o">=</span> <span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">8</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">window_size</span> <span class="o">=</span> <span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">mlp_ratio</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">pat_merg_rf</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">qkv_bias</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">drop_rate</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">drop_path_rate</span> <span class="o">=</span> <span class="mf">0.3</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">ape</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">spe</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">rpe</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">patch_norm</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">use_checkpoint</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">out_indices</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">reg_head_chan</span> <span class="o">=</span> <span class="mi">16</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">img_size</span> <span class="o">=</span> <span class="p">(</span><span class="mi">160</span><span class="p">,</span> <span class="mi">192</span><span class="p">,</span> <span class="mi">224</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">config</span></div>
+
+<div class="viewcode-block" id="get_3DTransMorphNoConvSkip_config"><a class="viewcode-back" href="../../../api.html#MIR.models.get_3DTransMorphNoConvSkip_config">[docs]</a><span class="k">def</span> <span class="nf">get_3DTransMorphNoConvSkip_config</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    No skip connections from convolution layers</span>
+
+<span class="sd">    Computational complexity:       577.34 GMac</span>
+<span class="sd">    Number of parameters:           63.56 M</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">ml_collections</span><span class="o">.</span><span class="n">ConfigDict</span><span class="p">()</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">if_transskip</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">if_convskip</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">patch_size</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">in_chans</span> <span class="o">=</span> <span class="mi">2</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">embed_dim</span> <span class="o">=</span> <span class="mi">96</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">depths</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">num_heads</span> <span class="o">=</span> <span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">8</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">window_size</span> <span class="o">=</span> <span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">mlp_ratio</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">pat_merg_rf</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">qkv_bias</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">drop_rate</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">drop_path_rate</span> <span class="o">=</span> <span class="mf">0.3</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">ape</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">spe</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">rpe</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">patch_norm</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">use_checkpoint</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">out_indices</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">reg_head_chan</span> <span class="o">=</span> <span class="mi">16</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">img_size</span> <span class="o">=</span> <span class="p">(</span><span class="mi">160</span><span class="p">,</span> <span class="mi">192</span><span class="p">,</span> <span class="mi">224</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">pos_embed_method</span> <span class="o">=</span> <span class="s1">&#39;relative&#39;</span>
+    <span class="k">return</span> <span class="n">config</span></div>
+
+<div class="viewcode-block" id="get_3DTransMorphNoTransSkip_config"><a class="viewcode-back" href="../../../api.html#MIR.models.get_3DTransMorphNoTransSkip_config">[docs]</a><span class="k">def</span> <span class="nf">get_3DTransMorphNoTransSkip_config</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    No skip connections from Transformer blocks</span>
+
+<span class="sd">    Computational complexity:       639.93 GMac</span>
+<span class="sd">    Number of parameters:           58.4 M</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">ml_collections</span><span class="o">.</span><span class="n">ConfigDict</span><span class="p">()</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">if_transskip</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">if_convskip</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">patch_size</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">in_chans</span> <span class="o">=</span> <span class="mi">2</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">embed_dim</span> <span class="o">=</span> <span class="mi">96</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">depths</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">num_heads</span> <span class="o">=</span> <span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">8</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">window_size</span> <span class="o">=</span> <span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">mlp_ratio</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">pat_merg_rf</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">qkv_bias</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">drop_rate</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">drop_path_rate</span> <span class="o">=</span> <span class="mf">0.3</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">ape</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">spe</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">rpe</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">patch_norm</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">use_checkpoint</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">out_indices</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">reg_head_chan</span> <span class="o">=</span> <span class="mi">16</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">img_size</span> <span class="o">=</span> <span class="p">(</span><span class="mi">160</span><span class="p">,</span> <span class="mi">192</span><span class="p">,</span> <span class="mi">224</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">config</span></div>
+
+<div class="viewcode-block" id="get_3DTransMorphNoSkip_config"><a class="viewcode-back" href="../../../api.html#MIR.models.get_3DTransMorphNoSkip_config">[docs]</a><span class="k">def</span> <span class="nf">get_3DTransMorphNoSkip_config</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    No skip connections</span>
+
+<span class="sd">    Computational complexity:       639.93 GMac</span>
+<span class="sd">    Number of parameters:           58.4 M</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">ml_collections</span><span class="o">.</span><span class="n">ConfigDict</span><span class="p">()</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">if_transskip</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">if_convskip</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">patch_size</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">in_chans</span> <span class="o">=</span> <span class="mi">2</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">embed_dim</span> <span class="o">=</span> <span class="mi">96</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">depths</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">num_heads</span> <span class="o">=</span> <span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">8</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">window_size</span> <span class="o">=</span> <span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">mlp_ratio</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">pat_merg_rf</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">qkv_bias</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">drop_rate</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">drop_path_rate</span> <span class="o">=</span> <span class="mf">0.3</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">ape</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">spe</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">rpe</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">patch_norm</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">use_checkpoint</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">out_indices</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">reg_head_chan</span> <span class="o">=</span> <span class="mi">16</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">img_size</span> <span class="o">=</span> <span class="p">(</span><span class="mi">160</span><span class="p">,</span> <span class="mi">192</span><span class="p">,</span> <span class="mi">224</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">config</span></div>
+
+<div class="viewcode-block" id="get_3DTransMorphLarge_config"><a class="viewcode-back" href="../../../api.html#MIR.models.get_3DTransMorphLarge_config">[docs]</a><span class="k">def</span> <span class="nf">get_3DTransMorphLarge_config</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    A Large TransMorph Network</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">ml_collections</span><span class="o">.</span><span class="n">ConfigDict</span><span class="p">()</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">if_transskip</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">if_convskip</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">patch_size</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">in_chans</span> <span class="o">=</span> <span class="mi">2</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">embed_dim</span> <span class="o">=</span> <span class="mi">128</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">depths</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">num_heads</span> <span class="o">=</span> <span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">16</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">window_size</span> <span class="o">=</span> <span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">mlp_ratio</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">pat_merg_rf</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">qkv_bias</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">drop_rate</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">drop_path_rate</span> <span class="o">=</span> <span class="mf">0.3</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">ape</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">spe</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">rpe</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">patch_norm</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">use_checkpoint</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">out_indices</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">reg_head_chan</span> <span class="o">=</span> <span class="mi">16</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">img_size</span> <span class="o">=</span> <span class="p">(</span><span class="mi">160</span><span class="p">,</span> <span class="mi">192</span><span class="p">,</span> <span class="mi">224</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">config</span></div>
+
+<div class="viewcode-block" id="get_3DTransMorphSmall_config"><a class="viewcode-back" href="../../../api.html#MIR.models.get_3DTransMorphSmall_config">[docs]</a><span class="k">def</span> <span class="nf">get_3DTransMorphSmall_config</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    A Small TransMorph Network</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">ml_collections</span><span class="o">.</span><span class="n">ConfigDict</span><span class="p">()</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">if_transskip</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">if_convskip</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">patch_size</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">in_chans</span> <span class="o">=</span> <span class="mi">2</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">embed_dim</span> <span class="o">=</span> <span class="mi">48</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">depths</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">num_heads</span> <span class="o">=</span> <span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">window_size</span> <span class="o">=</span> <span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">mlp_ratio</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">pat_merg_rf</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">qkv_bias</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">drop_rate</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">drop_path_rate</span> <span class="o">=</span> <span class="mf">0.3</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">ape</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">spe</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">rpe</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">patch_norm</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">use_checkpoint</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">out_indices</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">reg_head_chan</span> <span class="o">=</span> <span class="mi">16</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">img_size</span> <span class="o">=</span> <span class="p">(</span><span class="mi">160</span><span class="p">,</span> <span class="mi">192</span><span class="p">,</span> <span class="mi">224</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">config</span></div>
+
+<div class="viewcode-block" id="get_3DTransMorphTiny_config"><a class="viewcode-back" href="../../../api.html#MIR.models.get_3DTransMorphTiny_config">[docs]</a><span class="k">def</span> <span class="nf">get_3DTransMorphTiny_config</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    A Tiny TransMorph Network</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">ml_collections</span><span class="o">.</span><span class="n">ConfigDict</span><span class="p">()</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">if_transskip</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">if_convskip</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">patch_size</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">in_chans</span> <span class="o">=</span> <span class="mi">2</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">embed_dim</span> <span class="o">=</span> <span class="mi">6</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">depths</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">num_heads</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">window_size</span> <span class="o">=</span> <span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">mlp_ratio</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">pat_merg_rf</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">qkv_bias</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">drop_rate</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">drop_path_rate</span> <span class="o">=</span> <span class="mf">0.3</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">ape</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">spe</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">rpe</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">patch_norm</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">use_checkpoint</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">out_indices</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">reg_head_chan</span> <span class="o">=</span> <span class="mi">16</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">img_size</span> <span class="o">=</span> <span class="p">(</span><span class="mi">160</span><span class="p">,</span> <span class="mi">192</span><span class="p">,</span> <span class="mi">224</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">config</span></div>
+
+<div class="viewcode-block" id="get_3DTransMorphRelativePosEmbdSimple_config"><a class="viewcode-back" href="../../../api.html#MIR.models.get_3DTransMorphRelativePosEmbdSimple_config">[docs]</a><span class="k">def</span> <span class="nf">get_3DTransMorphRelativePosEmbdSimple_config</span><span class="p">():</span>
+    <span class="n">config</span> <span class="o">=</span> <span class="n">ml_collections</span><span class="o">.</span><span class="n">ConfigDict</span><span class="p">()</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">if_transskip</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">if_convskip</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">patch_size</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">in_chans</span> <span class="o">=</span> <span class="mi">2</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">embed_dim</span> <span class="o">=</span> <span class="mi">96</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">depths</span> <span class="o">=</span> <span class="p">(</span><span class="mi">8</span><span class="p">,)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">num_heads</span> <span class="o">=</span> <span class="p">(</span><span class="mi">4</span><span class="p">,)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">window_size</span> <span class="o">=</span> <span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">mlp_ratio</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">pat_merg_rf</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">qkv_bias</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">drop_rate</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">drop_path_rate</span> <span class="o">=</span> <span class="mf">0.3</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">ape</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">spe</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">rpe</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">patch_norm</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">use_checkpoint</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">out_indices</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,)</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">reg_head_chan</span> <span class="o">=</span> <span class="mi">16</span>
+    <span class="n">config</span><span class="o">.</span><span class="n">img_size</span> <span class="o">=</span> <span class="p">(</span><span class="mi">160</span><span class="p">,</span> <span class="mi">192</span><span class="p">,</span> <span class="mi">224</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">config</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

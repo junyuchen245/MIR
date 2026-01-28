@@ -1,0 +1,830 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MIR.models.SITReg.sitreg.model &mdash; MIR 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../../../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="../../../../../" id="documentation_options" src="../../../../../_static/documentation_options.js?v=f6245a2f"></script>
+      <script src="../../../../../_static/doctools.js?v=888ff710"></script>
+      <script src="../../../../../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../../../index.html" class="icon icon-home">
+            MIR
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../api.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../../index.html">MIR</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">MIR.models.SITReg.sitreg.model</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for MIR.models.SITReg.sitreg.model</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Implementation of SITReg model&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">from</span> <span class="nn">abc</span> <span class="kn">import</span> <span class="n">abstractmethod</span>
+<span class="kn">from</span> <span class="nn">itertools</span> <span class="kn">import</span> <span class="n">count</span>
+<span class="kn">from</span> <span class="nn">logging</span> <span class="kn">import</span> <span class="n">getLogger</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">NamedTuple</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span><span class="p">,</span> <span class="n">cast</span>
+
+<span class="kn">from</span> <span class="nn">MIR.models.SITReg.composable_mapping</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">CoordinateSystem</span><span class="p">,</span>
+    <span class="n">CubicSplineSampler</span><span class="p">,</span>
+    <span class="n">DataFormat</span><span class="p">,</span>
+    <span class="n">GridComposableMapping</span><span class="p">,</span>
+    <span class="n">Identity</span><span class="p">,</span>
+    <span class="n">LinearInterpolator</span><span class="p">,</span>
+    <span class="n">OriginalFOV</span><span class="p">,</span>
+    <span class="n">Start</span><span class="p">,</span>
+    <span class="n">affine</span><span class="p">,</span>
+    <span class="n">default_sampler</span><span class="p">,</span>
+    <span class="n">samplable_volume</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">MIR.models.SITReg.deformation_inversion_layer.interface</span> <span class="kn">import</span> <span class="n">FixedPointSolver</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="kn">import</span> <span class="n">prod</span> <span class="k">as</span> <span class="n">np_prod</span>
+<span class="kn">from</span> <span class="nn">torch</span> <span class="kn">import</span> <span class="n">Tensor</span><span class="p">,</span> <span class="n">cat</span><span class="p">,</span> <span class="n">chunk</span>
+<span class="kn">from</span> <span class="nn">torch</span> <span class="kn">import</span> <span class="n">device</span> <span class="k">as</span> <span class="n">torch_device</span>
+<span class="kn">from</span> <span class="nn">torch</span> <span class="kn">import</span> <span class="n">float64</span><span class="p">,</span> <span class="n">long</span><span class="p">,</span> <span class="n">tanh</span>
+<span class="kn">from</span> <span class="nn">torch.nn</span> <span class="kn">import</span> <span class="n">Linear</span><span class="p">,</span> <span class="n">Module</span><span class="p">,</span> <span class="n">ModuleList</span>
+
+<span class="kn">from</span> <span class="nn">MIR.models.SITReg.algorithm.affine_transformation</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">AffineTransformationTypeDefinition</span><span class="p">,</span>
+    <span class="n">calculate_n_parameters</span><span class="p">,</span>
+    <span class="n">generate_affine_transformation_matrix</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">MIR.models.SITReg.algorithm.cubic_b_spline_control_point_upper_bound</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">compute_max_control_point_value</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">MIR.models.SITReg.components</span> <span class="kn">import</span> <span class="n">ConvBlockNd</span><span class="p">,</span> <span class="n">ConvNd</span>
+<span class="kn">from</span> <span class="nn">MIR.models.SITReg.interface</span> <span class="kn">import</span> <span class="n">IActivationFactory</span><span class="p">,</span> <span class="n">INormalizerFactory</span>
+<span class="kn">from</span> <span class="nn">MIR.models.SITReg.normalizer</span> <span class="kn">import</span> <span class="n">get_normalizer_factory</span>
+
+<span class="kn">from</span> <span class="nn">.interface</span> <span class="kn">import</span> <span class="n">FeatureExtractor</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="MappingPair"><a class="viewcode-back" href="../../../../../api.html#MIR.models.MappingPair">[docs]</a><span class="k">class</span> <span class="nc">MappingPair</span><span class="p">(</span><span class="n">NamedTuple</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Mapping pair containing both forward and inverse deformation&quot;&quot;&quot;</span>
+
+    <span class="n">forward_mapping</span><span class="p">:</span> <span class="n">GridComposableMapping</span>
+    <span class="n">inverse_mapping</span><span class="p">:</span> <span class="n">GridComposableMapping</span></div>
+
+
+<div class="viewcode-block" id="SITReg"><a class="viewcode-back" href="../../../../../api.html#MIR.models.SITReg">[docs]</a><span class="k">class</span> <span class="nc">SITReg</span><span class="p">(</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;SITReg is a deep learning intra-modality image registration arhitecture</span>
+<span class="sd">    fulfilling strict symmetry properties</span>
+
+<span class="sd">    The implementation is dimensionality agnostic but PyTorch linear interpolation</span>
+<span class="sd">    supports only 2 and 3 dimensional volumes.</span>
+
+<span class="sd">    Arguments:</span>
+<span class="sd">        feature_extractor: Multi-resolution feature extractor</span>
+<span class="sd">        n_transformation_features_per_resolution: Defines how many features to</span>
+<span class="sd">            use for extracting transformation in anti-symmetric update for each</span>
+<span class="sd">            resolution. If None is given for some resolution, no deformation is</span>
+<span class="sd">            extracted for that.</span>
+<span class="sd">        n_transformation_convolutions_per_resolution: Defines how many convolutions to</span>
+<span class="sd">            use for extracting transformation in anti-symmetric update for each</span>
+<span class="sd">            resolution. If None is given for some resolution, no deformation is</span>
+<span class="sd">            extracted for that.</span>
+<span class="sd">        affine_transformation_type: Defines which type of affine transformation</span>
+<span class="sd">            to predict. If None, no affine transformation is predicted.</span>
+<span class="sd">        input_voxel_size: Voxel size of the inputs images</span>
+<span class="sd">        input_shape: Shape of the input images</span>
+<span class="sd">        transformation_downsampling_factor: Downsampling factor for each</span>
+<span class="sd">            dimension for the final deformation, e.g., providing [1.0, 1.0, 1.0] means</span>
+<span class="sd">            no downsampling for three dimensional inputs.</span>
+<span class="sd">        forward_fixed_point_solver: Defines fixed point solver for the forward pass</span>
+<span class="sd">            of the deformation inversion layers.</span>
+<span class="sd">        backward_fixed_point_solver: Defines fixed point solver for the backward pass</span>
+<span class="sd">            of the deformation inversion layers.</span>
+<span class="sd">        max_control_point_multiplier: Optimal maximum control point values are</span>
+<span class="sd">            multiplied with this value to ensure that the individual</span>
+<span class="sd">            deformations are invertible even after numerical errors. This should</span>
+<span class="sd">            be some value just below 1, e.g. 0.99.</span>
+<span class="sd">        activation_factory: Activation function to use.</span>
+<span class="sd">        normalizer_factory: Normalizer factory to use. If None, no normalization</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">feature_extractor</span><span class="p">:</span> <span class="n">FeatureExtractor</span><span class="p">,</span>
+        <span class="n">n_transformation_features_per_resolution</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+        <span class="n">n_transformation_convolutions_per_resolution</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+        <span class="n">affine_transformation_type</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">AffineTransformationTypeDefinition</span><span class="p">],</span>
+        <span class="n">input_voxel_size</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span>
+        <span class="n">input_shape</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+        <span class="n">transformation_downsampling_factor</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span>
+        <span class="n">forward_fixed_point_solver</span><span class="p">:</span> <span class="n">FixedPointSolver</span><span class="p">,</span>
+        <span class="n">backward_fixed_point_solver</span><span class="p">:</span> <span class="n">FixedPointSolver</span><span class="p">,</span>
+        <span class="n">max_control_point_multiplier</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+        <span class="n">activation_factory</span><span class="p">:</span> <span class="n">IActivationFactory</span><span class="p">,</span>
+        <span class="n">normalizer_factory</span><span class="p">:</span> <span class="n">INormalizerFactory</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="n">normalizer_factory</span> <span class="o">=</span> <span class="n">get_normalizer_factory</span><span class="p">(</span><span class="n">normalizer_factory</span><span class="p">)</span>
+        <span class="n">feature_shapes</span> <span class="o">=</span> <span class="n">feature_extractor</span><span class="o">.</span><span class="n">get_shapes</span><span class="p">()</span>
+        <span class="n">n_blocks</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">feature_shapes</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">n_blocks</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">n_transformation_features_per_resolution</span><span class="p">)</span> <span class="ow">or</span> <span class="n">n_blocks</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span>
+            <span class="n">n_transformation_convolutions_per_resolution</span>
+        <span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;Lists specifying blocks have to have the same length as the number of &quot;</span>
+                <span class="s2">&quot;feature levels produced by the feature extractor&quot;</span>
+            <span class="p">)</span>
+        <span class="n">predict_dense_for_stages</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">n_transformation_convolutions</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="k">for</span> <span class="n">n_transformation_convolutions</span> <span class="ow">in</span> <span class="n">n_transformation_convolutions_per_resolution</span>
+        <span class="p">]</span>
+        <span class="k">for</span> <span class="p">(</span>
+            <span class="n">n_transformation_features</span><span class="p">,</span>
+            <span class="n">predict_dense_for_stage</span><span class="p">,</span>
+        <span class="p">)</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span>
+            <span class="n">n_transformation_features_per_resolution</span><span class="p">,</span>
+            <span class="n">predict_dense_for_stages</span><span class="p">,</span>
+        <span class="p">):</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">predict_dense_for_stage</span> <span class="ow">and</span> <span class="n">n_transformation_features</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span>
+                <span class="ow">not</span> <span class="n">predict_dense_for_stage</span> <span class="ow">and</span> <span class="n">n_transformation_features</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s2">&quot;Either both, number of tranformation convolutions and number of &quot;</span>
+                    <span class="s2">&quot;transformation features must be provided for a resolution, or neither of them.&quot;</span>
+                <span class="p">)</span>
+        <span class="n">n_dims</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">input_voxel_size</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_feature_coordinate_systems</span> <span class="o">=</span> <span class="n">ModuleList</span><span class="p">(</span>
+            <span class="p">[</span>
+                <span class="n">CoordinateSystem</span><span class="o">.</span><span class="n">centered_normalized</span><span class="p">(</span>
+                    <span class="n">spatial_shape</span><span class="o">=</span><span class="n">input_shape</span><span class="p">,</span>
+                    <span class="n">voxel_size</span><span class="o">=</span><span class="n">input_voxel_size</span><span class="p">,</span>
+                <span class="p">)</span><span class="o">.</span><span class="n">reformat</span><span class="p">(</span>
+                    <span class="n">downsampling_factor</span><span class="o">=</span><span class="n">downsampling_factor</span><span class="p">,</span>
+                    <span class="n">spatial_shape</span><span class="o">=</span><span class="n">feature_shape</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span>
+                    <span class="n">reference</span><span class="o">=</span><span class="n">Start</span><span class="p">(),</span>
+                <span class="p">)</span>
+                <span class="k">for</span> <span class="p">(</span><span class="n">predict_deformation</span><span class="p">,</span> <span class="n">feature_shape</span><span class="p">,</span> <span class="n">downsampling_factor</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span>
+                    <span class="n">predict_dense_for_stages</span><span class="p">,</span>
+                    <span class="n">feature_shapes</span><span class="p">,</span>
+                    <span class="n">feature_extractor</span><span class="o">.</span><span class="n">get_downsampling_factors</span><span class="p">(),</span>
+                <span class="p">)</span>
+                <span class="k">if</span> <span class="n">predict_deformation</span>
+            <span class="p">]</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_transformation_coordinate_system</span> <span class="o">=</span> <span class="n">CoordinateSystem</span><span class="o">.</span><span class="n">centered_normalized</span><span class="p">(</span>
+            <span class="n">spatial_shape</span><span class="o">=</span><span class="n">input_shape</span><span class="p">,</span>
+            <span class="n">voxel_size</span><span class="o">=</span><span class="n">input_voxel_size</span><span class="p">,</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">reformat</span><span class="p">(</span>
+            <span class="n">downsampling_factor</span><span class="o">=</span><span class="n">transformation_downsampling_factor</span><span class="p">,</span>
+            <span class="n">spatial_shape</span><span class="o">=</span><span class="n">OriginalFOV</span><span class="p">(</span><span class="n">fitting_method</span><span class="o">=</span><span class="s2">&quot;ceil&quot;</span><span class="p">),</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_image_coordinate_system</span> <span class="o">=</span> <span class="n">CoordinateSystem</span><span class="o">.</span><span class="n">centered_normalized</span><span class="p">(</span>
+            <span class="n">spatial_shape</span><span class="o">=</span><span class="n">input_shape</span><span class="p">,</span>
+            <span class="n">voxel_size</span><span class="o">=</span><span class="n">input_voxel_size</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">counter</span> <span class="o">=</span> <span class="n">count</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dense_prediction_indices</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="nb">next</span><span class="p">(</span><span class="n">counter</span><span class="p">)</span> <span class="k">if</span> <span class="n">predict_deformation</span> <span class="k">else</span> <span class="kc">None</span>
+            <span class="k">for</span> <span class="n">predict_deformation</span> <span class="ow">in</span> <span class="n">predict_dense_for_stages</span>
+        <span class="p">]</span>
+        <span class="c1"># variable name for backward compatibility</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_not_none_dense_extration_networks</span> <span class="o">=</span> <span class="n">ModuleList</span><span class="p">(</span>
+            <span class="p">[</span>
+                <span class="n">_DenseExtractionNetwork</span><span class="p">(</span>
+                    <span class="n">n_input_features</span><span class="o">=</span><span class="n">feature_shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                    <span class="n">n_features</span><span class="o">=</span><span class="n">n_transformation_features</span><span class="p">,</span>
+                    <span class="n">n_convolutions</span><span class="o">=</span><span class="n">n_transformation_convolutions</span><span class="p">,</span>
+                    <span class="n">feature_coordinate_system</span><span class="o">=</span><span class="n">cast</span><span class="p">(</span>
+                        <span class="n">CoordinateSystem</span><span class="p">,</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_feature_coordinate_systems</span><span class="p">[</span><span class="n">dense_prediction_index</span><span class="p">],</span>
+                    <span class="p">),</span>
+                    <span class="n">transformation_coordinate_system</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_transformation_coordinate_system</span><span class="p">,</span>
+                    <span class="n">forward_fixed_point_solver</span><span class="o">=</span><span class="n">forward_fixed_point_solver</span><span class="p">,</span>
+                    <span class="n">backward_fixed_point_solver</span><span class="o">=</span><span class="n">backward_fixed_point_solver</span><span class="p">,</span>
+                    <span class="n">max_control_point_multiplier</span><span class="o">=</span><span class="n">max_control_point_multiplier</span><span class="p">,</span>
+                    <span class="n">activation_factory</span><span class="o">=</span><span class="n">activation_factory</span><span class="p">,</span>
+                    <span class="n">normalizer_factory</span><span class="o">=</span><span class="n">normalizer_factory</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="k">for</span> <span class="p">(</span>
+                    <span class="n">dense_prediction_index</span><span class="p">,</span>
+                    <span class="n">feature_shape</span><span class="p">,</span>
+                    <span class="n">n_transformation_features</span><span class="p">,</span>
+                    <span class="n">n_transformation_convolutions</span><span class="p">,</span>
+                <span class="p">)</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_dense_prediction_indices</span><span class="p">,</span>
+                    <span class="n">feature_shapes</span><span class="p">,</span>
+                    <span class="n">n_transformation_features_per_resolution</span><span class="p">,</span>
+                    <span class="n">n_transformation_convolutions_per_resolution</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="k">if</span> <span class="n">dense_prediction_index</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="p">]</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_affine_extraction_network</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">_AffineExtractionNetwork</span><span class="p">(</span>
+                <span class="n">n_dims</span><span class="o">=</span><span class="n">n_dims</span><span class="p">,</span>
+                <span class="n">volume_shape</span><span class="o">=</span><span class="n">feature_shapes</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">:],</span>
+                <span class="n">n_features</span><span class="o">=</span><span class="n">feature_shapes</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span>
+                <span class="n">activation_factory</span><span class="o">=</span><span class="n">activation_factory</span><span class="p">,</span>
+                <span class="n">transformation_coordinate_system</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_transformation_coordinate_system</span><span class="p">,</span>
+                <span class="n">affine_transformation_type</span><span class="o">=</span><span class="n">affine_transformation_type</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">affine_transformation_type</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="k">else</span> <span class="kc">None</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_predict_dense_for_stages</span> <span class="o">=</span> <span class="n">predict_dense_for_stages</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_feature_extractor</span> <span class="o">=</span> <span class="n">feature_extractor</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">image_coordinate_system</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CoordinateSystem</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Coordinate system used by the network for the inputs.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_image_coordinate_system</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">transformation_coordinate_system</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CoordinateSystem</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Coordinate system used by the predicted transformations.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_transformation_coordinate_system</span>
+
+    <span class="k">def</span> <span class="nf">_extract_affine</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">batch_combined_features</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">GridComposableMapping</span><span class="p">,</span> <span class="n">GridComposableMapping</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_affine_extraction_network</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">dtype</span> <span class="o">=</span> <span class="n">batch_combined_features</span><span class="o">.</span><span class="n">dtype</span>
+            <span class="n">device</span> <span class="o">=</span> <span class="n">batch_combined_features</span><span class="o">.</span><span class="n">device</span>
+            <span class="k">return</span> <span class="p">(</span>
+                <span class="n">Identity</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span><span class="o">.</span><span class="n">assign_coordinates</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_transformation_coordinate_system</span>
+                <span class="p">),</span>
+                <span class="n">Identity</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span><span class="o">.</span><span class="n">assign_coordinates</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_transformation_coordinate_system</span>
+                <span class="p">),</span>
+            <span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Starting affine transformation extraction&quot;</span><span class="p">)</span>
+        <span class="n">features_1</span><span class="p">,</span> <span class="n">features_2</span> <span class="o">=</span> <span class="n">chunk</span><span class="p">(</span><span class="n">batch_combined_features</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_affine_extraction_network</span><span class="p">(</span><span class="n">features_1</span><span class="p">,</span> <span class="n">features_2</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_extract_dense</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">batch_combined_features</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">coordinate_system</span><span class="p">:</span> <span class="n">CoordinateSystem</span><span class="p">,</span>
+        <span class="n">mapping_builder</span><span class="p">:</span> <span class="s2">&quot;_MappingBuilder&quot;</span><span class="p">,</span>
+        <span class="n">dense_extraction_network</span><span class="p">:</span> <span class="n">Module</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">GridComposableMapping</span><span class="p">,</span> <span class="n">GridComposableMapping</span><span class="p">]:</span>
+        <span class="n">features_1</span><span class="p">,</span> <span class="n">features_2</span> <span class="o">=</span> <span class="n">chunk</span><span class="p">(</span><span class="n">batch_combined_features</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">transformed_features_1</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="p">(</span>
+                <span class="n">samplable_volume</span><span class="p">(</span>
+                    <span class="n">data</span><span class="o">=</span><span class="n">features_1</span><span class="p">,</span>
+                    <span class="n">coordinate_system</span><span class="o">=</span><span class="n">coordinate_system</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="o">@</span> <span class="n">mapping_builder</span><span class="o">.</span><span class="n">left_forward</span><span class="p">()</span>
+            <span class="p">)</span>
+            <span class="o">.</span><span class="n">sample</span><span class="p">()</span>
+            <span class="o">.</span><span class="n">generate_values</span><span class="p">()</span>
+        <span class="p">)</span>
+        <span class="n">transformed_features_2</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="p">(</span>
+                <span class="n">samplable_volume</span><span class="p">(</span>
+                    <span class="n">data</span><span class="o">=</span><span class="n">features_2</span><span class="p">,</span>
+                    <span class="n">coordinate_system</span><span class="o">=</span><span class="n">coordinate_system</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="o">@</span> <span class="n">mapping_builder</span><span class="o">.</span><span class="n">right_forward</span><span class="p">()</span>
+            <span class="p">)</span>
+            <span class="o">.</span><span class="n">sample</span><span class="p">()</span>
+            <span class="o">.</span><span class="n">generate_values</span><span class="p">()</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">dense_extraction_network</span><span class="p">(</span>
+            <span class="n">transformed_features_1</span><span class="p">,</span>
+            <span class="n">transformed_features_2</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_to_level_index</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">low_first_level_index</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Obtain high resolution first level index</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            low_first_level_index: Low resolution first index, -1 refers to affine level</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">n_dense_levels</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_predict_dense_for_stages</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">n_dense_levels</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">low_first_level_index</span>
+
+<div class="viewcode-block" id="SITReg.forward"><a class="viewcode-back" href="../../../../../api.html#MIR.models.SITReg.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">image_1</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">image_2</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">mappings_for_levels</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]]</span> <span class="o">=</span> <span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="kc">True</span><span class="p">),),</span>
+        <span class="n">resample_when_composing</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">MappingPair</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Generate deformations</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            image_1: Image registered to image_2, Tensor with shape</span>
+<span class="sd">                (batch_size, n_channels, dim_1, ..., dim_{n_dims})</span>
+<span class="sd">            image_2: Image registered to image_1, Tensor with shape</span>
+<span class="sd">                (batch_size, n_channels, dim_1, ..., dim_{n_dims})</span>
+<span class="sd">            deformations_for_levels: Defines for which resolution levels the</span>
+<span class="sd">                deformations are returned. The first element of each tuple is</span>
+<span class="sd">                the index of the level and the second element indicates whether</span>
+<span class="sd">                to include affine transformation in the deformation. Indexing</span>
+<span class="sd">                starts from the highest resolution. Default value is [(0, True)]</span>
+<span class="sd">                which corresponds to returning the full deformation at the</span>
+<span class="sd">                highest resolution.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List of MappingPairs in the order given by the input argument</span>
+<span class="sd">            &quot;mappings_for_levels&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">with</span> <span class="n">default_sampler</span><span class="p">(</span>
+            <span class="n">LinearInterpolator</span><span class="p">(</span><span class="n">mask_extrapolated_regions</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="p">):</span>
+            <span class="n">mappings_for_levels_set</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">mappings_for_levels</span><span class="p">)</span>
+            <span class="n">batch_combined_features_list</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Tensor</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_feature_extractor</span><span class="p">(</span>
+                <span class="p">(</span><span class="n">image_1</span><span class="p">,</span> <span class="n">image_2</span><span class="p">),</span>
+            <span class="p">)</span>
+            <span class="n">predict_affine</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_affine_extraction_network</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="n">forward_affine</span><span class="p">,</span> <span class="n">inverse_affine</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extract_affine</span><span class="p">(</span>
+                <span class="n">batch_combined_features_list</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span>
+            <span class="p">)</span>
+            <span class="n">mapping_builder</span> <span class="o">=</span> <span class="n">_MappingBuilder</span><span class="p">(</span>
+                <span class="n">forward_affine</span><span class="o">=</span><span class="n">forward_affine</span><span class="p">,</span>
+                <span class="n">inverse_affine</span><span class="o">=</span><span class="n">inverse_affine</span><span class="p">,</span>
+                <span class="n">resample_when_composing</span><span class="o">=</span><span class="n">resample_when_composing</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">output_mappings</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">bool</span><span class="p">],</span> <span class="n">MappingPair</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="n">affine_level_index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_to_level_index</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">include_affine</span> <span class="ow">in</span> <span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="kc">True</span><span class="p">):</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">affine_level_index</span><span class="p">,</span> <span class="n">include_affine</span><span class="p">)</span> <span class="ow">in</span> <span class="n">mappings_for_levels_set</span><span class="p">:</span>
+                    <span class="n">output_mappings</span><span class="p">[(</span><span class="n">affine_level_index</span><span class="p">,</span> <span class="n">include_affine</span><span class="p">)]</span> <span class="o">=</span> <span class="p">(</span>
+                        <span class="n">mapping_builder</span><span class="o">.</span><span class="n">as_mapping_pair</span><span class="p">(</span><span class="n">include_affine</span><span class="p">)</span>
+                    <span class="p">)</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">predict_affine</span><span class="p">:</span>
+                        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                            <span class="s2">&quot;Deformation requested after affine transformation &quot;</span>
+                            <span class="s2">&quot;but no affine transformation is predicted.&quot;</span>
+                        <span class="p">)</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">include_affine</span><span class="p">:</span>
+                        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                            <span class="s2">&quot;Deformation before any dense deformations requested &quot;</span>
+                            <span class="s2">&quot;but no affine transformation is predicted.&quot;</span>
+                        <span class="p">)</span>
+            <span class="k">for</span> <span class="n">low_first_level_index</span><span class="p">,</span> <span class="p">(</span>
+                <span class="n">batch_combined_features</span><span class="p">,</span>
+                <span class="n">dense_prediction_index</span><span class="p">,</span>
+            <span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span>
+                <span class="nb">zip</span><span class="p">(</span>
+                    <span class="nb">reversed</span><span class="p">(</span><span class="n">batch_combined_features_list</span><span class="p">),</span>
+                    <span class="nb">reversed</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dense_prediction_indices</span><span class="p">),</span>
+                <span class="p">)</span>
+            <span class="p">):</span>
+                <span class="k">if</span> <span class="n">dense_prediction_index</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">predict_affine</span> <span class="ow">and</span> <span class="nb">all</span><span class="p">(</span>
+                        <span class="n">dim_size</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">for</span> <span class="n">dim_size</span> <span class="ow">in</span> <span class="n">batch_combined_features</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">:]</span>
+                    <span class="p">):</span>
+                        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                            <span class="s2">&quot;Predicting dense deformation together with affine transformation &quot;</span>
+                            <span class="s2">&quot;from features with only one dimension is not advisable.&quot;</span>
+                        <span class="p">)</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                        <span class="s2">&quot;Starting deformation extraction from features with shape </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span>
+                        <span class="nb">tuple</span><span class="p">(</span><span class="n">batch_combined_features</span><span class="o">.</span><span class="n">shape</span><span class="p">),</span>
+                    <span class="p">)</span>
+                    <span class="n">forward_dense</span><span class="p">,</span> <span class="n">inverse_dense</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extract_dense</span><span class="p">(</span>
+                        <span class="n">batch_combined_features</span><span class="o">=</span><span class="n">batch_combined_features</span><span class="p">,</span>
+                        <span class="n">coordinate_system</span><span class="o">=</span><span class="n">cast</span><span class="p">(</span>
+                            <span class="n">CoordinateSystem</span><span class="p">,</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">_feature_coordinate_systems</span><span class="p">[</span><span class="n">dense_prediction_index</span><span class="p">],</span>
+                        <span class="p">),</span>
+                        <span class="n">mapping_builder</span><span class="o">=</span><span class="n">mapping_builder</span><span class="p">,</span>
+                        <span class="n">dense_extraction_network</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_not_none_dense_extration_networks</span><span class="p">[</span>
+                            <span class="n">dense_prediction_index</span>
+                        <span class="p">],</span>
+                    <span class="p">)</span>
+                    <span class="n">mapping_builder</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+                        <span class="n">forward_dense</span><span class="o">=</span><span class="n">forward_dense</span><span class="p">,</span>
+                        <span class="n">inverse_dense</span><span class="o">=</span><span class="n">inverse_dense</span><span class="p">,</span>
+                    <span class="p">)</span>
+                <span class="n">level_index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_to_level_index</span><span class="p">(</span><span class="n">low_first_level_index</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">include_affine</span> <span class="ow">in</span> <span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="kc">True</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="p">(</span><span class="n">level_index</span><span class="p">,</span> <span class="n">include_affine</span><span class="p">)</span> <span class="ow">in</span> <span class="n">mappings_for_levels_set</span><span class="p">:</span>
+                        <span class="n">output_mappings</span><span class="p">[(</span><span class="n">level_index</span><span class="p">,</span> <span class="n">include_affine</span><span class="p">)]</span> <span class="o">=</span> <span class="p">(</span>
+                            <span class="n">mapping_builder</span><span class="o">.</span><span class="n">as_mapping_pair</span><span class="p">(</span><span class="n">include_affine</span><span class="p">)</span>
+                        <span class="p">)</span>
+                        <span class="k">if</span> <span class="n">dense_prediction_index</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                                <span class="s2">&quot;Intermediate mapping requested for level </span><span class="si">%d</span><span class="s2"> &quot;</span>
+                                <span class="s2">&quot;but no deformation is predicted on that level.&quot;</span><span class="p">,</span>
+                                <span class="n">level_index</span><span class="p">,</span>
+                            <span class="p">)</span>
+                <span class="k">del</span> <span class="n">batch_combined_features_list</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">return</span> <span class="p">[</span>
+                <span class="n">output_mappings</span><span class="p">[</span><span class="n">mapping_index</span><span class="p">]</span> <span class="k">for</span> <span class="n">mapping_index</span> <span class="ow">in</span> <span class="n">mappings_for_levels</span>
+            <span class="p">]</span></div></div>
+
+
+<span class="k">class</span> <span class="nc">_BaseTransformationExtractionNetwork</span><span class="p">(</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Base class for generating exactly inverse consistent transformations&quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">_extract_atomic_transformation</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">combined_input</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">GridComposableMapping</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Extract the smallest unit transformation&quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">_invert_mapping</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">mapping</span><span class="p">:</span> <span class="n">GridComposableMapping</span><span class="p">,</span> <span class="n">device</span><span class="p">:</span> <span class="n">torch_device</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">GridComposableMapping</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Invert transformation&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">_modify_input</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_tensor</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">input_tensor</span>
+
+    <span class="k">def</span> <span class="nf">_extract_atomic_transformations</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">features_1</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">features_2</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">GridComposableMapping</span><span class="p">,</span> <span class="n">GridComposableMapping</span><span class="p">]:</span>
+        <span class="n">input_1_modified</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_modify_input</span><span class="p">(</span><span class="n">features_1</span><span class="p">)</span>
+        <span class="n">input_2_modified</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_modify_input</span><span class="p">(</span><span class="n">features_2</span><span class="p">)</span>
+        <span class="n">forward_combined_input</span> <span class="o">=</span> <span class="n">cat</span><span class="p">(</span>
+            <span class="p">(</span><span class="n">input_1_modified</span> <span class="o">-</span> <span class="n">input_2_modified</span><span class="p">,</span> <span class="n">input_1_modified</span> <span class="o">+</span> <span class="n">input_2_modified</span><span class="p">),</span>
+            <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">reverse_combined_input</span> <span class="o">=</span> <span class="n">cat</span><span class="p">(</span>
+            <span class="p">(</span><span class="n">input_2_modified</span> <span class="o">-</span> <span class="n">input_1_modified</span><span class="p">,</span> <span class="n">input_1_modified</span> <span class="o">+</span> <span class="n">input_2_modified</span><span class="p">),</span>
+            <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">forward_atomic</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extract_atomic_transformation</span><span class="p">(</span>
+            <span class="n">forward_combined_input</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">reverse_atomic</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extract_atomic_transformation</span><span class="p">(</span>
+            <span class="n">reverse_combined_input</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">forward_atomic</span><span class="p">,</span> <span class="n">reverse_atomic</span>
+
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">features_1</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">features_2</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">GridComposableMapping</span><span class="p">,</span> <span class="n">GridComposableMapping</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Generate affine transformation parameters</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            features_1: Tensor with shape (batch_size, n_features, *volume_shape)</span>
+<span class="sd">            features_2: Tensor with shape (batch_size, n_features, *volume_shape)</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Forward mapping</span>
+<span class="sd">            Inverse mapping</span>
+<span class="sd">            Optional regularization</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">forward_atomic</span><span class="p">,</span> <span class="n">reverse_atomic</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extract_atomic_transformations</span><span class="p">(</span>
+            <span class="n">features_1</span><span class="o">=</span><span class="n">features_1</span><span class="p">,</span>
+            <span class="n">features_2</span><span class="o">=</span><span class="n">features_2</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">device</span> <span class="o">=</span> <span class="n">features_1</span><span class="o">.</span><span class="n">device</span>
+        <span class="n">inverse_forward_atomic</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_invert_mapping</span><span class="p">(</span><span class="n">forward_atomic</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">inverse_reverse_atomic</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_invert_mapping</span><span class="p">(</span><span class="n">reverse_atomic</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">forward_transformation</span> <span class="o">=</span> <span class="n">forward_atomic</span> <span class="o">@</span> <span class="n">inverse_reverse_atomic</span>
+        <span class="n">inverse_transformation</span> <span class="o">=</span> <span class="n">reverse_atomic</span> <span class="o">@</span> <span class="n">inverse_forward_atomic</span>
+        <span class="k">return</span> <span class="n">forward_transformation</span><span class="p">,</span> <span class="n">inverse_transformation</span>
+
+
+<span class="k">class</span> <span class="nc">_AffineExtractionNetwork</span><span class="p">(</span><span class="n">_BaseTransformationExtractionNetwork</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">n_dims</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">volume_shape</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
+        <span class="n">n_features</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">activation_factory</span><span class="p">:</span> <span class="n">IActivationFactory</span><span class="p">,</span>
+        <span class="n">transformation_coordinate_system</span><span class="p">:</span> <span class="n">CoordinateSystem</span><span class="p">,</span>
+        <span class="n">affine_transformation_type</span><span class="p">:</span> <span class="n">AffineTransformationTypeDefinition</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="n">n_affine_extraction_dimensions</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="nb">int</span><span class="p">(</span><span class="n">np_prod</span><span class="p">(</span><span class="n">volume_shape</span><span class="p">))</span> <span class="o">*</span> <span class="n">n_features</span>
+        <span class="n">n_affine_parameters</span> <span class="o">=</span> <span class="n">calculate_n_parameters</span><span class="p">(</span><span class="n">n_dims</span><span class="p">,</span> <span class="n">affine_transformation_type</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_transformation_coordinate_system</span> <span class="o">=</span> <span class="n">transformation_coordinate_system</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_affine_transformation_type</span> <span class="o">=</span> <span class="n">affine_transformation_type</span>
+        <span class="n">n_linears</span> <span class="o">=</span> <span class="mi">2</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">linears</span> <span class="o">=</span> <span class="n">ModuleList</span><span class="p">(</span>
+            <span class="p">[</span>
+                <span class="n">Linear</span><span class="p">(</span>
+                    <span class="n">n_affine_extraction_dimensions</span><span class="p">,</span>
+                    <span class="n">n_affine_extraction_dimensions</span><span class="p">,</span>
+                    <span class="n">bias</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_linears</span><span class="p">)</span>
+            <span class="p">]</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">activations</span> <span class="o">=</span> <span class="n">ModuleList</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">activation_factory</span><span class="o">.</span><span class="n">build</span><span class="p">()</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_linears</span><span class="p">)]</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">final_linear</span> <span class="o">=</span> <span class="n">Linear</span><span class="p">(</span>
+            <span class="n">n_affine_extraction_dimensions</span><span class="p">,</span> <span class="n">n_affine_parameters</span><span class="p">,</span> <span class="n">bias</span><span class="o">=</span><span class="kc">True</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_n_dims</span> <span class="o">=</span> <span class="n">n_dims</span>
+
+    <span class="k">def</span> <span class="nf">_extract_atomic_transformation</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">combined_input</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">GridComposableMapping</span><span class="p">:</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">combined_input</span>
+        <span class="k">for</span> <span class="n">linear</span><span class="p">,</span> <span class="n">activation</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">linears</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">activations</span><span class="p">):</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="n">linear</span><span class="p">(</span><span class="n">combined_input</span><span class="p">)</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="n">activation</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">final_linear</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
+        <span class="n">affine_matrix</span> <span class="o">=</span> <span class="n">generate_affine_transformation_matrix</span><span class="p">(</span>
+            <span class="n">output</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_affine_transformation_type</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">affine</span><span class="p">(</span><span class="n">affine_matrix</span><span class="p">)</span><span class="o">.</span><span class="n">assign_coordinates</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_transformation_coordinate_system</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_modify_input</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_tensor</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tensor</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">input_tensor</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">input_tensor</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_invert_mapping</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">mapping</span><span class="p">:</span> <span class="n">GridComposableMapping</span><span class="p">,</span> <span class="n">device</span><span class="p">:</span> <span class="n">torch_device</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">GridComposableMapping</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">mapping</span><span class="o">.</span><span class="n">invert</span><span class="p">()</span>
+
+
+<span class="k">class</span> <span class="nc">_DenseExtractionNetwork</span><span class="p">(</span><span class="n">_BaseTransformationExtractionNetwork</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">n_input_features</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">n_features</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">n_convolutions</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">feature_coordinate_system</span><span class="p">:</span> <span class="n">CoordinateSystem</span><span class="p">,</span>
+        <span class="n">transformation_coordinate_system</span><span class="p">:</span> <span class="n">CoordinateSystem</span><span class="p">,</span>
+        <span class="n">forward_fixed_point_solver</span><span class="p">:</span> <span class="n">FixedPointSolver</span><span class="p">,</span>
+        <span class="n">backward_fixed_point_solver</span><span class="p">:</span> <span class="n">FixedPointSolver</span><span class="p">,</span>
+        <span class="n">max_control_point_multiplier</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+        <span class="n">activation_factory</span><span class="p">:</span> <span class="n">IActivationFactory</span><span class="p">,</span>
+        <span class="n">normalizer_factory</span><span class="p">:</span> <span class="n">INormalizerFactory</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_n_dims</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">transformation_coordinate_system</span><span class="o">.</span><span class="n">spatial_shape</span><span class="p">)</span>
+        <span class="n">upsampling_factor_float</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">feature_coordinate_system</span><span class="o">.</span><span class="n">grid_spacing_cpu</span><span class="p">()</span>
+            <span class="o">/</span> <span class="n">transformation_coordinate_system</span><span class="o">.</span><span class="n">grid_spacing_cpu</span><span class="p">()</span>
+        <span class="p">)</span>
+        <span class="n">upsampling_factor</span> <span class="o">=</span> <span class="n">upsampling_factor_float</span><span class="o">.</span><span class="n">round</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">long</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">convolutions</span> <span class="o">=</span> <span class="n">ConvBlockNd</span><span class="p">(</span>
+            <span class="n">n_convolutions</span><span class="o">=</span><span class="n">n_convolutions</span><span class="p">,</span>
+            <span class="n">n_input_channels</span><span class="o">=</span><span class="mi">2</span> <span class="o">*</span> <span class="n">n_input_features</span><span class="p">,</span>
+            <span class="n">n_output_channels</span><span class="o">=</span><span class="n">n_features</span><span class="p">,</span>
+            <span class="n">kernel_size</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_dims</span><span class="p">,</span>
+            <span class="n">padding</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+            <span class="n">activation_factory</span><span class="o">=</span><span class="n">activation_factory</span><span class="p">,</span>
+            <span class="n">normalizer_factory</span><span class="o">=</span><span class="n">normalizer_factory</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">final_convolution</span> <span class="o">=</span> <span class="n">ConvNd</span><span class="p">(</span>
+            <span class="n">n_input_channels</span><span class="o">=</span><span class="n">n_features</span><span class="p">,</span>
+            <span class="n">n_output_channels</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_n_dims</span><span class="p">,</span>
+            <span class="n">kernel_size</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_n_dims</span><span class="p">,</span>
+            <span class="n">padding</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+            <span class="n">bias</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_feature_coordinate_system</span> <span class="o">=</span> <span class="n">feature_coordinate_system</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_transformation_coordinate_system</span> <span class="o">=</span> <span class="n">transformation_coordinate_system</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_forward_fixed_point_solver</span> <span class="o">=</span> <span class="n">forward_fixed_point_solver</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_backward_fixed_point_solver</span> <span class="o">=</span> <span class="n">backward_fixed_point_solver</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_max_control_point_value</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">max_control_point_multiplier</span>
+            <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_control_point_upper_bound</span><span class="p">(</span>
+                <span class="n">upsampling_factor</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_get_control_point_upper_bound</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">upsampling_factor</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">upsampling_factor</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">CONTROL_POINT_UPPER_BOUNDS_LOOKUP</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">CONTROL_POINT_UPPER_BOUNDS_LOOKUP</span><span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="n">upsampling_factor</span><span class="p">)]</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+            <span class="s2">&quot;Computing cubic b-spline control point upper bound for upsampling factor </span><span class="si">%s</span><span class="s2"> &quot;</span>
+            <span class="s2">&quot;which is not found in the lookup table. This might take a while. If you need &quot;</span>
+            <span class="s2">&quot;this often, consider adding the upsampling factor to the lookup table.&quot;</span><span class="p">,</span>
+            <span class="nb">tuple</span><span class="p">(</span><span class="n">upsampling_factor</span><span class="p">),</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">compute_max_control_point_value</span><span class="p">(</span>
+            <span class="n">upsampling_factors</span><span class="o">=</span><span class="n">upsampling_factor</span><span class="p">,</span>
+            <span class="n">dtype</span><span class="o">=</span><span class="n">float64</span><span class="p">,</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+
+    <span class="c1"># Precalculated upper bounds for the most common cases</span>
+    <span class="n">CONTROL_POINT_UPPER_BOUNDS_LOOKUP</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span> <span class="mf">0.36</span><span class="p">,</span>
+        <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">):</span> <span class="mf">0.3854469526363808</span><span class="p">,</span>
+        <span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">):</span> <span class="mf">0.39803114051999844</span><span class="p">,</span>
+        <span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">8</span><span class="p">):</span> <span class="mf">0.4007250760586097</span><span class="p">,</span>
+        <span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">16</span><span class="p">):</span> <span class="mf">0.40175329749498856</span><span class="p">,</span>
+        <span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">32</span><span class="p">):</span> <span class="mf">0.40253633025170044</span><span class="p">,</span>
+        <span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="mi">64</span><span class="p">):</span> <span class="mf">0.4029187201371043</span><span class="p">,</span>
+        <span class="p">(</span><span class="mi">128</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="mi">128</span><span class="p">):</span> <span class="mf">0.4031077300385704</span><span class="p">,</span>
+        <span class="p">(</span><span class="mi">256</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="mi">256</span><span class="p">):</span> <span class="mf">0.4032092148874895</span><span class="p">,</span>
+        <span class="p">(</span><span class="mi">512</span><span class="p">,</span> <span class="mi">512</span><span class="p">,</span> <span class="mi">512</span><span class="p">):</span> <span class="mf">0.4032603042953307</span><span class="p">,</span>
+        <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">):</span> <span class="mf">0.44999999999999996</span><span class="p">,</span>
+        <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">):</span> <span class="mf">0.4923274169638207</span><span class="p">,</span>
+        <span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">):</span> <span class="mf">0.47980320571640545</span><span class="p">,</span>
+        <span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">8</span><span class="p">):</span> <span class="mf">0.4845970764531083</span><span class="p">,</span>
+        <span class="p">(</span><span class="mi">16</span><span class="p">,</span> <span class="mi">16</span><span class="p">):</span> <span class="mf">0.48612715818186963</span><span class="p">,</span>
+        <span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">32</span><span class="p">):</span> <span class="mf">0.48728730908780815</span><span class="p">,</span>
+        <span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="mi">64</span><span class="p">):</span> <span class="mf">0.4879642422739664</span><span class="p">,</span>
+        <span class="p">(</span><span class="mi">128</span><span class="p">,</span> <span class="mi">128</span><span class="p">):</span> <span class="mf">0.48831189411920906</span><span class="p">,</span>
+        <span class="p">(</span><span class="mi">256</span><span class="p">,</span> <span class="mi">256</span><span class="p">):</span> <span class="mf">0.48848723983607806</span><span class="p">,</span>
+        <span class="p">(</span><span class="mi">512</span><span class="p">,</span> <span class="mi">512</span><span class="p">):</span> <span class="mf">0.48857585860314345</span><span class="p">,</span>
+        <span class="p">(</span><span class="mi">1024</span><span class="p">,</span> <span class="mi">1024</span><span class="p">):</span> <span class="mf">0.48862023712123526</span><span class="p">,</span>
+        <span class="p">(</span><span class="mi">2048</span><span class="p">,</span> <span class="mi">2048</span><span class="p">):</span> <span class="mf">0.48864249909355595</span><span class="p">,</span>
+        <span class="p">(</span><span class="mi">4096</span><span class="p">,</span> <span class="mi">4096</span><span class="p">):</span> <span class="mf">0.4886536264200244</span><span class="p">,</span>
+        <span class="p">(</span><span class="mi">8192</span><span class="p">,</span> <span class="mi">8192</span><span class="p">):</span> <span class="mf">0.48865919697612337</span><span class="p">,</span>
+    <span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">_extract_atomic_transformation</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">combined_input</span><span class="p">:</span> <span class="n">Tensor</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">GridComposableMapping</span><span class="p">:</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">convolutions</span><span class="p">(</span><span class="n">combined_input</span><span class="p">)</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">final_convolution</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_max_control_point_value</span> <span class="o">*</span> <span class="n">tanh</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">samplable_volume</span><span class="p">(</span>
+            <span class="n">output</span><span class="p">,</span>
+            <span class="n">coordinate_system</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_feature_coordinate_system</span><span class="p">,</span>
+            <span class="n">data_format</span><span class="o">=</span><span class="n">DataFormat</span><span class="o">.</span><span class="n">voxel_displacements</span><span class="p">(),</span>
+            <span class="n">sampler</span><span class="o">=</span><span class="n">CubicSplineSampler</span><span class="p">(</span>
+                <span class="n">prefilter</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">mask_extrapolated_regions</span><span class="o">=</span><span class="kc">False</span>
+            <span class="p">),</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">resample_to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_transformation_coordinate_system</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_invert_mapping</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">mapping</span><span class="p">:</span> <span class="n">GridComposableMapping</span><span class="p">,</span> <span class="n">device</span><span class="p">:</span> <span class="n">torch_device</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">GridComposableMapping</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">mapping</span><span class="o">.</span><span class="n">invert</span><span class="p">(</span>
+            <span class="n">fixed_point_inversion_arguments</span><span class="o">=</span><span class="p">{</span>
+                <span class="s2">&quot;forward_solver&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_forward_fixed_point_solver</span><span class="p">,</span>
+                <span class="s2">&quot;backward_solver&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_backward_fixed_point_solver</span><span class="p">,</span>
+            <span class="p">}</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">resample</span><span class="p">()</span>
+
+
+<span class="k">class</span> <span class="nc">_MappingBuilder</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Builder peforming the anti-symmetric deformation updates&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">forward_affine</span><span class="p">:</span> <span class="n">GridComposableMapping</span><span class="p">,</span>
+        <span class="n">inverse_affine</span><span class="p">:</span> <span class="n">GridComposableMapping</span><span class="p">,</span>
+        <span class="n">resample_when_composing</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_resample_when_composing</span> <span class="o">=</span> <span class="n">resample_when_composing</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">forward_affine</span> <span class="o">=</span> <span class="n">forward_affine</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inverse_affine</span> <span class="o">=</span> <span class="n">inverse_affine</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">left_forward_dense</span> <span class="o">=</span> <span class="n">Identity</span><span class="p">(</span>
+            <span class="n">device</span><span class="o">=</span><span class="n">forward_affine</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">forward_affine</span><span class="o">.</span><span class="n">dtype</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">assign_coordinates</span><span class="p">(</span><span class="n">forward_affine</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">right_forward_dense</span> <span class="o">=</span> <span class="n">Identity</span><span class="p">(</span>
+            <span class="n">device</span><span class="o">=</span><span class="n">forward_affine</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">forward_affine</span><span class="o">.</span><span class="n">dtype</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">assign_coordinates</span><span class="p">(</span><span class="n">forward_affine</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">left_inverse_dense</span> <span class="o">=</span> <span class="n">Identity</span><span class="p">(</span>
+            <span class="n">device</span><span class="o">=</span><span class="n">forward_affine</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">forward_affine</span><span class="o">.</span><span class="n">dtype</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">assign_coordinates</span><span class="p">(</span><span class="n">forward_affine</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">right_inverse_dense</span> <span class="o">=</span> <span class="n">Identity</span><span class="p">(</span>
+            <span class="n">device</span><span class="o">=</span><span class="n">forward_affine</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">forward_affine</span><span class="o">.</span><span class="n">dtype</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">assign_coordinates</span><span class="p">(</span><span class="n">forward_affine</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">left_forward</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">GridComposableMapping</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return full left forward mapping&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">forward_affine</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">left_forward_dense</span>
+
+    <span class="k">def</span> <span class="nf">right_forward</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">GridComposableMapping</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return full right forward mapping&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">inverse_affine</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">right_forward_dense</span>
+
+    <span class="k">def</span> <span class="nf">left_inverse</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">GridComposableMapping</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return full left inverse mapping&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">left_inverse_dense</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">inverse_affine</span>
+
+    <span class="k">def</span> <span class="nf">right_inverse</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">GridComposableMapping</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return full right inverse mapping&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">right_inverse_dense</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">forward_affine</span>
+
+    <span class="k">def</span> <span class="nf">_resample</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">mapping</span><span class="p">:</span> <span class="n">GridComposableMapping</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">GridComposableMapping</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resample_when_composing</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">mapping</span><span class="o">.</span><span class="n">resample</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">mapping</span>
+
+    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">forward_dense</span><span class="p">:</span> <span class="n">GridComposableMapping</span><span class="p">,</span>
+        <span class="n">inverse_dense</span><span class="p">:</span> <span class="n">GridComposableMapping</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Update with mappings from new stage&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">left_forward_dense</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resample</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">left_forward_dense</span> <span class="o">@</span> <span class="n">forward_dense</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">right_forward_dense</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resample</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">right_forward_dense</span> <span class="o">@</span> <span class="n">inverse_dense</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">left_inverse_dense</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resample</span><span class="p">(</span>
+            <span class="n">inverse_dense</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">left_inverse_dense</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">right_inverse_dense</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resample</span><span class="p">(</span>
+            <span class="n">forward_dense</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">right_inverse_dense</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">as_mapping_pair</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">include_affine</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MappingPair</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get current mapping as mapping pair&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">include_affine</span><span class="p">:</span>
+            <span class="n">forward</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resample</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">left_forward</span><span class="p">()</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">right_inverse</span><span class="p">(),</span>
+            <span class="p">)</span>
+            <span class="n">inverse</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resample</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">right_forward</span><span class="p">()</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">left_inverse</span><span class="p">(),</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">forward</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resample</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">left_forward_dense</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">right_inverse_dense</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">inverse</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resample</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">right_forward_dense</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">left_inverse_dense</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">MappingPair</span><span class="p">(</span><span class="n">forward</span><span class="p">,</span> <span class="n">inverse</span><span class="p">)</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

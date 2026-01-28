@@ -1,0 +1,194 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MIR.models.atlas_builder &mdash; MIR 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js?v=f6245a2f"></script>
+      <script src="../../../_static/doctools.js?v=888ff710"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            MIR
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">MIR</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">MIR.models.atlas_builder</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for MIR.models.atlas_builder</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
+<span class="kn">import</span> <span class="nn">torch.nn.functional</span> <span class="k">as</span> <span class="nn">F</span>
+
+<span class="kn">from</span> <span class="nn">.registration_utils</span> <span class="kn">import</span> <span class="n">SpatialTransformer</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">.SITReg.composable_mapping</span> <span class="kn">import</span> <span class="n">DataFormat</span>
+    <span class="n">_HAS_SITREG</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># pragma: no cover - optional dependency</span>
+    <span class="n">DataFormat</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">_HAS_SITREG</span> <span class="o">=</span> <span class="kc">False</span>
+
+
+<div class="viewcode-block" id="TemplateCreation"><a class="viewcode-back" href="../../../api.html#MIR.models.TemplateCreation">[docs]</a><span class="k">class</span> <span class="nc">TemplateCreation</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Deformable Template Network</span>
+<span class="sd">    Args:</span>
+<span class="sd">        reg_model: Registration model</span>
+<span class="sd">        img_size: Image size</span>
+<span class="sd">        mean_cap: Mean cap for the MeanStream</span>
+<span class="sd">        use_sitreg: Use SITReg-style mapping outputs when True; VFA, TransMorph, VoxelMorph-style otherwise</span>
+<span class="sd">        mode: SpatialTransformer interpolation mode (SITReg path)</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">reg_model</span><span class="p">,</span> <span class="n">img_size</span><span class="p">,</span> <span class="n">mean_cap</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">use_sitreg</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;bilinear&#39;</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reg_model</span> <span class="o">=</span> <span class="n">reg_model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mean_stream</span> <span class="o">=</span> <span class="n">MeanStream</span><span class="p">(</span><span class="n">mean_cap</span><span class="p">,</span> <span class="n">img_size</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">use_sitreg</span> <span class="o">=</span> <span class="n">use_sitreg</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">spatial_trans</span> <span class="o">=</span> <span class="n">SpatialTransformer</span><span class="p">(</span><span class="n">img_size</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">)</span> <span class="k">if</span> <span class="n">use_sitreg</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_sitreg</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">_HAS_SITREG</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span><span class="s2">&quot;SITReg is not available; cannot use SITReg mode.&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="TemplateCreation.forward"><a class="viewcode-back" href="../../../api.html#MIR.models.TemplateCreation.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_sitreg</span><span class="p">:</span>
+            <span class="n">atlas</span><span class="p">,</span> <span class="n">image</span> <span class="o">=</span> <span class="n">inputs</span>
+            <span class="n">mapping_pair</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">reg_model</span><span class="p">(</span><span class="n">atlas</span><span class="p">,</span> <span class="n">image</span><span class="p">,</span> <span class="n">mappings_for_levels</span><span class="o">=</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="kc">False</span><span class="p">),))[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">pos_flow</span> <span class="o">=</span> <span class="n">mapping_pair</span><span class="o">.</span><span class="n">forward_mapping</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">DataFormat</span><span class="o">.</span><span class="n">voxel_displacements</span><span class="p">())</span><span class="o">.</span><span class="n">generate_values</span><span class="p">()</span>
+            <span class="n">neg_flow</span> <span class="o">=</span> <span class="n">mapping_pair</span><span class="o">.</span><span class="n">inverse_mapping</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">DataFormat</span><span class="o">.</span><span class="n">voxel_displacements</span><span class="p">())</span><span class="o">.</span><span class="n">generate_values</span><span class="p">()</span>
+            <span class="n">def_atlas</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">spatial_trans</span><span class="p">(</span><span class="n">atlas</span><span class="p">,</span> <span class="n">pos_flow</span><span class="p">)</span>
+            <span class="n">def_image</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">spatial_trans</span><span class="p">(</span><span class="n">image</span><span class="p">,</span> <span class="n">neg_flow</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">def_atlas</span><span class="p">,</span> <span class="n">def_image</span><span class="p">,</span> <span class="n">pos_flow</span><span class="p">,</span> <span class="n">neg_flow</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">reg_model</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+        <span class="n">mean_stream</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean_stream</span><span class="p">(</span><span class="n">pos_flow</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">def_atlas</span><span class="p">,</span> <span class="n">def_image</span><span class="p">,</span> <span class="n">pos_flow</span><span class="p">,</span> <span class="n">neg_flow</span><span class="p">,</span> <span class="n">mean_stream</span></div></div>
+
+<div class="viewcode-block" id="MeanStream"><a class="viewcode-back" href="../../../api.html#MIR.models.MeanStream">[docs]</a><span class="k">class</span> <span class="nc">MeanStream</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Mean stream for the Deformable Template Network</span>
+<span class="sd">    Args:</span>
+<span class="sd">        cap: Cap for the mean</span>
+<span class="sd">        in_shape: Input shape</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cap</span><span class="o">=</span><span class="mf">100.0</span><span class="p">,</span> <span class="n">in_shape</span><span class="o">=</span><span class="p">(</span><span class="mi">160</span><span class="p">,</span> <span class="mi">160</span><span class="p">,</span> <span class="mi">256</span><span class="p">)):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cap</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">cap</span><span class="p">)</span>
+        <span class="n">weights</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">in_shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">in_shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">in_shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mean</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">weights</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="o">.</span><span class="n">requires_grad</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">count</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">)))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">count</span><span class="o">.</span><span class="n">requires_grad</span> <span class="o">=</span> <span class="kc">False</span>
+
+<div class="viewcode-block" id="MeanStream.mean_update"><a class="viewcode-back" href="../../../api.html#MIR.models.MeanStream.mean_update">[docs]</a>    <span class="k">def</span> <span class="nf">mean_update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pre_mean</span><span class="p">,</span> <span class="n">pre_count</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">pre_cap</span><span class="o">=</span><span class="mf">0.</span><span class="p">):</span>
+        <span class="n">pre_cap</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">pre_cap</span><span class="p">)</span>
+        <span class="n">B</span><span class="p">,</span> <span class="n">C</span><span class="p">,</span> <span class="n">H</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">L</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span>
+        <span class="c1"># compute this batch stats</span>
+        <span class="n">this_sum</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">keepdim</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="c1"># increase count and compute weights</span>
+        <span class="n">new_count</span> <span class="o">=</span> <span class="n">pre_count</span> <span class="o">+</span> <span class="n">B</span>
+        <span class="n">alpha</span> <span class="o">=</span> <span class="n">B</span> <span class="o">/</span> <span class="n">torch</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">new_count</span><span class="p">,</span> <span class="n">pre_cap</span><span class="p">)</span>
+
+        <span class="c1"># compute new mean. Note that once we reach self.cap (e.g. 1000),</span>
+        <span class="c1"># the &#39;previous mean&#39; matters less</span>
+        <span class="n">new_mean</span> <span class="o">=</span> <span class="n">pre_mean</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">alpha</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">this_sum</span> <span class="o">/</span> <span class="n">B</span><span class="p">)</span> <span class="o">*</span> <span class="n">alpha</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">new_mean</span><span class="p">,</span> <span class="n">new_count</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="MeanStream.forward"><a class="viewcode-back" href="../../../api.html#MIR.models.MeanStream.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">training</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="mf">1.</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">count</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">cap</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">z</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">)</span>
+
+        <span class="c1"># get new mean and count</span>
+        <span class="n">new_mean</span><span class="p">,</span> <span class="n">new_count</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean_update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mean</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">count</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cap</span><span class="p">)</span>
+        <span class="c1"># update op</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">count</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">new_count</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mean</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">new_mean</span><span class="p">)</span>
+
+        <span class="c1"># the first few 1000 should not matter that much towards this cost</span>
+        <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="mf">1.</span><span class="p">),</span> <span class="n">new_count</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">cap</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">z</span> <span class="o">*</span> <span class="n">new_mean</span><span class="p">)</span></div></div>
+
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

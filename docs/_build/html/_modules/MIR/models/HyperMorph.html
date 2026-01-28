@@ -1,0 +1,395 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MIR.models.HyperMorph &mdash; MIR 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js?v=f6245a2f"></script>
+      <script src="../../../_static/doctools.js?v=888ff710"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            MIR
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">MIR</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">MIR.models.HyperMorph</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for MIR.models.HyperMorph</h1><div class="highlight"><pre>
+<span></span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">HyperMorph</span>
+
+<span class="sd">Original code retrieved from:</span>
+<span class="sd">https://github.com/voxelmorph/voxelmorph</span>
+
+<span class="sd">Original paper:</span>
+
+<span class="sd">Hoopes, Andrew, et al. </span>
+<span class="sd">&quot;Hypermorph: Amortized hyperparameter learning for image registration.&quot; </span>
+<span class="sd">Information Processing in Medical Imaging: 27th International Conference, </span>
+<span class="sd">IPMI 2021, Virtual Event, June 28–June 30, 2021, Proceedings 27. </span>
+<span class="sd">Springer International Publishing, 2021.</span>
+
+<span class="sd">Balakrishnan, G., Zhao, A., Sabuncu, M. R., Guttag, J., &amp; Dalca, A. V. (2019).</span>
+<span class="sd">VoxelMorph: a learning framework for deformable medical image registration.</span>
+<span class="sd">IEEE transactions on medical imaging, 38(8), 1788-1800.</span>
+
+<span class="sd">Modified and tested by:</span>
+<span class="sd">Junyu Chen</span>
+<span class="sd">jchen245@jhmi.edu</span>
+<span class="sd">Johns Hopkins University</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
+<span class="kn">import</span> <span class="nn">torch.nn.functional</span> <span class="k">as</span> <span class="nn">nnf</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">torch.distributions.normal</span> <span class="kn">import</span> <span class="n">Normal</span>
+<span class="kn">import</span> <span class="nn">MIR.models.registration_utils</span> <span class="k">as</span> <span class="nn">utils</span>
+
+<span class="k">class</span> <span class="nc">HyperBlocks</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nb_hyp_params</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">nb_hyp_layers</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span> <span class="n">nb_hyp_units</span><span class="o">=</span><span class="mi">128</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fcs</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">ModuleList</span><span class="p">()</span>
+        <span class="n">hyp_last</span> <span class="o">=</span> <span class="n">nb_hyp_params</span>
+        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nb_hyp_layers</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fcs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">hyp_last</span><span class="p">,</span> <span class="n">nb_hyp_units</span><span class="p">))</span>
+            <span class="n">hyp_last</span> <span class="o">=</span> <span class="n">nb_hyp_units</span>
+
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">fc</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fcs</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">fc</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">relu</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">x</span>
+
+<span class="k">class</span> <span class="nc">ConvBlock_</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Specific convolutional block followed by leakyrelu for unet.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ndims</span><span class="p">,</span> <span class="n">in_channels</span><span class="p">,</span> <span class="n">out_channels</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">nb_hyp_units</span><span class="o">=</span><span class="mi">128</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+        <span class="n">Conv</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">nn</span><span class="p">,</span> <span class="s1">&#39;Conv</span><span class="si">%d</span><span class="s1">d&#39;</span> <span class="o">%</span> <span class="n">ndims</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">main</span> <span class="o">=</span> <span class="n">Conv</span><span class="p">(</span><span class="n">in_channels</span><span class="p">,</span> <span class="n">out_channels</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">stride</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">bias</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">activation</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">LeakyReLU</span><span class="p">(</span><span class="mf">0.2</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">linear</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">nb_hyp_units</span><span class="p">,</span> <span class="n">out_channels</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">hyp_feat</span><span class="p">):</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">main</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">bias</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">linear</span><span class="p">(</span><span class="n">hyp_feat</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">activation</span><span class="p">(</span><span class="n">out</span><span class="o">+</span><span class="n">bias</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">out</span>
+
+<span class="k">class</span> <span class="nc">ConvBlock</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Specific convolutional block followed by leakyrelu for unet.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ndims</span><span class="p">,</span> <span class="n">in_channels</span><span class="p">,</span> <span class="n">out_channels</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">nb_hyp_units</span><span class="o">=</span><span class="mi">128</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+        <span class="n">Conv</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">nn</span><span class="p">,</span> <span class="s1">&#39;Conv</span><span class="si">%d</span><span class="s1">d&#39;</span> <span class="o">%</span> <span class="n">ndims</span><span class="p">)</span>
+        <span class="c1">#self.linear = nn.Linear(nb_hyp_units, nb_hyp_units)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">activation</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">LeakyReLU</span><span class="p">(</span><span class="mf">0.2</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">linear_conv</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">nb_hyp_units</span><span class="p">,</span> <span class="mi">3</span><span class="o">**</span><span class="n">ndims</span><span class="o">*</span><span class="n">out_channels</span><span class="o">*</span><span class="n">in_channels</span><span class="p">,</span> <span class="n">bias</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">linear_bias</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">nb_hyp_units</span><span class="p">,</span> <span class="n">out_channels</span><span class="p">,</span> <span class="n">bias</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="c1">#self.linear_conv.weight = nn.Parameter(Normal(0, 1e-5).sample(self.linear_conv.weight.shape))</span>
+        <span class="c1">#self.linear_bias.weight = nn.Parameter(Normal(0, 1e-5).sample(self.linear_bias.weight.shape))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stride</span> <span class="o">=</span> <span class="n">stride</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out_channels</span> <span class="o">=</span> <span class="n">out_channels</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">in_channels</span> <span class="o">=</span> <span class="n">in_channels</span>
+
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">hyp_feat</span><span class="p">):</span>
+        <span class="c1">#hyp_feat = self.linear(hyp_feat)</span>
+        <span class="c1">#hyp_feat = torch.relu(hyp_feat)</span>
+        <span class="n">kernel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">linear_conv</span><span class="p">(</span><span class="n">hyp_feat</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">out_channels</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_channels</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+        <span class="c1">#self.main.weight.data = kernel</span>
+        <span class="c1">#out = self.main(x)</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">nnf</span><span class="o">.</span><span class="n">conv3d</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">kernel</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stride</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">bias</span><span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">linear_bias</span><span class="p">(</span><span class="n">hyp_feat</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">activation</span><span class="p">(</span><span class="n">out</span><span class="o">+</span><span class="n">bias</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">out</span>
+
+<span class="k">class</span> <span class="nc">CustomConv</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Specific convolutional block followed by leakyrelu for unet.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ndims</span><span class="p">,</span> <span class="n">in_channels</span><span class="p">,</span> <span class="n">out_channels</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">nb_hyp_units</span><span class="o">=</span><span class="mi">128</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+        <span class="n">Conv</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">nn</span><span class="p">,</span> <span class="s1">&#39;Conv</span><span class="si">%d</span><span class="s1">d&#39;</span> <span class="o">%</span> <span class="n">ndims</span><span class="p">)</span>
+        <span class="c1">#self.linear = nn.Linear(nb_hyp_units, nb_hyp_units)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">linear_conv</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">nb_hyp_units</span><span class="p">,</span> <span class="mi">3</span><span class="o">**</span><span class="n">ndims</span><span class="o">*</span><span class="n">out_channels</span><span class="o">*</span><span class="n">in_channels</span><span class="p">,</span> <span class="n">bias</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">linear_bias</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">nb_hyp_units</span><span class="p">,</span> <span class="n">out_channels</span><span class="p">,</span> <span class="n">bias</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">linear_conv</span><span class="o">.</span><span class="n">weight</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">Normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">1e-5</span><span class="p">)</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">linear_conv</span><span class="o">.</span><span class="n">weight</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">linear_bias</span><span class="o">.</span><span class="n">weight</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">Normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">1e-5</span><span class="p">)</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">linear_bias</span><span class="o">.</span><span class="n">weight</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stride</span> <span class="o">=</span> <span class="n">stride</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out_channels</span> <span class="o">=</span> <span class="n">out_channels</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">in_channels</span> <span class="o">=</span> <span class="n">in_channels</span>
+
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">hyp_feat</span><span class="p">):</span>
+        <span class="c1">#out = self.main(x)</span>
+        <span class="c1">#hyp_feat = self.linear(hyp_feat)</span>
+        <span class="c1">#hyp_feat = torch.relu(hyp_feat)</span>
+        <span class="n">kernel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">linear_conv</span><span class="p">(</span><span class="n">hyp_feat</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">out_channels</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">in_channels</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">nnf</span><span class="o">.</span><span class="n">conv3d</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">kernel</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">stride</span><span class="p">,</span> <span class="n">padding</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">bias</span><span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">linear_bias</span><span class="p">(</span><span class="n">hyp_feat</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">out</span><span class="o">+</span><span class="n">bias</span>
+        <span class="k">return</span> <span class="n">out</span>
+
+<span class="k">class</span> <span class="nc">Unet</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A unet architecture. Layer features can be specified directly as a list of encoder and decoder</span>
+<span class="sd">    features or as a single integer along with a number of unet levels. The default network features</span>
+<span class="sd">    per layer (when no options are specified) are:</span>
+<span class="sd">        encoder: [16, 32, 32, 32]</span>
+<span class="sd">        decoder: [32, 32, 32, 32, 32, 16, 16]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inshape</span><span class="p">,</span> <span class="n">nb_features</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">nb_levels</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">feat_mult</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Parameters:</span>
+<span class="sd">            inshape: Input shape. e.g. (192, 192, 192)</span>
+<span class="sd">            nb_features: Unet convolutional features. Can be specified via a list of lists with</span>
+<span class="sd">                the form [[encoder feats], [decoder feats]], or as a single integer. If None (default),</span>
+<span class="sd">                the unet features are defined by the default config described in the class documentation.</span>
+<span class="sd">            nb_levels: Number of levels in unet. Only used when nb_features is an integer. Default is None.</span>
+<span class="sd">            feat_mult: Per-level feature multiplier. Only used when nb_features is an integer. Default is 1.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># ensure correct dimensionality</span>
+        <span class="n">ndims</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">inshape</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="n">ndims</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="s1">&#39;ndims should be one of 1, 2, or 3. found: </span><span class="si">%d</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">ndims</span>
+
+        <span class="c1"># default encoder and decoder layer features if nothing provided</span>
+        <span class="k">if</span> <span class="n">nb_features</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">nb_features</span> <span class="o">=</span> <span class="p">((</span><span class="mi">8</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">32</span><span class="p">),</span> <span class="p">(</span><span class="mi">32</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">8</span><span class="p">))</span>
+
+        <span class="c1"># build feature list automatically</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">nb_features</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">nb_levels</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;must provide unet nb_levels if nb_features is an integer&#39;</span><span class="p">)</span>
+            <span class="n">feats</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">nb_features</span> <span class="o">*</span> <span class="n">feat_mult</span> <span class="o">**</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">nb_levels</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">enc_nf</span> <span class="o">=</span> <span class="n">feats</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dec_nf</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">flip</span><span class="p">(</span><span class="n">feats</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">nb_levels</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;cannot use nb_levels if nb_features is not an integer&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">enc_nf</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dec_nf</span> <span class="o">=</span> <span class="n">nb_features</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">upsample</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Upsample</span><span class="p">(</span><span class="n">scale_factor</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;nearest&#39;</span><span class="p">)</span>
+
+        <span class="c1"># configure encoder (down-sampling path)</span>
+        <span class="n">prev_nf</span> <span class="o">=</span> <span class="mi">2</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">downarm</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">ModuleList</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">nf</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">enc_nf</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">downarm</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ConvBlock</span><span class="p">(</span><span class="n">ndims</span><span class="p">,</span> <span class="n">prev_nf</span><span class="p">,</span> <span class="n">nf</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="mi">2</span><span class="p">))</span>
+            <span class="n">prev_nf</span> <span class="o">=</span> <span class="n">nf</span>
+
+        <span class="c1"># configure decoder (up-sampling path)</span>
+        <span class="n">enc_history</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">reversed</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">enc_nf</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">uparm</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">ModuleList</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">nf</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dec_nf</span><span class="p">[:</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">enc_nf</span><span class="p">)]):</span>
+            <span class="n">channels</span> <span class="o">=</span> <span class="n">prev_nf</span> <span class="o">+</span> <span class="n">enc_history</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">if</span> <span class="n">i</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">prev_nf</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">uparm</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ConvBlock</span><span class="p">(</span><span class="n">ndims</span><span class="p">,</span> <span class="n">channels</span><span class="p">,</span> <span class="n">nf</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
+            <span class="n">prev_nf</span> <span class="o">=</span> <span class="n">nf</span>
+
+        <span class="c1"># configure extra decoder convolutions (no up-sampling)</span>
+        <span class="n">prev_nf</span> <span class="o">+=</span> <span class="mi">2</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">extras</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">ModuleList</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">nf</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dec_nf</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">enc_nf</span><span class="p">):]:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">extras</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ConvBlock</span><span class="p">(</span><span class="n">ndims</span><span class="p">,</span> <span class="n">prev_nf</span><span class="p">,</span> <span class="n">nf</span><span class="p">,</span> <span class="n">stride</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
+            <span class="n">prev_nf</span> <span class="o">=</span> <span class="n">nf</span>
+
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">h</span><span class="p">):</span>
+
+        <span class="c1"># get encoder activations</span>
+        <span class="n">x_enc</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">downarm</span><span class="p">:</span>
+            <span class="n">x_enc</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">layer</span><span class="p">(</span><span class="n">x_enc</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">h</span><span class="p">))</span>
+
+        <span class="c1"># conv, upsample, concatenate series</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">x_enc</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">uparm</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">layer</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">h</span><span class="p">)</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">upsample</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">([</span><span class="n">x</span><span class="p">,</span> <span class="n">x_enc</span><span class="o">.</span><span class="n">pop</span><span class="p">()],</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="c1"># extra convs at full resolution</span>
+        <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">extras</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">layer</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">h</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">x</span>
+        
+<div class="viewcode-block" id="HyperVxmDense"><a class="viewcode-back" href="../../../api.html#MIR.models.HyperVxmDense">[docs]</a><span class="k">class</span> <span class="nc">HyperVxmDense</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    VoxelMorph network for (unsupervised) nonlinear registration between two images.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+        <span class="n">configs</span><span class="p">,</span>
+        <span class="n">gen_output</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Parameters:</span>
+<span class="sd">            inshape: Input shape. e.g. (192, 192, 192)</span>
+<span class="sd">            nb_unet_features: Unet convolutional features. Can be specified via a list of lists with</span>
+<span class="sd">                the form [[encoder feats], [decoder feats]], or as a single integer. If None (default),</span>
+<span class="sd">                the unet features are defined by the default config described in the unet class documentation.</span>
+<span class="sd">            nb_unet_levels: Number of levels in unet. Only used when nb_features is an integer. Default is None.</span>
+<span class="sd">            unet_feat_mult: Per-level feature multiplier. Only used when nb_features is an integer. Default is 1.</span>
+<span class="sd">            int_steps: Number of flow integration steps. The warp is non-diffeomorphic when this value is 0.</span>
+<span class="sd">            int_downsize: Integer specifying the flow downsample factor for vector integration. The flow field</span>
+<span class="sd">                is not downsampled when this value is 1.</span>
+<span class="sd">            bidir: Enable bidirectional cost function. Default is False.</span>
+<span class="sd">            use_probs: Use probabilities in flow field. Default is False.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="n">inshape</span> <span class="o">=</span> <span class="n">configs</span><span class="o">.</span><span class="n">img_size</span>
+        <span class="n">nb_unet_features</span><span class="o">=</span> <span class="n">configs</span><span class="o">.</span><span class="n">nb_unet_features</span>
+        <span class="n">nb_unet_levels</span><span class="o">=</span> <span class="n">configs</span><span class="o">.</span><span class="n">nb_unet_levels</span>
+        <span class="n">unet_feat_mult</span><span class="o">=</span> <span class="n">configs</span><span class="o">.</span><span class="n">unet_feat_mult</span>
+        <span class="n">use_probs</span><span class="o">=</span> <span class="n">configs</span><span class="o">.</span><span class="n">use_probs</span>
+        <span class="c1"># internal flag indicating whether to return flow or integrated warp during inference</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">training</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="c1"># ensure correct dimensionality</span>
+        <span class="n">ndims</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">inshape</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="n">ndims</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="s1">&#39;ndims should be one of 1, 2, or 3. found: </span><span class="si">%d</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">ndims</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">hyper_model</span> <span class="o">=</span> <span class="n">HyperBlocks</span><span class="p">()</span>
+
+        <span class="c1"># configure core unet model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">unet_model</span> <span class="o">=</span> <span class="n">Unet</span><span class="p">(</span>
+            <span class="n">inshape</span><span class="p">,</span>
+            <span class="n">nb_features</span><span class="o">=</span><span class="n">nb_unet_features</span><span class="p">,</span>
+            <span class="n">nb_levels</span><span class="o">=</span><span class="n">nb_unet_levels</span><span class="p">,</span>
+            <span class="n">feat_mult</span><span class="o">=</span><span class="n">unet_feat_mult</span>
+        <span class="p">)</span>
+
+        <span class="c1"># configure unet to flow field layer</span>
+        <span class="n">Conv</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">nn</span><span class="p">,</span> <span class="s1">&#39;Conv</span><span class="si">%d</span><span class="s1">d&#39;</span> <span class="o">%</span> <span class="n">ndims</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">flow</span> <span class="o">=</span> <span class="n">CustomConv</span><span class="p">(</span><span class="n">ndims</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">unet_model</span><span class="o">.</span><span class="n">dec_nf</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">ndims</span><span class="p">)</span>
+
+        <span class="c1"># init flow layer with small weights and bias</span>
+        <span class="c1">#self.flow.weight = nn.Parameter(Normal(0, 1e-5).sample(self.flow.weight.shape))</span>
+        <span class="c1">#self.flow.bias = nn.Parameter(torch.zeros(self.flow.bias.shape))</span>
+
+        <span class="c1"># probabilities are not supported in pytorch</span>
+        <span class="k">if</span> <span class="n">use_probs</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;Flow variance has not been implemented in pytorch - set use_probs to False&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gen_output</span> <span class="o">=</span> <span class="n">gen_output</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">gen_output</span><span class="p">:</span>
+            <span class="c1"># configure transformer</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">spatial_trans</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">SpatialTransformer</span><span class="p">(</span><span class="n">inshape</span><span class="p">)</span>
+
+<div class="viewcode-block" id="HyperVxmDense.forward"><a class="viewcode-back" href="../../../api.html#MIR.models.HyperVxmDense.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_imgs</span><span class="p">,</span> <span class="n">hyp_val</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        Parameters:</span>
+<span class="sd">            source: Source image tensor.</span>
+<span class="sd">            target: Target image tensor.</span>
+<span class="sd">            registration: Return transformed image and flow. Default is False.</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">mov</span><span class="p">,</span> <span class="n">fix</span> <span class="o">=</span> <span class="n">input_imgs</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">mov</span><span class="p">,</span> <span class="n">fix</span><span class="p">),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">hyper_model</span><span class="p">(</span><span class="n">hyp_val</span><span class="p">)</span>
+
+        <span class="c1"># concatenate inputs and propagate unet</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">unet_model</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">h</span><span class="p">)</span>
+
+        <span class="c1"># transform into flow field</span>
+        <span class="n">flow_field</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">flow</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">h</span><span class="p">)</span>
+
+        <span class="c1"># resize flow for integration</span>
+        <span class="n">pos_flow</span> <span class="o">=</span> <span class="n">flow_field</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">gen_output</span><span class="p">:</span>
+            <span class="c1"># warp image with flow field</span>
+            <span class="n">def_x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">spatial_trans</span><span class="p">(</span><span class="n">mov</span><span class="p">,</span> <span class="n">pos_flow</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">def_x</span><span class="p">,</span> <span class="n">pos_flow</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">pos_flow</span></div></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
