@@ -15,6 +15,21 @@ workflows**.
 
 Auto-generated documentation is available at: https://junyuchen245.github.io/MIR
 
+Quick start: IXI benchmarking
+-----------------------------
+
+Benchmark several registration models on the IXI dataset using the scripts in
+``tutorials/IXI_benchmarking``. The snippet below downloads the test data and
+launches a benchmark run.
+
+.. code-block:: bash
+
+   cd tutorials/IXI_benchmarking
+   python3.8 -u train_TransMorph.py
+   python3.8 -u train_TransMorphTVF.py
+   python3.8 -u train_SITReg.py
+   python3.8 -u train_SITReg_SPR.py
+
 Included Projects
 -----------------
 
@@ -82,4 +97,5 @@ About Me
    :maxdepth: 2
    :caption: Contents:
 
+   quick_start
    api

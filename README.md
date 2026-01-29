@@ -8,6 +8,12 @@ This repository hosts implementations of several projects I’ve contributed to,
 
 Auto-generated documentation is available at: [https://junyuchen245.github.io/MIR](https://junyuchen245.github.io/MIR)
 
+## Quick start: IXI benchmarking
+
+You can quickly benchmark several models on the IXI dataset using the scripts in
+[tutorials/IXI_benchmarking](tutorials/IXI_benchmarking). See the README there for
+dataset download and run commands.
+
 ## 📄 Included Projects
 
 1. **Pretraining Deformable Image Registration Networks with Random Images**  

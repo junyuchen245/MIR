@@ -19,7 +19,7 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="API Reference" href="api.html" /> 
+    <link rel="next" title="Quick Start" href="quick_start.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -43,6 +43,7 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="quick_start.html">Quick Start</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a></li>
 </ul>
 
@@ -80,6 +81,19 @@ preprocessing and post-processing utilities for medical image analysis. It also 
 for selected external packages to enable seamless integration into <strong>TransMorph-like registration
 workflows</strong>.</p>
 <p>Auto-generated documentation is available at: <a class="reference external" href="https://junyuchen245.github.io/MIR">https://junyuchen245.github.io/MIR</a></p>
+</section>
+<section id="quick-start-ixi-benchmarking">
+<h2>Quick start: IXI benchmarking<a class="headerlink" href="#quick-start-ixi-benchmarking" title="Permalink to this heading"></a></h2>
+<p>Benchmark several registration models on the IXI dataset using the scripts in
+<code class="docutils literal notranslate"><span class="pre">tutorials/IXI_benchmarking</span></code>. The snippet below downloads the test data and
+launches a benchmark run.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>tutorials/IXI_benchmarking
+python3.8<span class="w"> </span>-u<span class="w"> </span>train_TransMorph.py
+python3.8<span class="w"> </span>-u<span class="w"> </span>train_TransMorphTVF.py
+python3.8<span class="w"> </span>-u<span class="w"> </span>train_SITReg.py
+python3.8<span class="w"> </span>-u<span class="w"> </span>train_SITReg_SPR.py
+</pre></div>
+</div>
 </section>
 <section id="included-projects">
 <h2>Included Projects<a class="headerlink" href="#included-projects" title="Permalink to this heading"></a></h2>
@@ -136,6 +150,11 @@ workflows</strong>.</p>
 <div class="toctree-wrapper compound">
 <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="quick_start.html">Quick Start</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="quick_start.html#ixi-benchmarking">IXI Benchmarking</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quick_start.html#notebook-snippets">Notebook snippets</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="api/MIR.models.html">MIR.models</a></li>
 <li class="toctree-l2"><a class="reference internal" href="api/MIR.utils.html">MIR.utils</a></li>
@@ -284,7 +303,7 @@ workflows</strong>.</p>
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="api.html" class="btn btn-neutral float-right" title="API Reference" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="quick_start.html" class="btn btn-neutral float-right" title="Quick Start" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>
