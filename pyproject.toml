@@ -12,20 +12,21 @@ requires-python = ">=3.8.16"
 
 # Dependencies
 dependencies = [
+	"pytest",
 	"antspyx",
 	"einops==0.8.1",
 	"matplotlib==3.7.3",
 	"ml_collections==0.1.1",
-	"nibabel==5.3.2",
-	"numpy==1.24.4",
-	"pymedio==0.2.5",
-	"scipy==1.15.3",
-	"seaborn==0.11.0",
-	"SimpleITK==2.5.0",
-	"statsmodels==0.14.0",
-	"timm==0.9.10",
+	"nibabel",
+	"numpy",
+	"pymedio>=0.2.5",
+	"scipy",
+	"seaborn>=0.11.0",
+	"SimpleITK>=2.2.1",
+	"statsmodels>=0.14.0",
 	"natsort",
-	"torch==2.0.1+cu118",
+	"torch>=2.0.1",
+	"timm",
 ]
 
 [project.optional-dependencies]
