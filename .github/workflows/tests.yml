@@ -23,7 +23,21 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install pytest
-          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install antspyx
+          pip install torch==2.0.1 --index-url https://download.pytorch.org/whl/cpu
+          pip install \
+            einops==0.8.1 \
+            matplotlib==3.7.3 \
+            ml_collections==0.1.1 \
+            nibabel==5.2.1 \
+            numpy==1.24.4 \
+            pymedio==0.2.5 \
+            scipy==1.10.1 \
+            seaborn==0.11.0 \
+            SimpleITK==2.5.0 \
+            statsmodels==0.14.0 \
+            timm==0.9.10 \
+            natsort
           pip install -e . --no-deps
 
       - name: Run tests
