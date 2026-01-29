@@ -1,4 +1,6 @@
 <a href="https://opensource.org/license/apache-2-0"><img src="https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square"></a>
+<img src="https://github.com/junyuchen245/MIR/actions/workflows/tests.yml/badge.svg" alt="Run Tests">
+<img src="https://github.com/junyuchen245/MIR/actions/workflows/docs.yml/badge.svg" alt="Build and Deploy Docs">
 
 ## Overview
 
