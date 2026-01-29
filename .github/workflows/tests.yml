@@ -24,7 +24,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install pytest
           pip install torch --index-url https://download.pytorch.org/whl/cpu
-          pip install -e .
+          pip install -e . --no-deps
 
       - name: Run tests
         run: pytest -q tests
