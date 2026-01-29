@@ -26,6 +26,7 @@ jobs:
           pip install antspyx
           pip install SimpleITK --only-binary=:all:
           pip install torch==2.0.1 --index-url https://download.pytorch.org/whl/cpu
+          pip install torchvision==0.15.2 --index-url https://download.pytorch.org/whl/cpu
           pip install \
             einops==0.8.1 \
             matplotlib==3.7.3 \
