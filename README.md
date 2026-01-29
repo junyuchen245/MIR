@@ -8,6 +8,27 @@ This repository hosts implementations of several projects I’ve contributed to,
 
 Auto-generated documentation is available at: [https://junyuchen245.github.io/MIR](https://junyuchen245.github.io/MIR)
 
+## Installation
+
+**Prerequisite:** Install a CUDA-enabled PyTorch build before installing MIR.
+
+### Editable install (recommended)
+
+```
+git clone https://github.com/junyuchen245/MIR.git
+cd MIR
+python3.8 -m pip install -U pip
+python3.8 -m pip install -e .
+```
+
+### PyTorch CUDA build (required)
+
+Install a CUDA build of PyTorch following the official instructions, then install MIR:
+
+```
+python3.8 -m pip install -e .
+```
+
 ## Quick start: IXI benchmarking
 
 You can quickly benchmark several models on the IXI dataset using the scripts in
