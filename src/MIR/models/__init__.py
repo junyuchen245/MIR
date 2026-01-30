@@ -4,7 +4,7 @@ from .Deformable_Swin_Transformer_v2 import DefSwinTransformerV2
 from .Swin_Transformer import SwinTransformer
 from .TransMorph import Conv3dReLU, DecoderBlock, RegistrationHead, TransMorphAffine, TransMorph, TransMorphTVF, TransMorphTVFSPR, CONFIGS
 from .configs_TransMorph import get_3DTransMorphDWin3Lvl_config, get_3DTransMorph3Lvl_config, get_3DTransMorph_config, get_3DTransMorphNoRelativePosEmbd_config, get_3DTransMorphSin_config, get_3DTransMorphLrn_config, get_3DTransMorphNoConvSkip_config, get_3DTransMorphNoTransSkip_config, get_3DTransMorphNoSkip_config, get_3DTransMorphLarge_config, get_3DTransMorphSmall_config, get_3DTransMorphTiny_config, get_3DTransMorphRelativePosEmbdSimple_config
-from .registration_utils import SpatialTransformer, VecInt, AffineTransformer, ensemble_average, invert_warp_via_velocity, fit_warp_to_svf
+from .registration_utils import SpatialTransformer, VecInt, AffineTransformer, ensemble_average, invert_warp_via_velocity, fit_warp_to_svf, fit_warp_to_svf_fast
 from .Selfsupervised_Learning_Heads import SSLHeadNLvl, SSLHead1Lvl
 from .VFA import VFA, Decoder, DoubleConv3d, grid_to_flow, VFASPR
 from .MultiMorph import GroupNet3D, Warp3d, make_epoch_batches, ListBatchSampler
@@ -96,6 +96,7 @@ __all__ = [
     'ensemble_average',
     'invert_warp_via_velocity',
     'fit_warp_to_svf',
+    'fit_warp_to_svf_fast',
     'TemplateCreation',
     'MeanStream',
     'SynthesisHead3DAdvanced',

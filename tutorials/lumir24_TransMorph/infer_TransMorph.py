@@ -95,7 +95,7 @@ def main():
         url = f"https://drive.google.com/uc?id={file_id}"
         gdown.download(url, 'LUMIR_dataset.json', quiet=False)
 
-    pretrained = torch.load(pretrained_dir+pretrained_wts)[ ModelWeights['TransMorphTVF-LUMIR24-MonoModal']['wts_key']]
+    pretrained = torch.load(pretrained_dir+pretrained_wts)[ModelWeights['TransMorphTVF-LUMIR24-MonoModal']['wts_key']]
     model.load_state_dict(pretrained)
     print('Pretrained Weights: {} loaded!'.format(pretrained_dir+pretrained_wts))
     model.cuda()

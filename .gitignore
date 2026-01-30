@@ -8,7 +8,9 @@ tutorials/IPEN_registration/
 # Ignore any folder named "experiments" or "logs" anywhere in the repo
 **/experiments/
 **/logs/
+**/pretrained_wts/
 **/atlas/
+**/template_outputs/
 **/__pycache__/
 
 # Ignore compiled Python artifacts everywhere

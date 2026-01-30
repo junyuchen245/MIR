@@ -13,7 +13,8 @@ preprocessing and post-processing utilities for medical image analysis. It also 
 for selected external packages to enable seamless integration into **TransMorph-like registration
 workflows**.
 
-Auto-generated documentation is available at: https://junyuchen245.github.io/MIR
+Documentation is available at: https://junyuchen245.github.io/MIR
+Github repository: https://github.com/junyuchen245/MIR
 
 Installation
 ------------

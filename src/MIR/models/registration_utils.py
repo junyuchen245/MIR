@@ -305,6 +305,105 @@ def fit_warp_to_svf(
         return disp_pred
     else:
         raise ValueError(f"unknown output_type {output_type}, expected 'disp' or 'svf'")
+
+
+def fit_warp_to_svf_fast(
+    warp_t,
+    nb_steps: int = 5,
+    iters: int = 50,
+    lr: float = 0.1,
+    downsample_factor: int = 2,
+    refine_iters: int = 10,
+    min_delta: float = 1e-5,
+    warm_start: torch.Tensor = None,
+    use_amp: bool = False,
+    output_type: str = "disp",  # "svf" | "disp"
+    verbose: bool = False,
+    **kwargs,
+):
+    """
+    Fast approximation to fit_warp_to_svf using coarse-to-fine fitting.
+
+    Args:
+        warp_t: Displacement field tensor (B, C, *vol).
+        nb_steps: VecInt steps for exponentiation.
+        iters: Optimization iterations for coarse fit.
+        lr: Learning rate for coarse fit.
+        downsample_factor: Integer downsample factor for speed (>1 recommended).
+        output_type: "disp" returns velocity (SVF); "svf" returns displacement.
+        verbose: Print progress during fitting.
+        **kwargs: Passed to fit_warp_to_svf (e.g., objective, init, min_delta).
+
+    Returns:
+        Tensor of same shape as warp_t, either SVF (velocity) or displacement.
+    """
+    device = warp_t.device
+
+    def _optimize(warp, init_vel, nsteps, niter, lr_val):
+        vol_shape = warp.shape[2:]
+        integrator = VecInt(vol_shape, nsteps).to(device)
+        vel = nn.Parameter(init_vel.clone())
+        opt = torch.optim.Adam([vel], lr=lr_val)
+        last_loss = None
+        scaler = torch.cuda.amp.GradScaler(enabled=use_amp and warp.is_cuda)
+        for epoch in range(niter):
+            opt.zero_grad(set_to_none=True)
+            with torch.cuda.amp.autocast(enabled=use_amp and warp.is_cuda):
+                disp_pred = integrator(vel)
+                loss = nnf.mse_loss(disp_pred, warp)
+            if use_amp and warp.is_cuda:
+                scaler.scale(loss).backward()
+                scaler.step(opt)
+                scaler.update()
+            else:
+                loss.backward()
+                opt.step()
+            if last_loss is not None and abs(last_loss - loss.item()) < min_delta:
+                if verbose:
+                    print(f"Converged @ {epoch:4d}  loss={loss.item():.4e}")
+                break
+            last_loss = loss.item()
+            if verbose and epoch % 20 == 0:
+                print(f"[{epoch:03d}]  loss={loss.item():.4e}")
+        return vel
+
+    if downsample_factor > 1:
+        scale = 1.0 / float(downsample_factor)
+        warp_ds = nnf.interpolate(
+            warp_t,
+            scale_factor=scale,
+            mode="trilinear",
+            align_corners=False,
+        ) * scale
+        if warm_start is not None:
+            warm_ds = nnf.interpolate(
+                warm_start,
+                scale_factor=scale,
+                mode="trilinear",
+                align_corners=False,
+            ) * scale
+        else:
+            warm_ds = warp_ds.detach()
+        vel_ds = _optimize(warp_ds, warm_ds, nb_steps, iters, lr)
+        vel = nnf.interpolate(
+            vel_ds,
+            size=warp_t.shape[2:],
+            mode="trilinear",
+            align_corners=False,
+        ) * downsample_factor
+    else:
+        init_vel = warm_start if warm_start is not None else warp_t.detach()
+        vel = _optimize(warp_t, init_vel, nb_steps, iters, lr)
+
+    if refine_iters > 0:
+        vel = _optimize(warp_t, vel.detach(), nb_steps, refine_iters, lr)
+
+    if output_type == "disp":
+        return vel
+    elif output_type == "svf":
+        return VecInt(warp_t.shape[2:], nb_steps).to(device)(vel)
+    else:
+        raise ValueError(f"unknown output_type {output_type}, expected 'disp' or 'svf'")
  
  
 # -----------------------  inverse via velocity  --------------------------- #
