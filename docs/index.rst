@@ -14,6 +14,7 @@ for selected external packages to enable seamless integration into **TransMorph-
 workflows**.
 
 Documentation is available at: https://junyuchen245.github.io/MIR
+
 Github repository: https://github.com/junyuchen245/MIR
 
 Installation
@@ -114,4 +115,5 @@ About Me
    :caption: Contents:
 
    quick_start
+   brain_template_example
    api
