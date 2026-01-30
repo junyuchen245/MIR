@@ -131,4 +131,5 @@ About Me
 
    quick_start
    brain_template_example
+   models/index
    api

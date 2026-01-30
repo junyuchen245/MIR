@@ -27,6 +27,7 @@
    :toctree:
    :recursive:
 
+   MIR.utils.deedsbcv_binary
    MIR.utils.other_utils
    MIR.utils.registration_utils
    MIR.utils.segmentation_utils
