@@ -13,16 +13,17 @@ REPO_ROOT = os.path.abspath(os.path.join(THIS_DIR, "..", ".."))
 if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
-from MIR.models import SpatialTransformer, TransMorphTVF, VecInt, fit_warp_to_svf_fast, VFA
+from MIR.models import SpatialTransformer, TransMorphTVF, VecInt, fit_warp_to_svf_fast, VFA, convex_adam_MIND
 import MIR.models.configs_TransMorph as configs_TransMorph
 import MIR.models.configs_VFA as configs_VFA
+import MIR.models.convexAdam.configs_ConvexAdam_MIND as configs_ConvexAdam
 from MIR import ModelWeights, DatasetJSONs
 import gdown
 
 INPUT_SHAPE = (160, 224, 192)
 LUMIR_BASE_DIR = "/scratch2/jchen/DATA/LUMIR/"
 LUMIR_JSON = "LUMIR_dataset.json"
-MODEL_TYPE = "TransMorphTVF"  # "TransMorphTVF" or "VFA"
+MODEL_TYPE = "ConvexAdam"  # "TransMorphTVF" | "VFA" | "ConvexAdam"
 WEIGHTS_PATH = "pretrained_wts/"
 OUT_DIR = "template_outputs"
 NUM_ITERS = 10
@@ -46,7 +47,7 @@ if MODEL_TYPE == "VFA":
 elif MODEL_TYPE == "TransMorphTVF":
     pretrained_wts = "TransMorphTVF.pth.tar"
     MODEL_SUBTYPE = "TransMorphTVF-LUMIR24-MonoModal"
-if not os.path.isfile(WEIGHTS_PATH+pretrained_wts):
+if MODEL_TYPE in {"VFA", "TransMorphTVF"} and not os.path.isfile(WEIGHTS_PATH+pretrained_wts):
     # download model
     file_id = ModelWeights[MODEL_SUBTYPE]['wts']
     url = f"https://drive.google.com/uc?id={file_id}"
@@ -102,9 +103,13 @@ def build_model(device, input_shape):
         config.out_chan = 3
         model = TransMorphTVF(config, SVF=USE_SVF_MODEL, time_steps=7).to(device)
         return model
+    if MODEL_TYPE == "ConvexAdam":
+        return convex_adam_MIND, configs_ConvexAdam.get_ConvexAdam_MIND_brain_default_config()
     raise ValueError(f"Unknown MODEL_TYPE: {MODEL_TYPE}")
 
 def load_checkpoint(model, ckpt_path, device):
+    if MODEL_TYPE == "ConvexAdam":
+        return
     state_dict = torch.load(ckpt_path, map_location=device)[ModelWeights[MODEL_SUBTYPE]['wts_key']]
     model.load_state_dict(state_dict)
 
@@ -147,12 +152,18 @@ def build_template():
     print(f"Train samples: {len(train_set)}")
 
     model = build_model(device, INPUT_SHAPE)
-    load_checkpoint(model, WEIGHTS_PATH+pretrained_wts, device)
-    model.eval()
-    print(f"Loaded weights from: {WEIGHTS_PATH+pretrained_wts}")
-    print(f"Model type: {MODEL_TYPE}")
-    print(f"SVF model output: {USE_SVF_MODEL}")
-    print(f"Model subtype: {MODEL_SUBTYPE}")
+    if MODEL_TYPE == "ConvexAdam":
+        model_fn, model_cfg = model
+        print(f"Model type: {MODEL_TYPE}")
+        print(f"SVF model output: {USE_SVF_MODEL}")
+        model = (model_fn, model_cfg)
+    else:
+        load_checkpoint(model, WEIGHTS_PATH+pretrained_wts, device)
+        model.eval()
+        print(f"Loaded weights from: {WEIGHTS_PATH+pretrained_wts}")
+        print(f"Model type: {MODEL_TYPE}")
+        print(f"SVF model output: {USE_SVF_MODEL}")
+        print(f"Model subtype: {MODEL_SUBTYPE}")
     spatial_trans = SpatialTransformer(INPUT_SHAPE).to(device)
 
     template = init_template_from_atlas(train_loader, device)
@@ -177,6 +188,10 @@ def build_template():
                     template_half = F.avg_pool3d(template_batch, 2)
                     flow = model((moving_half, template_half))
                     flow = F.interpolate(flow, scale_factor=2, mode="trilinear", align_corners=False) * 2
+                elif MODEL_TYPE == "ConvexAdam":
+                    model_fn, model_cfg = model
+                    with torch.enable_grad():
+                        flow = model_fn(moving, template_batch, model_cfg)
                 else:
                     flow = model((moving, template_batch))
                 warped = spatial_trans(moving, flow)

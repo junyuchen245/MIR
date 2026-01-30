@@ -1,14 +1,14 @@
-Brain template example (LUMIR24)
+Brain template example
 ===============================
 
-This example builds a brain template from the LUMIR24 dataset using either **TransMorphTVF** or **VFA**. The script is self‑contained **except** for the dataset itself: you must download the LUMIR24 data in advance.
+This example builds a brain template from the LUMIR24 dataset using **TransMorphTVF**, **VFA**, or **ConvexAdam**. The script is self‑contained **except** for the dataset itself: you must download the LUMIR24 data in advance.
 
 Prerequisites
 -------------
 
 - LUMIR24 dataset downloaded locally.
 - CUDA‑enabled PyTorch (recommended).
-- Internet access on first run to download pretrained weights and the LUMIR JSON file.
+- Internet access on first run to download pretrained weights (TransMorphTVF/VFA) and the LUMIR JSON file.
 
 Dataset requirement
 -------------------
@@ -33,7 +33,7 @@ Configuration
 
 Edit these settings near the top of ``build_template.py``:
 
-- ``MODEL_TYPE``: ``"TransMorphTVF"`` or ``"VFA"``
+- ``MODEL_TYPE``: ``"TransMorphTVF"``, ``"VFA"``, or ``"ConvexAdam"``
 - ``LUMIR_BASE_DIR``: path to your local LUMIR24 data
 - ``WEIGHTS_PATH``: folder for pretrained weights (auto‑download)
 - ``OUT_DIR``: output folder for NIfTI templates
@@ -48,3 +48,9 @@ Templates are saved as NIfTI files in ``template_outputs``:
 - ``template_outputs/template_iter_00.nii.gz``
 - ``template_outputs/template_iter_01.nii.gz``
 - ...
+
+Notes
+-----
+
+- Pretrained weights are downloaded only for ``TransMorphTVF`` and ``VFA``.
+- ``ConvexAdam`` does not require pretrained weights.

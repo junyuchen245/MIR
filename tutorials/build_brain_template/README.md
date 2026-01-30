@@ -1,12 +1,12 @@
-# Brain Template Building (LUMIR24)
+# Brain Template Building
 
-This example builds a brain template from the LUMIR24 dataset using either **TransMorphTVF** or **VFA**. The script is self‑contained **except** for the dataset itself: you must download the LUMIR24 data in advance.
+This example builds a brain template from the LUMIR24 dataset using **TransMorphTVF**, **VFA**, or **ConvexAdam**. The script is self‑contained **except** for the dataset itself: you must download the LUMIR24 data in advance.
 
 ## Requirements
 
 - LUMIR24 dataset downloaded locally.
 - A CUDA‑enabled PyTorch environment (recommended for speed).
-- Internet access on first run to download the pretrained weights and the LUMIR JSON file.
+- Internet access on first run to download pretrained weights (TransMorphTVF/VFA) and the LUMIR JSON file.
 
 ## Dataset prerequisite (required)
 
@@ -20,7 +20,7 @@ The script will download `LUMIR_dataset.json` automatically if it is missing, bu
 
 Open `build_template.py` and edit these settings near the top:
 
-- `MODEL_TYPE`: `"TransMorphTVF"` or `"VFA"`
+- `MODEL_TYPE`: `"TransMorphTVF"`, `"VFA"`, or `"ConvexAdam"`
 - `LUMIR_BASE_DIR`: path to your local LUMIR24 data
 - `WEIGHTS_PATH`: folder for pretrained weights (auto‑download)
 - `OUT_DIR`: output folder for NIfTI templates
@@ -47,7 +47,8 @@ template_outputs/template_iter_01.nii.gz
 
 ## Notes
 
-- The script downloads pretrained weights and the LUMIR dataset JSON automatically.
+- The script downloads pretrained weights and the LUMIR dataset JSON automatically (weights only for TransMorphTVF/VFA).
 - If `MODEL_TYPE="TransMorphTVF"`, the model runs on downsampled inputs and the flow is upsampled for warping.
 - If `MODEL_TYPE="VFA"`, the model runs at full resolution.
+- If `MODEL_TYPE="ConvexAdam"`, no pretrained weights are required; flows are computed directly from the optimizer.
 - For shape averaging, log‑domain averaging (`SHAPE_AVG_LOGDOMAIN=True`) is recommended for diffeomorphic consistency.
