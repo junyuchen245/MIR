@@ -31,6 +31,11 @@ Editable install (recommended)::
 Install a CUDA build of PyTorch following the official instructions, then
 install MIR as above.
 
+Platform notes
+--------------
+
+- deedsBCV integration is **Linux-only**. Windows users can still use MIR, but deedsBCV functionality is unavailable.
+
 Getting started
 ---------------
 
@@ -111,6 +116,9 @@ External Wrappers Included
 4. **SITReg: Multi-resolution architecture for symmetric, inverse consistent, and topology preserving image registration.**
    *Honkamaa, Joel, and Pekka Marttinen.* ***MELBA***, *2024.*
    `Paper <https://www.melba-journal.org/papers/2024:026.html>`_ | `Repo <https://github.com/honkamj/SITReg>`_
+
+5. **deedsBCV**
+   `Repo <https://github.com/mattiaspaul/deedsBCV>`_
 
 About Me
 --------

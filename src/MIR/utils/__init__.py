@@ -4,6 +4,7 @@ from .training_utils import Logger, AverageMeter, pad_image, normalize_01, Rando
 from .other_utils import pkload, savepkl, write2csv, process_label, CenterCropPad3D, SLANT_label_reassign, create_zip, load_partial_weights, zoom_img
 from .visualization_utils import mk_grid_img, get_cmap, pca_reduce_channels_cpu
 from .segmentation_utils import sliding_window_inference, sliding_window_inference_multires
+from .deedsbcv_binary import get_deedsbcv_dir, get_deedsbcv_executable
 __all__ = [
     'SpatialTransformer',
     'VecInt',

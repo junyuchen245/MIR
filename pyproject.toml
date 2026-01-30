@@ -38,6 +38,7 @@ package-dir = {"" = "src"}    # <-- tell it that your packages live in src/
 [tool.setuptools.package-data]
 # this says: in the src/MIR/utils folder, include any .txt
 "MIR.utils" = ["FreeSurfer_label_info.txt"]
+"MIR.models" = ["deedsBCV/bin/*"]
 
 # either explicitly list your package
 # packages = ["MIR"]

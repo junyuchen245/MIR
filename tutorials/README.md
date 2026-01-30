@@ -7,7 +7,6 @@ This directory provides tutorials on how to run various models in MIR, including
 - **LUMIR24/25**: Training/inference pipelines for TransMorph and VFA on the Learn2Reg challenges.
 - **IXI**: Brain registration pipelines for IXI (including SITReg-based training).
 - **AutoPET**: PET/CT registration workflows and evaluation utilities.
-- **PSMA atlas building**: Population analysis and statistical evaluation utilities.
 
 Each tutorial folder contains a runnable script and, when applicable, a README with dataset paths, outputs, and notes.
 
@@ -17,6 +16,7 @@ Each tutorial folder contains a runnable script and, when applicable, a README w
 - [IXI_HyperTransMorph](https://github.com/junyuchen245/MIR/tree/main/tutorials/IXI_HyperTransMorph): HyperTransMorph-based IXI registration with hyperparameter conditioning.
 - [IXI_HyperMorph](https://github.com/junyuchen245/MIR/tree/main/tutorials/IXI_HyperMorph): HyperMorph (VoxelMorph-style) IXI registration and evaluation.
 - [IXI_TransMorphSPR](https://github.com/junyuchen245/MIR/tree/main/tutorials/IXI_TransMorphSPR): TransMorph with spatially varying regularization on IXI.
+- [IXI_deedsBCV](https://github.com/junyuchen245/MIR/tree/main/tutorials/IXI_deedsBCV): deedsBCV validation on IXI (Linux-only, uses bundled binaries).
 - [lumir24_TransMorph](https://github.com/junyuchen245/MIR/tree/main/tutorials/lumir24_TransMorph): TransMorph pipelines for Learn2Reg 2024.
 - [lumir24_VFA](https://github.com/junyuchen245/MIR/tree/main/tutorials/lumir24_VFA): VFA pipelines for Learn2Reg 2024.
 - [lumir24_ConvexAdam](https://github.com/junyuchen245/MIR/tree/main/tutorials/lumir24_ConvexAdam): ConvexAdam baselines for Learn2Reg 2024.
@@ -26,8 +26,6 @@ Each tutorial folder contains a runnable script and, when applicable, a README w
 - [autoPET_TransMorphSPR](https://github.com/junyuchen245/MIR/tree/main/tutorials/autoPET_TransMorphSPR): PET/CT registration with TransMorph SPR.
 - [autoPET_ConvexAdamSPR](https://github.com/junyuchen245/MIR/tree/main/tutorials/autoPET_ConvexAdamSPR): PET/CT registration with ConvexAdam SPR.
 - [autoPET_FireANTs_SPR](https://github.com/junyuchen245/MIR/tree/main/tutorials/autoPET_FireANTs_SPR): PET/CT registration with FireANTs SPR baselines.
-- [PSMA_atlas_building](https://github.com/junyuchen245/MIR/tree/main/tutorials/PSMA_atlas_building): PSMA atlas building, population analysis, and statistical evaluation.
-- [PSMA_atlas_building_MultiMorph](https://github.com/junyuchen245/MIR/tree/main/tutorials/PSMA_atlas_building_MultiMorph): MultiMorph-based PSMA atlas building pipeline.
 - [VFA_image_seg](https://github.com/junyuchen245/MIR/tree/main/tutorials/VFA_image_seg): VFA-based feature extraction for segmentation tasks.
 - [VFA_image_synthesis](https://github.com/junyuchen245/MIR/tree/main/tutorials/VFA_image_synthesis): VFA-based feature extraction for synthesis tasks.
 - [brain_MRI_preprocessing](https://github.com/junyuchen245/MIR/tree/main/tutorials/brain_MRI_preprocessing): MRI preprocessing utilities (bias correction, normalization, masking).

@@ -35,6 +35,10 @@ You can quickly benchmark several models on the IXI dataset using the scripts in
 [tutorials/IXI_benchmarking](tutorials/IXI_benchmarking). See the README there for
 dataset download and run commands.
 
+## Platform notes
+
+- deedsBCV integration is **Linux-only**. Windows users can still use MIR, but deedsBCV functionality is unavailable.
+
 ## 📄 Included Projects
 
 1. **Pretraining Deformable Image Registration Networks with Random Images**  
@@ -92,6 +96,8 @@ dataset download and run commands.
 4. **SITReg: Multi-resolution architecture for symmetric, inverse consistent, and topology preserving image registration.**\
    *Honkamaa, Joel, and Pekka Marttinen. ***MELBA***, 2024.*\
    [[Paper](https://www.melba-journal.org/papers/2024:026.html)] | [[Repo](https://github.com/honkamj/SITReg)]
+
+5. **deedsBCV** [[Repo](https://github.com/mattiaspaul/deedsBCV)]
 ---
 
 
