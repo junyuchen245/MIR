@@ -8,14 +8,13 @@ MIR Documentation
 Overview
 --------
 
-MIR package hosts implementations of several projects I've contributed to, along with helpful
-preprocessing and post-processing utilities for medical image analysis. It also provides wrappers
-for selected external packages to enable seamless integration into **TransMorph-like registration
-workflows**.
+MIR is a research toolkit for medical image registration, providing model implementations,
+training/inference scripts, and supporting utilities. It also includes curated wrappers for
+selected external packages to support **TransMorph‑style registration workflows**.
 
-Documentation is available at: https://junyuchen245.github.io/MIR
+Documentation: https://junyuchen245.github.io/MIR
 
-Github repository: https://github.com/junyuchen245/MIR
+Repository: https://github.com/junyuchen245/MIR
 
 Installation
 ------------
@@ -32,12 +31,14 @@ Editable install (recommended)::
 Install a CUDA build of PyTorch following the official instructions, then
 install MIR as above.
 
-Quick start: IXI benchmarking
------------------------------
+Getting started
+---------------
 
-Benchmark several registration models on the IXI dataset using the scripts in
-``tutorials/IXI_benchmarking``. The snippet below downloads the test data and
-launches a benchmark run.
+Quick start: IXI benchmarking
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Benchmark multiple registration models on the IXI dataset using the scripts in
+`tutorials/IXI_benchmarking <https://github.com/junyuchen245/MIR/tree/main/tutorials/IXI_benchmarking>`_.
 
 .. code-block:: bash
 
@@ -46,6 +47,12 @@ launches a benchmark run.
    python3.8 -u train_TransMorphTVF.py
    python3.8 -u train_SITReg.py
    python3.8 -u train_SITReg_SPR.py
+
+Example: Brain template construction (LUMIR24)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Build a population template from LUMIR24 using TransMorphTVF, VFA, or ConvexAdam.
+See :doc:`brain_template_example` for the full walkthrough.
 
 Included Projects
 -----------------

@@ -65,3 +65,13 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 html_theme = "sphinx_rtd_theme"
 html_static_path = ["_static"]
+html_theme_options = {
+    "style_nav_header_background": "#1f2937",
+    "collapse_navigation": False,
+    "navigation_depth": 3,
+    "titles_only": False,
+}
+
+html_css_files = [
+    "custom.css",
+]

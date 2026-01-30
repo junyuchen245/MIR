@@ -1,0 +1,632 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Brain template example (LUMIR24) &mdash; MIR 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=0ef3fce4" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=f6245a2f"></script>
+      <script src="_static/doctools.js?v=888ff710"></script>
+      <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="API Reference" href="api.html" />
+    <link rel="prev" title="Quick Start" href="quick_start.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search"  style="background: #1f2937" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            MIR
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="quick_start.html">Quick Start</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="quick_start.html#ixi-benchmarking-i-m-still-working-on-this-section">IXI Benchmarking (I’m still working on this section)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quick_start.html#notebook-snippets">Notebook snippets</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="quick_start.html#imports-and-setup">Imports and setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="quick_start.html#dataset-paths">Dataset paths</a></li>
+<li class="toctree-l3"><a class="reference internal" href="quick_start.html#model-factory-functions">Model factory functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="quick_start.html#data-download-and-extraction">Data download and extraction</a></li>
+<li class="toctree-l3"><a class="reference internal" href="quick_start.html#inference-loop">Inference loop</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Brain template example (LUMIR24)</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#prerequisites">Prerequisites</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#dataset-requirement">Dataset requirement</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#run-the-example">Run the example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#configuration">Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#outputs">Outputs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#notes">Notes</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/MIR.models.html">MIR.models</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.models.Deformable_Swin_Transformer.html">MIR.models.Deformable_Swin_Transformer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.models.Deformable_Swin_Transformer_v2.html">MIR.models.Deformable_Swin_Transformer_v2</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.models.HyperMorph.html">MIR.models.HyperMorph</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.models.HyperTransMorph.html">MIR.models.HyperTransMorph</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.models.HyperVFA.html">MIR.models.HyperVFA</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.models.MultiMorph.html">MIR.models.MultiMorph</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.models.SITReg.html">MIR.models.SITReg</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.models.Segmentation_Heads.html">MIR.models.Segmentation_Heads</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.models.Selfsupervised_Learning_Heads.html">MIR.models.Selfsupervised_Learning_Heads</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.models.Swin_Transformer.html">MIR.models.Swin_Transformer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.models.Synthesis_Heads.html">MIR.models.Synthesis_Heads</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.models.TransMorph.html">MIR.models.TransMorph</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.models.TransVFA.html">MIR.models.TransVFA</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.models.VFA.html">MIR.models.VFA</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.models.VoxelMorph.html">MIR.models.VoxelMorph</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.models.atlas_builder.html">MIR.models.atlas_builder</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.models.configs_TransMorph.html">MIR.models.configs_TransMorph</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.models.configs_VFA.html">MIR.models.configs_VFA</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.models.configs_VoxelMorph.html">MIR.models.configs_VoxelMorph</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.models.convexAdam.html">MIR.models.convexAdam</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.models.fireants.html">MIR.models.fireants</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.models.registration_utils.html">MIR.models.registration_utils</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api/MIR.utils.html">MIR.utils</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.utils.other_utils.html">MIR.utils.other_utils</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.utils.registration_utils.html">MIR.utils.registration_utils</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.utils.segmentation_utils.html">MIR.utils.segmentation_utils</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.utils.training_utils.html">MIR.utils.training_utils</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.utils.visualization_utils.html">MIR.utils.visualization_utils</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api/MIR.image_similarity.html">MIR.image_similarity</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.image_similarity.CompositeRecon.html">MIR.image_similarity.CompositeRecon</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.image_similarity.Correlation_Ratio.html">MIR.image_similarity.Correlation_Ratio</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.image_similarity.Dice.html">MIR.image_similarity.Dice</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.image_similarity.MIND_SSC.html">MIR.image_similarity.MIND_SSC</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.image_similarity.Mutual_Information.html">MIR.image_similarity.Mutual_Information</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.image_similarity.NCC.html">MIR.image_similarity.NCC</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.image_similarity.PCC.html">MIR.image_similarity.PCC</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.image_similarity.SSIM.html">MIR.image_similarity.SSIM</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.image_similarity.Segmentation_Overlap.html">MIR.image_similarity.Segmentation_Overlap</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api/MIR.deformation_regularizer.html">MIR.deformation_regularizer</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.deformation_regularizer.GlobalRegularizers.html">MIR.deformation_regularizer.GlobalRegularizers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.deformation_regularizer.KL_divergence.html">MIR.deformation_regularizer.KL_divergence</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.deformation_regularizer.LocalRegularizers.html">MIR.deformation_regularizer.LocalRegularizers</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api/MIR.accuracy_measures.html">MIR.accuracy_measures</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.accuracy_measures.acc_measures.html">MIR.accuracy_measures.acc_measures</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.accuracy_measures.digital_diffeomorphism.html">MIR.accuracy_measures.digital_diffeomorphism</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.AdvancedDecoder3D"><code class="docutils literal notranslate"><span class="pre">AdvancedDecoder3D</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.AdvancedDecoder3D.forward"><code class="docutils literal notranslate"><span class="pre">AdvancedDecoder3D.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.AffineTransformer"><code class="docutils literal notranslate"><span class="pre">AffineTransformer</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.AffineTransformer.apply_affine"><code class="docutils literal notranslate"><span class="pre">AffineTransformer.apply_affine()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.AffineTransformer.forward"><code class="docutils literal notranslate"><span class="pre">AffineTransformer.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.Conv3dReLU"><code class="docutils literal notranslate"><span class="pre">Conv3dReLU</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.ConvNeXtSynthHead3D"><code class="docutils literal notranslate"><span class="pre">ConvNeXtSynthHead3D</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.ConvNeXtSynthHead3D.forward"><code class="docutils literal notranslate"><span class="pre">ConvNeXtSynthHead3D.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.Decoder"><code class="docutils literal notranslate"><span class="pre">Decoder</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.Decoder.forward"><code class="docutils literal notranslate"><span class="pre">Decoder.forward()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.Decoder.get_candidate_from_tensor"><code class="docutils literal notranslate"><span class="pre">Decoder.get_candidate_from_tensor()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.Decoder.to_token"><code class="docutils literal notranslate"><span class="pre">Decoder.to_token()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.DecoderBlock"><code class="docutils literal notranslate"><span class="pre">DecoderBlock</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.DecoderBlock.forward"><code class="docutils literal notranslate"><span class="pre">DecoderBlock.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.DefSwinTransformer"><code class="docutils literal notranslate"><span class="pre">DefSwinTransformer</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.DefSwinTransformer.forward"><code class="docutils literal notranslate"><span class="pre">DefSwinTransformer.forward()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.DefSwinTransformer.init_weights"><code class="docutils literal notranslate"><span class="pre">DefSwinTransformer.init_weights()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.DefSwinTransformer.train"><code class="docutils literal notranslate"><span class="pre">DefSwinTransformer.train()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.DefSwinTransformerV2"><code class="docutils literal notranslate"><span class="pre">DefSwinTransformerV2</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.DefSwinTransformerV2.forward"><code class="docutils literal notranslate"><span class="pre">DefSwinTransformerV2.forward()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.DefSwinTransformerV2.init_weights"><code class="docutils literal notranslate"><span class="pre">DefSwinTransformerV2.init_weights()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.DefSwinTransformerV2.train"><code class="docutils literal notranslate"><span class="pre">DefSwinTransformerV2.train()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.DoubleConv3d"><code class="docutils literal notranslate"><span class="pre">DoubleConv3d</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.DoubleConv3d.forward"><code class="docutils literal notranslate"><span class="pre">DoubleConv3d.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.EfficientAdvancedSynthHead3D"><code class="docutils literal notranslate"><span class="pre">EfficientAdvancedSynthHead3D</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.EfficientAdvancedSynthHead3D.forward"><code class="docutils literal notranslate"><span class="pre">EfficientAdvancedSynthHead3D.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.EncoderFeatureExtractor"><code class="docutils literal notranslate"><span class="pre">EncoderFeatureExtractor</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.EncoderFeatureExtractor.forward"><code class="docutils literal notranslate"><span class="pre">EncoderFeatureExtractor.forward()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.EncoderFeatureExtractor.get_shapes"><code class="docutils literal notranslate"><span class="pre">EncoderFeatureExtractor.get_shapes()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.GroupNet3D"><code class="docutils literal notranslate"><span class="pre">GroupNet3D</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.GroupNet3D.forward"><code class="docutils literal notranslate"><span class="pre">GroupNet3D.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.GroupNormalizerFactory"><code class="docutils literal notranslate"><span class="pre">GroupNormalizerFactory</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.GroupNormalizerFactory.build"><code class="docutils literal notranslate"><span class="pre">GroupNormalizerFactory.build()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.HyperTransMorphTVF"><code class="docutils literal notranslate"><span class="pre">HyperTransMorphTVF</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.HyperTransMorphTVF.forward"><code class="docutils literal notranslate"><span class="pre">HyperTransMorphTVF.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.HyperTransMorphTVFSPR"><code class="docutils literal notranslate"><span class="pre">HyperTransMorphTVFSPR</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.HyperTransMorphTVFSPR.forward"><code class="docutils literal notranslate"><span class="pre">HyperTransMorphTVFSPR.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.HyperVFA"><code class="docutils literal notranslate"><span class="pre">HyperVFA</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.HyperVFA.forward"><code class="docutils literal notranslate"><span class="pre">HyperVFA.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.HyperVFASPR"><code class="docutils literal notranslate"><span class="pre">HyperVFASPR</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.HyperVFASPR.forward"><code class="docutils literal notranslate"><span class="pre">HyperVFASPR.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.HyperVxmDense"><code class="docutils literal notranslate"><span class="pre">HyperVxmDense</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.HyperVxmDense.forward"><code class="docutils literal notranslate"><span class="pre">HyperVxmDense.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.ListBatchSampler"><code class="docutils literal notranslate"><span class="pre">ListBatchSampler</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.MappingPair"><code class="docutils literal notranslate"><span class="pre">MappingPair</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.MappingPair.forward_mapping"><code class="docutils literal notranslate"><span class="pre">MappingPair.forward_mapping</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.MappingPair.inverse_mapping"><code class="docutils literal notranslate"><span class="pre">MappingPair.inverse_mapping</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.MeanStream"><code class="docutils literal notranslate"><span class="pre">MeanStream</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.MeanStream.forward"><code class="docutils literal notranslate"><span class="pre">MeanStream.forward()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.MeanStream.mean_update"><code class="docutils literal notranslate"><span class="pre">MeanStream.mean_update()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.ReLUFactory"><code class="docutils literal notranslate"><span class="pre">ReLUFactory</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.ReLUFactory.build"><code class="docutils literal notranslate"><span class="pre">ReLUFactory.build()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.RegistrationHead"><code class="docutils literal notranslate"><span class="pre">RegistrationHead</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.SITReg"><code class="docutils literal notranslate"><span class="pre">SITReg</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.SITReg.forward"><code class="docutils literal notranslate"><span class="pre">SITReg.forward()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.SITReg.image_coordinate_system"><code class="docutils literal notranslate"><span class="pre">SITReg.image_coordinate_system</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.SITReg.transformation_coordinate_system"><code class="docutils literal notranslate"><span class="pre">SITReg.transformation_coordinate_system</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.SSLHead1Lvl"><code class="docutils literal notranslate"><span class="pre">SSLHead1Lvl</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.SSLHead1Lvl.forward"><code class="docutils literal notranslate"><span class="pre">SSLHead1Lvl.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.SSLHeadNLvl"><code class="docutils literal notranslate"><span class="pre">SSLHeadNLvl</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.SSLHeadNLvl.forward"><code class="docutils literal notranslate"><span class="pre">SSLHeadNLvl.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.SpatialTransformer"><code class="docutils literal notranslate"><span class="pre">SpatialTransformer</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.SpatialTransformer.forward"><code class="docutils literal notranslate"><span class="pre">SpatialTransformer.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.SwinTransformer"><code class="docutils literal notranslate"><span class="pre">SwinTransformer</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.SwinTransformer.forward"><code class="docutils literal notranslate"><span class="pre">SwinTransformer.forward()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.SwinTransformer.init_weights"><code class="docutils literal notranslate"><span class="pre">SwinTransformer.init_weights()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.SwinTransformer.train"><code class="docutils literal notranslate"><span class="pre">SwinTransformer.train()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.SynthesisHead3D"><code class="docutils literal notranslate"><span class="pre">SynthesisHead3D</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.SynthesisHead3D.forward"><code class="docutils literal notranslate"><span class="pre">SynthesisHead3D.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.SynthesisHead3DAdvanced"><code class="docutils literal notranslate"><span class="pre">SynthesisHead3DAdvanced</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.SynthesisHead3DAdvanced.forward"><code class="docutils literal notranslate"><span class="pre">SynthesisHead3DAdvanced.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.TemplateCreation"><code class="docutils literal notranslate"><span class="pre">TemplateCreation</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.TemplateCreation.forward"><code class="docutils literal notranslate"><span class="pre">TemplateCreation.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.TransMorph"><code class="docutils literal notranslate"><span class="pre">TransMorph</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.TransMorph.forward"><code class="docutils literal notranslate"><span class="pre">TransMorph.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.TransMorphAffine"><code class="docutils literal notranslate"><span class="pre">TransMorphAffine</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.TransMorphAffine.forward"><code class="docutils literal notranslate"><span class="pre">TransMorphAffine.forward()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.TransMorphAffine.softplus"><code class="docutils literal notranslate"><span class="pre">TransMorphAffine.softplus()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.TransMorphTVF"><code class="docutils literal notranslate"><span class="pre">TransMorphTVF</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.TransMorphTVF.forward"><code class="docutils literal notranslate"><span class="pre">TransMorphTVF.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.TransMorphTVFSPR"><code class="docutils literal notranslate"><span class="pre">TransMorphTVFSPR</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.TransMorphTVFSPR.forward"><code class="docutils literal notranslate"><span class="pre">TransMorphTVFSPR.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.TransVFA"><code class="docutils literal notranslate"><span class="pre">TransVFA</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.TransVFA.forward"><code class="docutils literal notranslate"><span class="pre">TransVFA.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.VFA"><code class="docutils literal notranslate"><span class="pre">VFA</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.VFA.forward"><code class="docutils literal notranslate"><span class="pre">VFA.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.VFASPR"><code class="docutils literal notranslate"><span class="pre">VFASPR</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.VFASPR.forward"><code class="docutils literal notranslate"><span class="pre">VFASPR.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.VecInt"><code class="docutils literal notranslate"><span class="pre">VecInt</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.VecInt.forward"><code class="docutils literal notranslate"><span class="pre">VecInt.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.VxmDense"><code class="docutils literal notranslate"><span class="pre">VxmDense</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.VxmDense.forward"><code class="docutils literal notranslate"><span class="pre">VxmDense.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.Warp3d"><code class="docutils literal notranslate"><span class="pre">Warp3d</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.models.Warp3d.forward"><code class="docutils literal notranslate"><span class="pre">Warp3d.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.convex_adam_MIND"><code class="docutils literal notranslate"><span class="pre">convex_adam_MIND()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.convex_adam_MIND_SPR"><code class="docutils literal notranslate"><span class="pre">convex_adam_MIND_SPR()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.convex_adam_features"><code class="docutils literal notranslate"><span class="pre">convex_adam_features()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.convex_adam_seg_features"><code class="docutils literal notranslate"><span class="pre">convex_adam_seg_features()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.convex_adam_vfa"><code class="docutils literal notranslate"><span class="pre">convex_adam_vfa()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.ensemble_average"><code class="docutils literal notranslate"><span class="pre">ensemble_average()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.fit_warp_to_svf"><code class="docutils literal notranslate"><span class="pre">fit_warp_to_svf()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.fit_warp_to_svf_fast"><code class="docutils literal notranslate"><span class="pre">fit_warp_to_svf_fast()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.get_3DTransMorph3Lvl_config"><code class="docutils literal notranslate"><span class="pre">get_3DTransMorph3Lvl_config()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.get_3DTransMorphDWin3Lvl_config"><code class="docutils literal notranslate"><span class="pre">get_3DTransMorphDWin3Lvl_config()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.get_3DTransMorphLarge_config"><code class="docutils literal notranslate"><span class="pre">get_3DTransMorphLarge_config()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.get_3DTransMorphLrn_config"><code class="docutils literal notranslate"><span class="pre">get_3DTransMorphLrn_config()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.get_3DTransMorphNoConvSkip_config"><code class="docutils literal notranslate"><span class="pre">get_3DTransMorphNoConvSkip_config()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.get_3DTransMorphNoRelativePosEmbd_config"><code class="docutils literal notranslate"><span class="pre">get_3DTransMorphNoRelativePosEmbd_config()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.get_3DTransMorphNoSkip_config"><code class="docutils literal notranslate"><span class="pre">get_3DTransMorphNoSkip_config()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.get_3DTransMorphNoTransSkip_config"><code class="docutils literal notranslate"><span class="pre">get_3DTransMorphNoTransSkip_config()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.get_3DTransMorphRelativePosEmbdSimple_config"><code class="docutils literal notranslate"><span class="pre">get_3DTransMorphRelativePosEmbdSimple_config()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.get_3DTransMorphSin_config"><code class="docutils literal notranslate"><span class="pre">get_3DTransMorphSin_config()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.get_3DTransMorphSmall_config"><code class="docutils literal notranslate"><span class="pre">get_3DTransMorphSmall_config()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.get_3DTransMorphTiny_config"><code class="docutils literal notranslate"><span class="pre">get_3DTransMorphTiny_config()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.get_3DTransMorph_config"><code class="docutils literal notranslate"><span class="pre">get_3DTransMorph_config()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.get_ConvexAdam_MIND_brain_default_config"><code class="docutils literal notranslate"><span class="pre">get_ConvexAdam_MIND_brain_default_config()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.get_VFA_default_config"><code class="docutils literal notranslate"><span class="pre">get_VFA_default_config()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.get_VXM_1_config"><code class="docutils literal notranslate"><span class="pre">get_VXM_1_config()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.get_VXM_BJ_config"><code class="docutils literal notranslate"><span class="pre">get_VXM_BJ_config()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.get_VXM_default_config"><code class="docutils literal notranslate"><span class="pre">get_VXM_default_config()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.grid_to_flow"><code class="docutils literal notranslate"><span class="pre">grid_to_flow()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.invert_warp_via_velocity"><code class="docutils literal notranslate"><span class="pre">invert_warp_via_velocity()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.models.make_epoch_batches"><code class="docutils literal notranslate"><span class="pre">make_epoch_batches()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.utils.AverageMeter"><code class="docutils literal notranslate"><span class="pre">AverageMeter</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.utils.AverageMeter.reset"><code class="docutils literal notranslate"><span class="pre">AverageMeter.reset()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.utils.AverageMeter.update"><code class="docutils literal notranslate"><span class="pre">AverageMeter.update()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.utils.Logger"><code class="docutils literal notranslate"><span class="pre">Logger</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.utils.Logger.flush"><code class="docutils literal notranslate"><span class="pre">Logger.flush()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.utils.Logger.write"><code class="docutils literal notranslate"><span class="pre">Logger.write()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.utils.MultiResPatchSampler3D"><code class="docutils literal notranslate"><span class="pre">MultiResPatchSampler3D</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.utils.RandomPatchSampler3D"><code class="docutils literal notranslate"><span class="pre">RandomPatchSampler3D</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.utils.SLANT_label_reassign"><code class="docutils literal notranslate"><span class="pre">SLANT_label_reassign()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.utils.SpatialTransformer"><code class="docutils literal notranslate"><span class="pre">SpatialTransformer</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.utils.SpatialTransformer.forward"><code class="docutils literal notranslate"><span class="pre">SpatialTransformer.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.utils.VecInt"><code class="docutils literal notranslate"><span class="pre">VecInt</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.utils.VecInt.forward"><code class="docutils literal notranslate"><span class="pre">VecInt.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.utils.get_cmap"><code class="docutils literal notranslate"><span class="pre">get_cmap()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.utils.load_partial_weights"><code class="docutils literal notranslate"><span class="pre">load_partial_weights()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.utils.make_affine_from_pixdim"><code class="docutils literal notranslate"><span class="pre">make_affine_from_pixdim()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.utils.mk_grid_img"><code class="docutils literal notranslate"><span class="pre">mk_grid_img()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.utils.pad_image"><code class="docutils literal notranslate"><span class="pre">pad_image()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.utils.pkload"><code class="docutils literal notranslate"><span class="pre">pkload()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.utils.resample_to_orginal_space_and_save"><code class="docutils literal notranslate"><span class="pre">resample_to_orginal_space_and_save()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.utils.savepkl"><code class="docutils literal notranslate"><span class="pre">savepkl()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.utils.sliding_window_inference"><code class="docutils literal notranslate"><span class="pre">sliding_window_inference()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.utils.write2csv"><code class="docutils literal notranslate"><span class="pre">write2csv()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.utils.zoom_img"><code class="docutils literal notranslate"><span class="pre">zoom_img()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.image_similarity.CompRecon"><code class="docutils literal notranslate"><span class="pre">CompRecon</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.image_similarity.CompRecon.forward"><code class="docutils literal notranslate"><span class="pre">CompRecon.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.image_similarity.CorrRatio"><code class="docutils literal notranslate"><span class="pre">CorrRatio</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.image_similarity.CorrRatio.correlation_ratio"><code class="docutils literal notranslate"><span class="pre">CorrRatio.correlation_ratio()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.image_similarity.CorrRatio.forward"><code class="docutils literal notranslate"><span class="pre">CorrRatio.forward()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.image_similarity.CorrRatio.gaussian_kernel"><code class="docutils literal notranslate"><span class="pre">CorrRatio.gaussian_kernel()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.image_similarity.CorrRatio.vol_bin_centers"><code class="docutils literal notranslate"><span class="pre">CorrRatio.vol_bin_centers</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.image_similarity.DiceLoss"><code class="docutils literal notranslate"><span class="pre">DiceLoss</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.image_similarity.DiceLoss.forward"><code class="docutils literal notranslate"><span class="pre">DiceLoss.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.image_similarity.DiceSegLoss"><code class="docutils literal notranslate"><span class="pre">DiceSegLoss</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.image_similarity.DiceSegLoss.forward"><code class="docutils literal notranslate"><span class="pre">DiceSegLoss.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.image_similarity.FastNCC"><code class="docutils literal notranslate"><span class="pre">FastNCC</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.image_similarity.FastNCC.forward"><code class="docutils literal notranslate"><span class="pre">FastNCC.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.image_similarity.LocalCorrRatio"><code class="docutils literal notranslate"><span class="pre">LocalCorrRatio</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.image_similarity.LocalCorrRatio.correlation_ratio"><code class="docutils literal notranslate"><span class="pre">LocalCorrRatio.correlation_ratio()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.image_similarity.LocalCorrRatio.forward"><code class="docutils literal notranslate"><span class="pre">LocalCorrRatio.forward()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.image_similarity.LocalCorrRatio.gaussian_kernel"><code class="docutils literal notranslate"><span class="pre">LocalCorrRatio.gaussian_kernel()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.image_similarity.LocalCorrRatio.vol_bin_centers"><code class="docutils literal notranslate"><span class="pre">LocalCorrRatio.vol_bin_centers</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.image_similarity.MIND_loss"><code class="docutils literal notranslate"><span class="pre">MIND_loss</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.image_similarity.MIND_loss.MINDSSC"><code class="docutils literal notranslate"><span class="pre">MIND_loss.MINDSSC()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.image_similarity.MIND_loss.forward"><code class="docutils literal notranslate"><span class="pre">MIND_loss.forward()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.image_similarity.MIND_loss.pdist_squared"><code class="docutils literal notranslate"><span class="pre">MIND_loss.pdist_squared()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.image_similarity.MutualInformation"><code class="docutils literal notranslate"><span class="pre">MutualInformation</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.image_similarity.MutualInformation.forward"><code class="docutils literal notranslate"><span class="pre">MutualInformation.forward()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.image_similarity.MutualInformation.mi"><code class="docutils literal notranslate"><span class="pre">MutualInformation.mi()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.image_similarity.NCC"><code class="docutils literal notranslate"><span class="pre">NCC</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.image_similarity.NCC.forward"><code class="docutils literal notranslate"><span class="pre">NCC.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.image_similarity.NCC_fp16"><code class="docutils literal notranslate"><span class="pre">NCC_fp16</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.image_similarity.NCC_fp16.forward"><code class="docutils literal notranslate"><span class="pre">NCC_fp16.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.image_similarity.NCC_gauss"><code class="docutils literal notranslate"><span class="pre">NCC_gauss</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.image_similarity.NCC_gauss.create_window_3D"><code class="docutils literal notranslate"><span class="pre">NCC_gauss.create_window_3D()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.image_similarity.NCC_gauss.forward"><code class="docutils literal notranslate"><span class="pre">NCC_gauss.forward()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.image_similarity.NCC_gauss.gaussian"><code class="docutils literal notranslate"><span class="pre">NCC_gauss.gaussian()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.image_similarity.NCC_mok"><code class="docutils literal notranslate"><span class="pre">NCC_mok</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.image_similarity.NCC_mok.forward"><code class="docutils literal notranslate"><span class="pre">NCC_mok.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.image_similarity.NCC_mok2"><code class="docutils literal notranslate"><span class="pre">NCC_mok2</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.image_similarity.NCC_mok2.forward"><code class="docutils literal notranslate"><span class="pre">NCC_mok2.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.image_similarity.NCC_vfa"><code class="docutils literal notranslate"><span class="pre">NCC_vfa</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.image_similarity.NCC_vfa.forward"><code class="docutils literal notranslate"><span class="pre">NCC_vfa.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.image_similarity.NCC_vxm"><code class="docutils literal notranslate"><span class="pre">NCC_vxm</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.image_similarity.NCC_vxm.forward"><code class="docutils literal notranslate"><span class="pre">NCC_vxm.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.image_similarity.PCC"><code class="docutils literal notranslate"><span class="pre">PCC</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.image_similarity.PCC.forward"><code class="docutils literal notranslate"><span class="pre">PCC.forward()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.image_similarity.PCC.pcc"><code class="docutils literal notranslate"><span class="pre">PCC.pcc()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.image_similarity.SSIM2D"><code class="docutils literal notranslate"><span class="pre">SSIM2D</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.image_similarity.SSIM2D.forward"><code class="docutils literal notranslate"><span class="pre">SSIM2D.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.image_similarity.SSIM3D"><code class="docutils literal notranslate"><span class="pre">SSIM3D</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.image_similarity.SSIM3D.forward"><code class="docutils literal notranslate"><span class="pre">SSIM3D.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.image_similarity.SegmentationLoss"><code class="docutils literal notranslate"><span class="pre">SegmentationLoss</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.image_similarity.SegmentationLoss.forward"><code class="docutils literal notranslate"><span class="pre">SegmentationLoss.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.image_similarity.create_window"><code class="docutils literal notranslate"><span class="pre">create_window()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.image_similarity.create_window_3D"><code class="docutils literal notranslate"><span class="pre">create_window_3D()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.image_similarity.gaussian"><code class="docutils literal notranslate"><span class="pre">gaussian()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.image_similarity.localMutualInformation"><code class="docutils literal notranslate"><span class="pre">localMutualInformation</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.image_similarity.localMutualInformation.forward"><code class="docutils literal notranslate"><span class="pre">localMutualInformation.forward()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.image_similarity.localMutualInformation.local_mi"><code class="docutils literal notranslate"><span class="pre">localMutualInformation.local_mi()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.image_similarity.ssim"><code class="docutils literal notranslate"><span class="pre">ssim()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.image_similarity.ssim3D"><code class="docutils literal notranslate"><span class="pre">ssim3D()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.deformation_regularizer.DisplacementRegularizer"><code class="docutils literal notranslate"><span class="pre">DisplacementRegularizer</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.deformation_regularizer.DisplacementRegularizer.compute_bending_energy"><code class="docutils literal notranslate"><span class="pre">DisplacementRegularizer.compute_bending_energy()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.deformation_regularizer.DisplacementRegularizer.compute_gradient_norm"><code class="docutils literal notranslate"><span class="pre">DisplacementRegularizer.compute_gradient_norm()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.deformation_regularizer.DisplacementRegularizer.forward"><code class="docutils literal notranslate"><span class="pre">DisplacementRegularizer.forward()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.deformation_regularizer.DisplacementRegularizer.gradient_dx"><code class="docutils literal notranslate"><span class="pre">DisplacementRegularizer.gradient_dx()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.deformation_regularizer.DisplacementRegularizer.gradient_dy"><code class="docutils literal notranslate"><span class="pre">DisplacementRegularizer.gradient_dy()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.deformation_regularizer.DisplacementRegularizer.gradient_dz"><code class="docutils literal notranslate"><span class="pre">DisplacementRegularizer.gradient_dz()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.deformation_regularizer.DisplacementRegularizer.gradient_txyz"><code class="docutils literal notranslate"><span class="pre">DisplacementRegularizer.gradient_txyz()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.deformation_regularizer.Grad2D"><code class="docutils literal notranslate"><span class="pre">Grad2D</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.deformation_regularizer.Grad2D.forward"><code class="docutils literal notranslate"><span class="pre">Grad2D.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.deformation_regularizer.Grad3DiTV"><code class="docutils literal notranslate"><span class="pre">Grad3DiTV</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.deformation_regularizer.Grad3DiTV.forward"><code class="docutils literal notranslate"><span class="pre">Grad3DiTV.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.deformation_regularizer.Grad3d"><code class="docutils literal notranslate"><span class="pre">Grad3d</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.deformation_regularizer.Grad3d.forward"><code class="docutils literal notranslate"><span class="pre">Grad3d.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.deformation_regularizer.GradICON3d"><code class="docutils literal notranslate"><span class="pre">GradICON3d</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.deformation_regularizer.GradICON3d.forward"><code class="docutils literal notranslate"><span class="pre">GradICON3d.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.deformation_regularizer.GradICONExact3d"><code class="docutils literal notranslate"><span class="pre">GradICONExact3d</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.deformation_regularizer.GradICONExact3d.forward"><code class="docutils literal notranslate"><span class="pre">GradICONExact3d.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.deformation_regularizer.KL_divergence"><code class="docutils literal notranslate"><span class="pre">KL_divergence</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.deformation_regularizer.KL_divergence.forward"><code class="docutils literal notranslate"><span class="pre">KL_divergence.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.deformation_regularizer.LocalGrad3d"><code class="docutils literal notranslate"><span class="pre">LocalGrad3d</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.deformation_regularizer.LocalGrad3d.forward"><code class="docutils literal notranslate"><span class="pre">LocalGrad3d.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.deformation_regularizer.MultiVariateKL_divergence"><code class="docutils literal notranslate"><span class="pre">MultiVariateKL_divergence</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.deformation_regularizer.MultiVariateKL_divergence.forward"><code class="docutils literal notranslate"><span class="pre">MultiVariateKL_divergence.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.deformation_regularizer.logBeta"><code class="docutils literal notranslate"><span class="pre">logBeta</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.deformation_regularizer.logBeta.forward"><code class="docutils literal notranslate"><span class="pre">logBeta.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.deformation_regularizer.logGaussian"><code class="docutils literal notranslate"><span class="pre">logGaussian</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api.html#MIR.deformation_regularizer.logGaussian.forward"><code class="docutils literal notranslate"><span class="pre">logGaussian.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.accuracy_measures.calc_J_i"><code class="docutils literal notranslate"><span class="pre">calc_J_i()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.accuracy_measures.calc_Jstar_1"><code class="docutils literal notranslate"><span class="pre">calc_Jstar_1()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.accuracy_measures.calc_Jstar_2"><code class="docutils literal notranslate"><span class="pre">calc_Jstar_2()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.accuracy_measures.calc_jac_dets"><code class="docutils literal notranslate"><span class="pre">calc_jac_dets()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.accuracy_measures.calc_measurements"><code class="docutils literal notranslate"><span class="pre">calc_measurements()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.accuracy_measures.dice_val_VOI"><code class="docutils literal notranslate"><span class="pre">dice_val_VOI()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.accuracy_measures.dice_val_all"><code class="docutils literal notranslate"><span class="pre">dice_val_all()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.accuracy_measures.dice_val_substruct"><code class="docutils literal notranslate"><span class="pre">dice_val_substruct()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#MIR.accuracy_measures.get_identity_grid"><code class="docutils literal notranslate"><span class="pre">get_identity_grid()</span></code></a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #1f2937" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">MIR</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Brain template example (LUMIR24)</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/brain_template_example.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="brain-template-example-lumir24">
+<h1>Brain template example (LUMIR24)<a class="headerlink" href="#brain-template-example-lumir24" title="Permalink to this heading"></a></h1>
+<p>This example builds a population brain template from the LUMIR24 dataset using
+<strong>TransMorphTVF</strong>, <strong>VFA</strong>, or <strong>ConvexAdam</strong>. The script is self‑contained
+<strong>except</strong> for the dataset itself: you must download LUMIR24 in advance.</p>
+<section id="prerequisites">
+<h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Permalink to this heading"></a></h2>
+<ul class="simple">
+<li><p>LUMIR24 dataset downloaded locally.</p></li>
+<li><p>CUDA‑enabled PyTorch (recommended).</p></li>
+<li><p>Internet access on first run to download pretrained weights (TransMorphTVF/VFA) and the LUMIR JSON file.</p></li>
+</ul>
+</section>
+<section id="dataset-requirement">
+<h2>Dataset requirement<a class="headerlink" href="#dataset-requirement" title="Permalink to this heading"></a></h2>
+<p>Download LUMIR24 and set the base directory in the script:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">LUMIR_BASE_DIR</span></code>: root folder that contains the LUMIR24 images referenced by <code class="docutils literal notranslate"><span class="pre">LUMIR_dataset.json</span></code>.</p></li>
+</ul>
+<p>The script will download <code class="docutils literal notranslate"><span class="pre">LUMIR_dataset.json</span></code> automatically if it is missing, but <strong>the images themselves must be present</strong>.</p>
+</section>
+<section id="run-the-example">
+<h2>Run the example<a class="headerlink" href="#run-the-example" title="Permalink to this heading"></a></h2>
+<p>From <a class="reference external" href="https://github.com/junyuchen245/MIR/tree/main/tutorials/build_brain_template">tutorials/build_brain_template</a>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python3.8<span class="w"> </span>-u<span class="w"> </span>build_template.py
+</pre></div>
+</div>
+</section>
+<section id="configuration">
+<h2>Configuration<a class="headerlink" href="#configuration" title="Permalink to this heading"></a></h2>
+<p>Edit these settings near the top of <code class="docutils literal notranslate"><span class="pre">build_template.py</span></code> to match your environment and
+method choice:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">MODEL_TYPE</span></code>: <code class="docutils literal notranslate"><span class="pre">&quot;TransMorphTVF&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;VFA&quot;</span></code>, or <code class="docutils literal notranslate"><span class="pre">&quot;ConvexAdam&quot;</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">LUMIR_BASE_DIR</span></code>: path to your local LUMIR24 data</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">WEIGHTS_PATH</span></code>: folder for pretrained weights (auto‑download)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">OUT_DIR</span></code>: output folder for NIfTI templates</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">NUM_ITERS</span></code>: number of template refinement iterations</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">SHAPE_AVG_LOGDOMAIN</span></code>: log‑domain (velocity) averaging vs. flow averaging</p></li>
+</ul>
+</section>
+<section id="outputs">
+<h2>Outputs<a class="headerlink" href="#outputs" title="Permalink to this heading"></a></h2>
+<p>Templates are saved as NIfTI files in <code class="docutils literal notranslate"><span class="pre">template_outputs</span></code>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">template_outputs/template_iter_00.nii.gz</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">template_outputs/template_iter_01.nii.gz</span></code></p></li>
+<li><p>…</p></li>
+</ul>
+</section>
+<section id="notes">
+<h2>Notes<a class="headerlink" href="#notes" title="Permalink to this heading"></a></h2>
+<ul class="simple">
+<li><p>Pretrained weights are downloaded only for <code class="docutils literal notranslate"><span class="pre">TransMorphTVF</span></code> and <code class="docutils literal notranslate"><span class="pre">VFA</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ConvexAdam</span></code> does not require pretrained weights.</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="quick_start.html" class="btn btn-neutral float-left" title="Quick Start" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="api.html" class="btn btn-neutral float-right" title="API Reference" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026 Junyu Chen.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

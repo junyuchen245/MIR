@@ -1,0 +1,82 @@
+/* Brand + typography */
+:root {
+  --mir-accent: #2563eb;
+  --mir-accent-dark: #1e40af;
+  --mir-bg-soft: #f8fafc;
+  --mir-text: #111827;
+}
+
+body {
+  color: var(--mir-text);
+  font-feature-settings: "kern", "liga", "calt";
+}
+
+.wy-nav-side {
+  background: #0f172a;
+}
+
+.wy-side-nav-search {
+  background: #1f2937;
+  border-bottom: 1px solid #0b1220;
+}
+
+.wy-side-nav-search input[type="text"] {
+  border-radius: 8px;
+  border: 1px solid #334155;
+}
+
+.wy-nav-content {
+  max-width: 1100px;
+}
+
+.wy-nav-content-wrap {
+  background: var(--mir-bg-soft);
+}
+
+.rst-content h1,
+.rst-content h2,
+.rst-content h3,
+.rst-content h4 {
+  color: #0f172a;
+}
+
+.rst-content a,
+.wy-menu-vertical a {
+  color: var(--mir-accent);
+}
+
+.rst-content a:hover,
+.wy-menu-vertical a:hover {
+  color: var(--mir-accent-dark);
+}
+
+/* Code blocks */
+.rst-content pre,
+.rst-content code {
+  border-radius: 10px;
+}
+
+.rst-content pre {
+  background: #0b1020;
+  color: #e5e7eb;
+  border: 1px solid #1f2937;
+  padding: 14px 16px;
+}
+
+/* Admonitions */
+.rst-content .admonition,
+.rst-content .note,
+.rst-content .warning {
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+}
+
+/* Tables */
+.rst-content table.docutils {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.rst-content table.docutils thead th {
+  background: #e2e8f0;
+}

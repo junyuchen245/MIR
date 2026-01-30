@@ -9,6 +9,7 @@
   <title>API Reference &mdash; MIR 0.0.1 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=0ef3fce4" />
 
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
@@ -20,14 +21,14 @@
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="MIR.models" href="api/MIR.models.html" />
-    <link rel="prev" title="Quick Start" href="quick_start.html" /> 
+    <link rel="prev" title="Brain template example (LUMIR24)" href="brain_template_example.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
   <div class="wy-grid-for-nav">
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search" >
+        <div class="wy-side-nav-search"  style="background: #1f2937" >
 
           
           
@@ -44,13 +45,84 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="quick_start.html">Quick Start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quick_start.html">Quick Start</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="quick_start.html#ixi-benchmarking-i-m-still-working-on-this-section">IXI Benchmarking (I’m still working on this section)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quick_start.html#notebook-snippets">Notebook snippets</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="quick_start.html#imports-and-setup">Imports and setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="quick_start.html#dataset-paths">Dataset paths</a></li>
+<li class="toctree-l3"><a class="reference internal" href="quick_start.html#model-factory-functions">Model factory functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="quick_start.html#data-download-and-extraction">Data download and extraction</a></li>
+<li class="toctree-l3"><a class="reference internal" href="quick_start.html#inference-loop">Inference loop</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="brain_template_example.html">Brain template example (LUMIR24)</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="brain_template_example.html#prerequisites">Prerequisites</a></li>
+<li class="toctree-l2"><a class="reference internal" href="brain_template_example.html#dataset-requirement">Dataset requirement</a></li>
+<li class="toctree-l2"><a class="reference internal" href="brain_template_example.html#run-the-example">Run the example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="brain_template_example.html#configuration">Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="brain_template_example.html#outputs">Outputs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="brain_template_example.html#notes">Notes</a></li>
+</ul>
+</li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">API Reference</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="api/MIR.models.html">MIR.models</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/MIR.utils.html">MIR.utils</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/MIR.image_similarity.html">MIR.image_similarity</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/MIR.deformation_regularizer.html">MIR.deformation_regularizer</a></li>
-<li class="toctree-l2"><a class="reference internal" href="api/MIR.accuracy_measures.html">MIR.accuracy_measures</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/MIR.models.html">MIR.models</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.models.Deformable_Swin_Transformer.html">MIR.models.Deformable_Swin_Transformer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.models.Deformable_Swin_Transformer_v2.html">MIR.models.Deformable_Swin_Transformer_v2</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.models.HyperMorph.html">MIR.models.HyperMorph</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.models.HyperTransMorph.html">MIR.models.HyperTransMorph</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.models.HyperVFA.html">MIR.models.HyperVFA</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.models.MultiMorph.html">MIR.models.MultiMorph</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.models.SITReg.html">MIR.models.SITReg</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.models.Segmentation_Heads.html">MIR.models.Segmentation_Heads</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.models.Selfsupervised_Learning_Heads.html">MIR.models.Selfsupervised_Learning_Heads</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.models.Swin_Transformer.html">MIR.models.Swin_Transformer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.models.Synthesis_Heads.html">MIR.models.Synthesis_Heads</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.models.TransMorph.html">MIR.models.TransMorph</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.models.TransVFA.html">MIR.models.TransVFA</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.models.VFA.html">MIR.models.VFA</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.models.VoxelMorph.html">MIR.models.VoxelMorph</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.models.atlas_builder.html">MIR.models.atlas_builder</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.models.configs_TransMorph.html">MIR.models.configs_TransMorph</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.models.configs_VFA.html">MIR.models.configs_VFA</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.models.configs_VoxelMorph.html">MIR.models.configs_VoxelMorph</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.models.convexAdam.html">MIR.models.convexAdam</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.models.fireants.html">MIR.models.fireants</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.models.registration_utils.html">MIR.models.registration_utils</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api/MIR.utils.html">MIR.utils</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.utils.other_utils.html">MIR.utils.other_utils</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.utils.registration_utils.html">MIR.utils.registration_utils</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.utils.segmentation_utils.html">MIR.utils.segmentation_utils</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.utils.training_utils.html">MIR.utils.training_utils</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.utils.visualization_utils.html">MIR.utils.visualization_utils</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api/MIR.image_similarity.html">MIR.image_similarity</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.image_similarity.CompositeRecon.html">MIR.image_similarity.CompositeRecon</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.image_similarity.Correlation_Ratio.html">MIR.image_similarity.Correlation_Ratio</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.image_similarity.Dice.html">MIR.image_similarity.Dice</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.image_similarity.MIND_SSC.html">MIR.image_similarity.MIND_SSC</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.image_similarity.Mutual_Information.html">MIR.image_similarity.Mutual_Information</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.image_similarity.NCC.html">MIR.image_similarity.NCC</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.image_similarity.PCC.html">MIR.image_similarity.PCC</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.image_similarity.SSIM.html">MIR.image_similarity.SSIM</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.image_similarity.Segmentation_Overlap.html">MIR.image_similarity.Segmentation_Overlap</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api/MIR.deformation_regularizer.html">MIR.deformation_regularizer</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.deformation_regularizer.GlobalRegularizers.html">MIR.deformation_regularizer.GlobalRegularizers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.deformation_regularizer.KL_divergence.html">MIR.deformation_regularizer.KL_divergence</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.deformation_regularizer.LocalRegularizers.html">MIR.deformation_regularizer.LocalRegularizers</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api/MIR.accuracy_measures.html">MIR.accuracy_measures</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.accuracy_measures.acc_measures.html">MIR.accuracy_measures.acc_measures</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/MIR.accuracy_measures.digital_diffeomorphism.html">MIR.accuracy_measures.digital_diffeomorphism</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="#MIR.models.AdvancedDecoder3D"><code class="docutils literal notranslate"><span class="pre">AdvancedDecoder3D</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#MIR.models.AdvancedDecoder3D.forward"><code class="docutils literal notranslate"><span class="pre">AdvancedDecoder3D.forward()</span></code></a></li>
 </ul>
@@ -225,8 +297,10 @@
 <li class="toctree-l2"><a class="reference internal" href="#MIR.models.convex_adam_MIND_SPR"><code class="docutils literal notranslate"><span class="pre">convex_adam_MIND_SPR()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#MIR.models.convex_adam_features"><code class="docutils literal notranslate"><span class="pre">convex_adam_features()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#MIR.models.convex_adam_seg_features"><code class="docutils literal notranslate"><span class="pre">convex_adam_seg_features()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#MIR.models.convex_adam_vfa"><code class="docutils literal notranslate"><span class="pre">convex_adam_vfa()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#MIR.models.ensemble_average"><code class="docutils literal notranslate"><span class="pre">ensemble_average()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#MIR.models.fit_warp_to_svf"><code class="docutils literal notranslate"><span class="pre">fit_warp_to_svf()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#MIR.models.fit_warp_to_svf_fast"><code class="docutils literal notranslate"><span class="pre">fit_warp_to_svf_fast()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#MIR.models.get_3DTransMorph3Lvl_config"><code class="docutils literal notranslate"><span class="pre">get_3DTransMorph3Lvl_config()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#MIR.models.get_3DTransMorphDWin3Lvl_config"><code class="docutils literal notranslate"><span class="pre">get_3DTransMorphDWin3Lvl_config()</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="#MIR.models.get_3DTransMorphLarge_config"><code class="docutils literal notranslate"><span class="pre">get_3DTransMorphLarge_config()</span></code></a></li>
@@ -445,7 +519,7 @@
       </div>
     </nav>
 
-    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #1f2937" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
           <a href="index.html">MIR</a>
       </nav>
@@ -1779,6 +1853,33 @@ SVF is enabled.</p>
 <dd></dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="MIR.models.convex_adam_vfa">
+<span class="sig-prename descclassname"><span class="pre">MIR.models.</span></span><span class="sig-name descname"><span class="pre">convex_adam_vfa</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">img_fixed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">numpy.ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">torch.Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">img_moving</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">numpy.ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">torch.Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">convex_config</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vfa_config</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">feature_scales</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Iterable</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_feat_channels</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">32</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_no_grad</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vfa_weights_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vfa_weights_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vfa_encoder</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">torch.nn.Module</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initial_disp</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">torch.Tensor</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">torch.device</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">torch.device</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">torch.Tensor</span></span></span><a class="reference internal" href="_modules/MIR/models/convexAdam/convex_adam_VFA.html#convex_adam_vfa"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#MIR.models.convex_adam_vfa" title="Permalink to this definition"></a></dt>
+<dd><p>Register images using ConvexAdam on VFA encoder multiscale features.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>img_fixed</strong> – Fixed image tensor/array.</p></li>
+<li><p><strong>img_moving</strong> – Moving image tensor/array.</p></li>
+<li><p><strong>convex_config</strong> – ConvexAdam config (defaults to MIND brain config).</p></li>
+<li><p><strong>vfa_config</strong> – VFA config (defaults to VFA default config).</p></li>
+<li><p><strong>feature_scales</strong> – Iterable of encoder scale indices to use (coarse-&gt;fine).</p></li>
+<li><p><strong>max_feat_channels</strong> – Channel cap per scale for efficiency.</p></li>
+<li><p><strong>use_no_grad</strong> – If True, compute VFA features under no_grad.</p></li>
+<li><p><strong>vfa_weights_path</strong> – Optional path to a VFA checkpoint that contains both encoder and decoder.</p></li>
+<li><p><strong>vfa_weights_key</strong> – Optional key to read from a checkpoint dict.</p></li>
+<li><p><strong>vfa_encoder</strong> – Optional preloaded VFA encoder to reuse across calls.</p></li>
+<li><p><strong>initial_disp</strong> – Optional initial displacement (B, 3, H, W, D).</p></li>
+<li><p><strong>device</strong> – Torch device.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Displacement field tensor (B, 3, H, W, D).</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="MIR.models.ensemble_average">
 <span class="sig-prename descclassname"><span class="pre">MIR.models.</span></span><span class="sig-name descname"><span class="pre">ensemble_average</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fields</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">field_types</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">weights</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nb_steps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">iters</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'cpu'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/MIR/models/registration_utils.html#ensemble_average"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#MIR.models.ensemble_average" title="Permalink to this definition"></a></dt>
 <dd><p>Ensemble average of displacement fields or SVFs.
@@ -1827,6 +1928,29 @@ warped = transform(moving_img_t, disp_t)                 # (1,1,*vol)</p>
 Parameters mirror the original TF implementation.
 <cite>warp</cite> shape: (<a href="#id27"><span class="problematic" id="id28">*</span></a>vol_shape, ndims)  (numpy array or torch tensor)
 Returns: v as a numpy array of same shape.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="MIR.models.fit_warp_to_svf_fast">
+<span class="sig-prename descclassname"><span class="pre">MIR.models.</span></span><span class="sig-name descname"><span class="pre">fit_warp_to_svf_fast</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">warp_t</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nb_steps</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">iters</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">50</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">downsample_factor</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">refine_iters</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_delta</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1e-05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">warm_start</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">torch.Tensor</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_amp</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'disp'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/MIR/models/registration_utils.html#fit_warp_to_svf_fast"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#MIR.models.fit_warp_to_svf_fast" title="Permalink to this definition"></a></dt>
+<dd><p>Fast approximation to fit_warp_to_svf using coarse-to-fine fitting.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>warp_t</strong> – Displacement field tensor (B, C, <a href="#id29"><span class="problematic" id="id30">*</span></a>vol).</p></li>
+<li><p><strong>nb_steps</strong> – VecInt steps for exponentiation.</p></li>
+<li><p><strong>iters</strong> – Optimization iterations for coarse fit.</p></li>
+<li><p><strong>lr</strong> – Learning rate for coarse fit.</p></li>
+<li><p><strong>downsample_factor</strong> – Integer downsample factor for speed (&gt;1 recommended).</p></li>
+<li><p><strong>output_type</strong> – “disp” returns velocity (SVF); “svf” returns displacement.</p></li>
+<li><p><strong>verbose</strong> – Print progress during fitting.</p></li>
+<li><p><strong>**kwargs</strong> – Passed to fit_warp_to_svf (e.g., objective, init, min_delta).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Tensor of same shape as warp_t, either SVF (velocity) or displacement.</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py function">
@@ -2000,7 +2124,7 @@ config.max_channels: int, maximum number of channels in the encoder.</p>
 voxel‑displacement field that VoxelMorph’s SpatialTransformer expects.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>grid</strong> – Tensor of shape [B, ndim, <a href="#id29"><span class="problematic" id="id30">*</span></a>spatial_dims] with absolute coords.</p>
+<dd class="field-odd"><p><strong>grid</strong> – Tensor of shape [B, ndim, <a href="#id31"><span class="problematic" id="id32">*</span></a>spatial_dims] with absolute coords.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>Tensor of the same shape containing displacements from identity.</p>
@@ -3364,14 +3488,14 @@ Expect input dimension: 3xHxWxS.</p>
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="quick_start.html" class="btn btn-neutral float-left" title="Quick Start" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="brain_template_example.html" class="btn btn-neutral float-left" title="Brain template example (LUMIR24)" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
         <a href="api/MIR.models.html" class="btn btn-neutral float-right" title="MIR.models" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright .</p>
+    <p>&#169; Copyright 2026 Junyu Chen.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

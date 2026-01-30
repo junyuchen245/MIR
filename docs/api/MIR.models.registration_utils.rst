@@ -1,4 +1,4 @@
-MIR.models.registration\_utils
+﻿MIR.models.registration\_utils
 ==============================
 
 .. automodule:: MIR.models.registration_utils
@@ -16,6 +16,7 @@ MIR.models.registration\_utils
       ensemble_average
       ensure_svf
       fit_warp_to_svf
+      fit_warp_to_svf_fast
       invert_warp_via_velocity
       jacobian_determinant
    

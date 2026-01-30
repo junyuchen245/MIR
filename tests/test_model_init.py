@@ -5,8 +5,10 @@ from MIR.models import (
     VFA,
     VxmDense,
 )
+from MIR.models import convex_adam_MIND
 from MIR.models import configs_TransMorph as configs_TransMorph
 from MIR.models import configs_VFA as configs_VFA
+import MIR.models.convexAdam.configs_ConvexAdam_MIND as configs_ConvexAdam
 
 
 def test_vfa_init_cpu():
@@ -36,6 +38,12 @@ def test_voxelmorph_init_cpu():
     config.use_probs = False
     model = VxmDense(config, gen_output=False)
     assert model is not None
+
+
+def test_convexadam_init_cpu():
+    config = configs_ConvexAdam.get_ConvexAdam_MIND_brain_default_config()
+    assert config is not None
+    assert callable(convex_adam_MIND)
 
 
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="SITReg requires CUDA in current setup")

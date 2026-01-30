@@ -4,13 +4,15 @@ Quick Start
 IXI Benchmarking (I'm still working on this section)
 ----------------
 
-Use the IXI benchmarking scripts to run quick comparisons across models. The
-notebook in ``tutorials/IXI_benchmarking/IXI_benchmarking.ipynb`` contains the
-full workflow, and the commands below run the core benchmarks.
+Use the IXI benchmarking scripts in
+`tutorials/IXI_benchmarking <https://github.com/junyuchen245/MIR/tree/main/tutorials/IXI_benchmarking>`_
+to run quick comparisons across models. The
+notebook in `tutorials/IXI_benchmarking/IXI_benchmarking.ipynb <https://github.com/junyuchen245/MIR/blob/main/tutorials/IXI_benchmarking/IXI_benchmarking.ipynb>`_
+contains the full workflow, and the commands below run the core benchmarks.
 
 .. code-block:: bash
 
-   cd tutorials/IXI_benchmarking
+    cd tutorials/IXI_benchmarking
    python3.8 -u train_TransMorph.py
    python3.8 -u train_TransMorphTVF.py
    python3.8 -u train_SITReg.py
