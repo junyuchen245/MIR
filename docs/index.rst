@@ -28,9 +28,6 @@ Editable install (recommended)::
    python3.8 -m pip install -U pip
    python3.8 -m pip install -e .
 
-Install a CUDA build of PyTorch following the official instructions, then
-install MIR as above.
-
 Platform notes
 --------------
 

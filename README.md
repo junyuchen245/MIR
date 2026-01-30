@@ -21,14 +21,6 @@ python3.8 -m pip install -U pip
 python3.8 -m pip install -e .
 ```
 
-### PyTorch CUDA build (required)
-
-Install a CUDA build of PyTorch following the official instructions, then install MIR:
-
-```
-python3.8 -m pip install -e .
-```
-
 ## Quick start: IXI benchmarking
 
 You can quickly benchmark several models on the IXI dataset using the scripts in
