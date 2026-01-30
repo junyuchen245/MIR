@@ -23,6 +23,7 @@ _register_stub("MIR.models.fireants.interpolator")
 
 project = "MIR"
 author = "Junyu Chen"
+copyright = "2026 Junyu Chen"
 release = "0.0.1"
 
 extensions = [
