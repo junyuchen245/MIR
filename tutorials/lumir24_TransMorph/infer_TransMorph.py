@@ -8,6 +8,8 @@ from MIR.models import TransMorphTVF
 from MIR import ModelWeights, DatasetJSONs
 import MIR.models.configs_TransMorph as configs_TransMorph
 import matplotlib
+
+from MIR.pretrained_wts import ValEvalModules
 matplotlib.use('Agg')
 import torch.nn.functional as F
 import nibabel as nib
@@ -63,9 +65,11 @@ def save_nii(img, file_name, pix_dim=[1., 1., 1.]):
 
 def main():
     batch_size = 1
-    val_dir = '/scratch/jchen/DATA/LUMIR/'
+    val_dir = '/scratch2/jchen/DATA/LUMIR/'
     scale_factor = 2
     output_dir = 'LUMIR_TransMorph_ValPhase/'
+    eval_dir = 'output_eval/'+output_dir
+    os.makedirs(eval_dir, exist_ok=True)
     if not os.path.isdir(output_dir):
         os.makedirs(output_dir)
     
@@ -94,6 +98,16 @@ def main():
         file_id = DatasetJSONs['LUMIR24']
         url = f"https://drive.google.com/uc?id={file_id}"
         gdown.download(url, 'LUMIR_dataset.json', quiet=False)
+        
+    if not os.path.isfile('lumir24_eval'):
+        file_id = ValEvalModules['LUMIR24']
+        url = f"https://drive.google.com/uc?id={file_id}"
+        gdown.download(url, 'lumir24_eval.zip', quiet=False)
+        import zipfile
+        with zipfile.ZipFile('lumir24_eval.zip', 'r') as zip:
+            zip.extractall('./')
+        os.remove('lumir24_eval.zip')
+    os.system('chmod +x lumir24_evaluate')
 
     pretrained = torch.load(pretrained_dir+pretrained_wts)[ModelWeights['TransMorphTVF-LUMIR24-MonoModal']['wts_key']]
     model.load_state_dict(pretrained)
@@ -125,6 +139,8 @@ def main():
             flow = flow.squeeze(0).detach().cpu().numpy()
             save_nii(flow, output_dir + 'disp_{}_{}'.format(fx_id, mv_id))
             print('disp_{}_{}.nii.gz saved to {}'.format(fx_id, mv_id, output_dir))
+
+    os.system(f'./lumir24_evaluate --input-path {output_dir} --output-path {eval_dir}')
 
 if __name__ == '__main__':
     '''

@@ -13,7 +13,7 @@ import nibabel as nib
 import matplotlib.pyplot as plt
 import random
 from torch.utils.data import Dataset
-
+from MIR import ValEvalModules
 class L2RLUMIRJSONDataset(Dataset):
     def __init__(self, base_dir, json_path, stage='train'):
         with open(json_path) as f:
@@ -62,8 +62,10 @@ def save_nii(img, file_name, pix_dim=[1., 1., 1.]):
 
 def main():
     batch_size = 1
-    val_dir = '/scratch/jchen/DATA/LUMIR/LUMIR25/'
+    val_dir = '/scratch2/jchen/DATA/LUMIR/LUMIR25/'
     output_dir = 'LUMIR_ConvexAdam_ValPhase/'
+    eval_dir = 'output_eval/'+output_dir
+    os.makedirs(eval_dir, exist_ok=True)
     if not os.path.isdir(output_dir):
         os.makedirs(output_dir)
     
@@ -80,6 +82,16 @@ def main():
         file_id = "164Flc1C6oufONGimvpKlrNtq5t3obXEo"
         url = f"https://drive.google.com/uc?id={file_id}"
         gdown.download(url, 'LUMIR25_dataset.json', quiet=False)
+    
+    if not os.path.isfile('lumir25_eval'):
+        file_id = ValEvalModules['LUMIR25']
+        url = f"https://drive.google.com/uc?id={file_id}"
+        gdown.download(url, 'lumir25_eval.zip', quiet=False)
+        import zipfile
+        with zipfile.ZipFile('lumir25_eval.zip', 'r') as zip:
+            zip.extractall('./')
+        os.remove('lumir25_eval.zip')
+    os.system('chmod +x lumir25_eval')
     
     '''
     Initialize training
@@ -101,11 +113,12 @@ def main():
         flow = flow.squeeze(0).detach().cpu().numpy()
         save_nii(flow, output_dir + 'disp_{}_{}'.format(fx_id, mv_id))
         print('disp_{}_{}.nii.gz saved to {}'.format(fx_id, mv_id, output_dir))
-        
-    create_zip('LUMIR_ConvexAdam_ValPhase.zip', output_dir)
-    if os.path.isfile('LUMIR_ConvexAdam_ValPhase.zip'):
-        os.system('rm -rf {}'.format(output_dir))
-        print('Removed existing output directory: {}'.format(output_dir))
+    
+    os.system(f'./lumir25_eval --input-path {output_dir} --output-path {eval_dir}')
+    #create_zip('LUMIR_ConvexAdam_ValPhase.zip', output_dir)
+    #if os.path.isfile('LUMIR_ConvexAdam_ValPhase.zip'):
+    #    os.system('rm -rf {}'.format(output_dir))
+    #    print('Removed existing output directory: {}'.format(output_dir))
 
 if __name__ == '__main__':
     '''

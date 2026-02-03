@@ -13,6 +13,7 @@ import nibabel as nib
 import matplotlib.pyplot as plt
 import random
 from torch.utils.data import Dataset
+from MIR import ValEvalModules
 
 class L2RLUMIRJSONDataset(Dataset):
     def __init__(self, base_dir, json_path, stage='train'):
@@ -62,8 +63,10 @@ def save_nii(img, file_name, pix_dim=[1., 1., 1.]):
 
 def main():
     batch_size = 1
-    val_dir = '/scratch/jchen/DATA/LUMIR/'
+    val_dir = '/scratch2/jchen/DATA/LUMIR/'
     output_dir = 'LUMIR_ConvexAdam_ValPhase/'
+    eval_dir = 'output_eval/'+output_dir
+    os.makedirs(eval_dir, exist_ok=True)
     if not os.path.isdir(output_dir):
         os.makedirs(output_dir)
     
@@ -81,15 +84,27 @@ def main():
         url = f"https://drive.google.com/uc?id={file_id}"
         gdown.download(url, 'LUMIR_dataset.json', quiet=False)
     
+    if not os.path.isfile('lumir24_eval'):
+        file_id = ValEvalModules['LUMIR24']
+        url = f"https://drive.google.com/uc?id={file_id}"
+        gdown.download(url, 'lumir24_eval.zip', quiet=False)
+        import zipfile
+        with zipfile.ZipFile('lumir24_eval.zip', 'r') as zip:
+            zip.extractall('./')
+        os.remove('lumir24_eval.zip')
+    os.system('chmod +x lumir24_evaluate')
+    
     '''
     Initialize training
     '''
-    val_set = L2RLUMIRJSONDataset(base_dir=val_dir, json_path=val_dir+'LUMIR_dataset.json', stage='test')
+    val_set = L2RLUMIRJSONDataset(base_dir=val_dir, json_path='LUMIR_dataset.json', stage='test')
     val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=False, num_workers=1, pin_memory=True)
     val_files = val_set.imgs
+    
     '''
     Validation
     '''
+    
     for i, data in enumerate(val_loader):
         mv_id = val_files[i]['moving'].split('_')[-2]
         fx_id = val_files[i]['fixed'].split('_')[-2]
@@ -98,10 +113,11 @@ def main():
         x = data[0]
         y = data[1]
         flow = model(x, y, config)
-        #flow = F.interpolate(flow.cuda(), scale_factor=2, mode='trilinear', align_corners=False) * 2
         flow = flow.squeeze(0).detach().cpu().numpy()
         save_nii(flow, output_dir + 'disp_{}_{}'.format(fx_id, mv_id))
         print('disp_{}_{}.nii.gz saved to {}'.format(fx_id, mv_id, output_dir))
+     
+    os.system(f'./lumir24_evaluate --input-path {output_dir} --output-path {eval_dir}')
 
 if __name__ == '__main__':
     '''

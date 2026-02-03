@@ -8,7 +8,8 @@ from . import utils
 from . import random_image_generation
 from . import intensity_normalization
 from . import statistical_analysis
-from .pretrained_wts import ModelWeights, DatasetJSONs
+from . import l2r_io
+from .pretrained_wts import ModelWeights, DatasetJSONs, ValEvalModules
 from . import label_reference
 
 __all__ = [
@@ -24,9 +25,11 @@ __all__ = [
     'RandomMultiContrastRemap',
     'ModelWeights',
     'DatasetJSONs',
+    'ValEvalModules',
     'fill_holes_torch',
     'label_reference',
     'statistical_analysis',
+    'l2r_io',
 ]
 
 # ───────────────────────────────────────

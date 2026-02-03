@@ -10,6 +10,7 @@ from .VFA import VFA, Decoder, DoubleConv3d, grid_to_flow, VFASPR
 from .MultiMorph import GroupNet3D, Warp3d, make_epoch_batches, ListBatchSampler
 from .HyperVFA import HyperVFA, HyperVFASPR
 from .TransVFA import TransVFA
+from .affine_reg import AffineReg3D, PreAffineToTemplate
 from .atlas_builder import TemplateCreation, MeanStream
 from .configs_VFA import get_VFA_default_config
 from .Synthesis_Heads import SynthesisHead3DAdvanced, SynthesisHead3D, EfficientAdvancedSynthHead3D, ConvNeXtSynthHead3D
@@ -93,6 +94,8 @@ __all__ = [
     'DoubleConv3d',
     'grid_to_flow',
     'TransVFA',
+    'AffineReg3D',
+    'PreAffineToTemplate',
     'get_VFA_default_config',
     'ensemble_average',
     'invert_warp_via_velocity',

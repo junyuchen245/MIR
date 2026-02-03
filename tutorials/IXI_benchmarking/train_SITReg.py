@@ -1,4 +1,3 @@
-from torch.utils.tensorboard import SummaryWriter
 import os
 import sys
 import glob
@@ -94,7 +93,7 @@ def main():
     sys.stdout = Logger('logs/'+save_dir)
     lr = 0.0001 #learning rate
     epoch_start = 0
-    max_epoch = 500 #max traning epoch
+    max_epoch = 250 #max traning epoch
     cont_training = False #if continue training
 
     '''
@@ -152,7 +151,6 @@ def main():
     best_dsc = 0
     criterion_ncc = NCC_vxm()
     criterion_reg = Grad3d(penalty='l2')
-    writer = SummaryWriter(log_dir='logs/'+save_dir)
     for epoch in range(epoch_start, max_epoch):
         print('Training Starts')
         '''
@@ -187,24 +185,12 @@ def main():
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            
-            #plt.figure()
-            #plt.subplot(1, 3, 1)
-            #plt.imshow(x_aug.cpu().detach().numpy()[0, 0, :, 120, :], vmax=1, vmin=0, cmap='gray')
-            #plt.subplot(1, 3, 2)
-            #plt.imshow(y_aug.cpu().detach().numpy()[0, 0, :, 120, :], vmax=1, vmin=0, cmap='gray')
-            #plt.subplot(1, 3, 3)
-            #plt.imshow(output.cpu().detach().numpy()[0, 0, :, 120, :], vmax=1, vmin=0, cmap='gray')
-            #plt.savefig('tmp.png')
-            #plt.close()
-
 
             print('Iter {} of {} loss {:.4f}, Img Sim: {:.6f}, Reg: {:.6f}'.format(idx, len(train_loader),
                                                                                             loss.item(),
                                                                                             loss_ncc.item(),
                                                                                             loss_reg.item()))
 
-        writer.add_scalar('Loss/train', loss_all.avg, epoch)
         print('Epoch {} loss {:.4f}'.format(epoch, loss_all.avg))
         '''
         Validation
@@ -216,12 +202,9 @@ def main():
                 x, y, x_seg, y_seg = to_cuda(data)
                 x = x.float()
                 y = y.float()
-                grid_img = mk_grid_img(8, 1, (H, W, D), dim=0).cuda()
                 mapping_pair = model(x, y, mappings_for_levels=((0, False),))[0]
                 flow = mapping_to_flow(mapping_pair.forward_mapping)
-                #flow = F.interpolate(flow.cuda(), scale_factor=2, mode='trilinear', align_corners=False) * 2
                 def_out = spatial_trans_nn(x_seg.cuda().float(), flow)
-                def_grid = spatial_trans(grid_img.float(), flow)
                 dsc = dice_val_VOI(def_out.long(), y_seg.long(), eval_labels=VOI_lbls)
                 eval_dsc.update(dsc.item(), x.size(0))
                 print(eval_dsc.avg)
@@ -232,21 +215,7 @@ def main():
             'best_dsc': best_dsc,
             'optimizer': optimizer.state_dict(),
         }, save_dir='experiments/' + save_dir, filename='dsc{:.4f}.pth.tar'.format(eval_dsc.avg))
-        plt.switch_backend('agg')
-        pred_fig = comput_fig(flow)
-        grid_fig = comput_fig(def_grid)
-        x_fig = comput_fig(x)
-        tar_fig = comput_fig(y)
-        writer.add_figure('Grid', grid_fig, epoch)
-        plt.close(grid_fig)
-        writer.add_figure('moving', x_fig, epoch)
-        plt.close(x_fig)
-        writer.add_figure('fixed', tar_fig, epoch)
-        plt.close(tar_fig)
-        writer.add_figure('deformed', pred_fig, epoch)
-        plt.close(pred_fig)
         loss_all.reset()
-    writer.close()
 
 def comput_fig(img):
     img = img.detach().cpu().numpy()[0, 0, 48:64, :, :]

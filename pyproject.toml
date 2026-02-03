@@ -39,6 +39,7 @@ package-dir = {"" = "src"}    # <-- tell it that your packages live in src/
 # this says: in the src/MIR/utils folder, include any .txt
 "MIR.utils" = ["FreeSurfer_label_info.txt"]
 "MIR.models" = ["deedsBCV/bin/*"]
+"MIR.templates" = ["*.nii.gz"]
 
 # either explicitly list your package
 # packages = ["MIR"]

@@ -15,7 +15,7 @@ import nibabel as nib
 import matplotlib.pyplot as plt
 import random
 from torch.utils.data import Dataset
-
+from MIR import ValEvalModules
 class L2RLUMIRJSONDataset(Dataset):
     def __init__(self, base_dir, json_path, stage='train'):
         with open(json_path) as f:
@@ -66,6 +66,8 @@ def main():
     batch_size = 1
     val_dir = '/scratch2/jchen/DATA/LUMIR/'
     output_dir = 'LUMIR_ConvexAdam_ValPhase/'
+    eval_dir = 'output_eval/'+output_dir
+    os.makedirs(eval_dir, exist_ok=True)
     if not os.path.isdir(output_dir):
         os.makedirs(output_dir)
     
@@ -95,12 +97,19 @@ def main():
         gdown.download(url, pretrained_dir + pretrained_wts, quiet=False)
     vfa_weights_key = ModelWeights['VFA-LUMIR24-MonoModal']['wts_key']
     
+    if not os.path.isfile('evaluation_module'):
+        file_id = ValEvalModules['LUMIR24']
+        url = f"https://drive.google.com/uc?id={file_id}"
+        gdown.download(url, 'evaluation_module', quiet=False)
+    os.system('chmod +x evaluation_module')
+    
     '''
     Initialize training
     '''
     val_set = L2RLUMIRJSONDataset(base_dir=val_dir, json_path='LUMIR_dataset.json', stage='validation')
     val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=False, num_workers=1, pin_memory=True)
     val_files = val_set.imgs
+    
     '''
     Validation
     '''
@@ -123,7 +132,9 @@ def main():
         flow = flow.squeeze(0).detach().cpu().numpy()
         save_nii(flow, output_dir + 'disp_{}_{}'.format(fx_id, mv_id))
         print('disp_{}_{}.nii.gz saved to {}'.format(fx_id, mv_id, output_dir))
-
+        
+    os.system(f'./evaluation_module --input-path {output_dir} --output-path {eval_dir}')
+    
 if __name__ == '__main__':
     '''
     GPU configuration

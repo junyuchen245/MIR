@@ -17,6 +17,11 @@ DatasetJSONs = {
     'LUMIR25': '164Flc1C6oufONGimvpKlrNtq5t3obXEo'
 }
 
+ValEvalModules = {
+    'LUMIR24': '11JY7E7MQRYOVb6ejKj_16w0w3QVyVWeE',
+    'LUMIR25': '1yp_ERmLMdhtsCDLKe1HyL18_oNgEermO'
+}
+
 FDG_atlas_autoPET = {
     'fdg_autoPET_CT_atlas_norm01_2.8x2.8x3.8': '1VGXnimeyN7bCzBOK4JKUFCYrOWin-IX6',
     'fdg_autoPET_SUV_atlas_norm01_2.8x2.8x3.8': '1aTZV9qv97Z9HswvkHWwISO9JsifzeeOh',
