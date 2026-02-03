@@ -8,6 +8,8 @@ from MIR.models import VFA
 import MIR.models.configs_VFA as CONFIGS_VFA
 from MIR import ModelWeights, DatasetJSONs
 import matplotlib
+
+from MIR.pretrained_wts import ValEvalModules
 matplotlib.use('Agg')
 import torch.nn.functional as F
 import nibabel as nib
@@ -67,6 +69,8 @@ def main():
     val_dir = '/scratch/jchen/DATA/LUMIR/LUMIR25/'
     scale_factor = 1
     output_dir = 'LUMIR_VFAlumir25_ValPhase/'
+    eval_dir = 'output_eval/'+output_dir
+    os.makedirs(eval_dir, exist_ok=True)
     if not os.path.isdir(output_dir):
         os.makedirs(output_dir)
     
@@ -100,6 +104,16 @@ def main():
         file_id = DatasetJSONs['LUMIR25']
         url = f"https://drive.google.com/uc?id={file_id}"
         gdown.download(url, 'LUMIR25_dataset.json', quiet=False)
+    
+    if not os.path.isfile('lumir25_eval'):
+        file_id = ValEvalModules['LUMIR25']
+        url = f"https://drive.google.com/uc?id={file_id}"
+        gdown.download(url, 'lumir25_eval.zip', quiet=False)
+        import zipfile
+        with zipfile.ZipFile('lumir25_eval.zip', 'r') as zip:
+            zip.extractall('./')
+        os.remove('lumir25_eval.zip')
+    os.system('chmod +x lumir25_eval')
 
     pretrained_multi = torch.load(pretrained_dir+pretrained_wts_multi)[ModelWeights['VFA-LUMIR25-MultiModal']['wts_key']]
     pretrained_mono = torch.load(pretrained_dir+pretrained_wts_mono)[ModelWeights['VFA-LUMIR24-MonoModal']['wts_key']]
@@ -139,6 +153,8 @@ def main():
         flow = flow.squeeze(0).detach().cpu().numpy()
         save_nii(flow, output_dir + 'disp_{}_{}'.format(fx_id, mv_id))
         print('disp_{}_{}.nii.gz saved to {}'.format(fx_id, mv_id, output_dir))
+    
+    os.system(f'./lumir25_eval --input-path {output_dir} --output-path {eval_dir}') 
 
 if __name__ == '__main__':
     '''

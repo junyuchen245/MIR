@@ -12,7 +12,7 @@ MIR is a research toolkit for medical image registration, providing model implem
 training/inference scripts, and supporting utilities. It also includes curated wrappers for
 selected external packages to support **TransMorph‑style registration workflows**.
 
-Documentation: https://junyuchen245.github.io/MIR
+Documentation: https://junyuchen.me/MIR
 
 Repository: https://github.com/junyuchen245/MIR
 

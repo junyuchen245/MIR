@@ -25,13 +25,13 @@ from MIR.image_similarity import (
 
 
 class AffineReg3D(nn.Module):
-    """3D affine registration with configurable degrees of freedom.
+    """3D affine registration with configurable degrees of freedom. This is an optimization-based approach, not deep learning-based.
 
     Args:
         vol_shape: Spatial shape tuple (D, H, W).
         dof: Degrees of freedom, one of: "affine", "rigid", "translation", "scaling".
-        scales: Multi-scale factors (e.g., (1.0, 0.5)).
-        loss_funcs: Loss names per scale ("mse", "l1", "ncc").
+        scales: Multi-scale factors (e.g., (0.25, 0.5, 1)).
+        loss_funcs: Loss names per scale ("mse", "l1", "ncc", "fastncc", "pcc", "localcorrratio", "corrratio", "ssim3d", "mutualinformation", "localmutualinformation", "mind").
         loss_weights: Optional loss weights per scale.
         mode: Sampling mode for SpatialTransformer.
         batch_size: Parameter batch size (defaults to 1).

@@ -9,7 +9,13 @@ from MIR.models import convex_adam_MIND
 from MIR.models import configs_TransMorph as configs_TransMorph
 from MIR.models import configs_VFA as configs_VFA
 import MIR.models.convexAdam.configs_ConvexAdam_MIND as configs_ConvexAdam
+from MIR.models import AffineReg3D
 
+def test_affine_reg_init_cpu():
+    config = type("cfg", (), {})()
+    config.img_size = (16, 16, 16)
+    model = AffineReg3D(config)
+    assert model is not None
 
 def test_vfa_init_cpu():
     config = configs_VFA.get_VFA_default_config()
