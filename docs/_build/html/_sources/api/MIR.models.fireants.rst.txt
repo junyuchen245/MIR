@@ -1,4 +1,4 @@
-﻿MIR.models.fireants
+MIR.models.fireants
 ===================
 
 .. automodule:: MIR.models.fireants

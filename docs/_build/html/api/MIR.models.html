@@ -45,7 +45,7 @@
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../quick_start.html">Quick Start</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../brain_template_example.html">Brain template example (LUMIR24)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../brain_template_example.html">Brain template example</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../models/index.html">Models</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../api.html">API Reference</a><ul class="current">
 <li class="toctree-l2 current"><a class="current reference internal" href="#">MIR.models</a><ul>
@@ -64,6 +64,7 @@
 <li class="toctree-l3"><a class="reference internal" href="MIR.models.TransVFA.html">MIR.models.TransVFA</a></li>
 <li class="toctree-l3"><a class="reference internal" href="MIR.models.VFA.html">MIR.models.VFA</a></li>
 <li class="toctree-l3"><a class="reference internal" href="MIR.models.VoxelMorph.html">MIR.models.VoxelMorph</a></li>
+<li class="toctree-l3"><a class="reference internal" href="MIR.models.affine_reg.html">MIR.models.affine_reg</a></li>
 <li class="toctree-l3"><a class="reference internal" href="MIR.models.atlas_builder.html">MIR.models.atlas_builder</a></li>
 <li class="toctree-l3"><a class="reference internal" href="MIR.models.configs_TransMorph.html">MIR.models.configs_TransMorph</a></li>
 <li class="toctree-l3"><a class="reference internal" href="MIR.models.configs_VFA.html">MIR.models.configs_VFA</a></li>
@@ -78,6 +79,7 @@
 <li class="toctree-l2"><a class="reference internal" href="MIR.deformation_regularizer.html">MIR.deformation_regularizer</a></li>
 <li class="toctree-l2"><a class="reference internal" href="MIR.accuracy_measures.html">MIR.accuracy_measures</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../api.html#MIR.models.AdvancedDecoder3D"><code class="docutils literal notranslate"><span class="pre">AdvancedDecoder3D</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#MIR.models.AffineReg3D"><code class="docutils literal notranslate"><span class="pre">AffineReg3D</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../api.html#MIR.models.AffineTransformer"><code class="docutils literal notranslate"><span class="pre">AffineTransformer</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../api.html#MIR.models.Conv3dReLU"><code class="docutils literal notranslate"><span class="pre">Conv3dReLU</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../api.html#MIR.models.ConvNeXtSynthHead3D"><code class="docutils literal notranslate"><span class="pre">ConvNeXtSynthHead3D</span></code></a></li>
@@ -98,6 +100,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../api.html#MIR.models.ListBatchSampler"><code class="docutils literal notranslate"><span class="pre">ListBatchSampler</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../api.html#MIR.models.MappingPair"><code class="docutils literal notranslate"><span class="pre">MappingPair</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../api.html#MIR.models.MeanStream"><code class="docutils literal notranslate"><span class="pre">MeanStream</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#MIR.models.PreAffineToTemplate"><code class="docutils literal notranslate"><span class="pre">PreAffineToTemplate</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../api.html#MIR.models.ReLUFactory"><code class="docutils literal notranslate"><span class="pre">ReLUFactory</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../api.html#MIR.models.RegistrationHead"><code class="docutils literal notranslate"><span class="pre">RegistrationHead</span></code></a></li>
 <li class="toctree-l2"><a class="reference internal" href="../api.html#MIR.models.SITReg"><code class="docutils literal notranslate"><span class="pre">SITReg</span></code></a></li>
@@ -290,25 +293,28 @@
 <tr class="row-odd"><td><p><a class="reference internal" href="MIR.models.VoxelMorph.html#module-MIR.models.VoxelMorph" title="MIR.models.VoxelMorph"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MIR.models.VoxelMorph</span></code></a></p></td>
 <td><p>VoxelMorph</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="MIR.models.atlas_builder.html#module-MIR.models.atlas_builder" title="MIR.models.atlas_builder"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MIR.models.atlas_builder</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="MIR.models.affine_reg.html#module-MIR.models.affine_reg" title="MIR.models.affine_reg"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MIR.models.affine_reg</span></code></a></p></td>
+<td><p>3D affine registration module using MIR SpatialTransformer.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="MIR.models.atlas_builder.html#module-MIR.models.atlas_builder" title="MIR.models.atlas_builder"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MIR.models.atlas_builder</span></code></a></p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="MIR.models.configs_TransMorph.html#module-MIR.models.configs_TransMorph" title="MIR.models.configs_TransMorph"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MIR.models.configs_TransMorph</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="MIR.models.configs_TransMorph.html#module-MIR.models.configs_TransMorph" title="MIR.models.configs_TransMorph"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MIR.models.configs_TransMorph</span></code></a></p></td>
 <td><p>Configuration presets for TransMorph models.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="MIR.models.configs_VFA.html#module-MIR.models.configs_VFA" title="MIR.models.configs_VFA"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MIR.models.configs_VFA</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="MIR.models.configs_VFA.html#module-MIR.models.configs_VFA" title="MIR.models.configs_VFA"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MIR.models.configs_VFA</span></code></a></p></td>
 <td><p>Configuration presets for VFA models.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="MIR.models.configs_VoxelMorph.html#module-MIR.models.configs_VoxelMorph" title="MIR.models.configs_VoxelMorph"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MIR.models.configs_VoxelMorph</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="MIR.models.configs_VoxelMorph.html#module-MIR.models.configs_VoxelMorph" title="MIR.models.configs_VoxelMorph"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MIR.models.configs_VoxelMorph</span></code></a></p></td>
 <td><p>Configuration presets for VoxelMorph models.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="MIR.models.convexAdam.html#module-MIR.models.convexAdam" title="MIR.models.convexAdam"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MIR.models.convexAdam</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="MIR.models.convexAdam.html#module-MIR.models.convexAdam" title="MIR.models.convexAdam"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MIR.models.convexAdam</span></code></a></p></td>
 <td><p>ConvexAdam registration wrappers and configuration presets.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="MIR.models.fireants.html#module-MIR.models.fireants" title="MIR.models.fireants"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MIR.models.fireants</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="MIR.models.fireants.html#module-MIR.models.fireants" title="MIR.models.fireants"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MIR.models.fireants</span></code></a></p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="MIR.models.registration_utils.html#module-MIR.models.registration_utils" title="MIR.models.registration_utils"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MIR.models.registration_utils</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="MIR.models.registration_utils.html#module-MIR.models.registration_utils" title="MIR.models.registration_utils"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MIR.models.registration_utils</span></code></a></p></td>
 <td><p>Model-level registration utilities (transformers and geometry).</p></td>
 </tr>
 </tbody>

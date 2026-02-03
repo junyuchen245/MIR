@@ -12,7 +12,7 @@ MIR is a research toolkit for medical image registration, providing model implem
 training/inference scripts, and supporting utilities. It also includes curated wrappers for
 selected external packages to support **TransMorph‑style registration workflows**.
 
-Documentation: https://junyuchen245.github.io/MIR
+Documentation: https://junyuchen.me/MIR
 
 Repository: https://github.com/junyuchen245/MIR
 
@@ -27,9 +27,6 @@ Editable install (recommended)::
    cd MIR
    python3.8 -m pip install -U pip
    python3.8 -m pip install -e .
-
-Install a CUDA build of PyTorch following the official instructions, then
-install MIR as above.
 
 Platform notes
 --------------
@@ -53,8 +50,8 @@ Benchmark multiple registration models on the IXI dataset using the scripts in
    python3.8 -u train_SITReg.py
    python3.8 -u train_SITReg_SPR.py
 
-Example: Brain template construction (LUMIR24)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Example: Brain template construction
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Build a population template from LUMIR24 using TransMorphTVF, VFA, or ConvexAdam.
 See :doc:`brain_template_example` for the full walkthrough.
@@ -130,6 +127,8 @@ About Me
    :caption: Contents:
 
    quick_start
+   quick_start_brain_registration
+   quick_start_ixi_benchmarking
    brain_template_example
    models/index
    api

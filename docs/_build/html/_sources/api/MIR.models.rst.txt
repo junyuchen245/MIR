@@ -42,6 +42,7 @@
    MIR.models.TransVFA
    MIR.models.VFA
    MIR.models.VoxelMorph
+   MIR.models.affine_reg
    MIR.models.atlas_builder
    MIR.models.configs_TransMorph
    MIR.models.configs_VFA

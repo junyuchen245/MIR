@@ -50,8 +50,8 @@ Benchmark multiple registration models on the IXI dataset using the scripts in
    python3.8 -u train_SITReg.py
    python3.8 -u train_SITReg_SPR.py
 
-Example: Brain template construction (LUMIR24)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Example: Brain template construction
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Build a population template from LUMIR24 using TransMorphTVF, VFA, or ConvexAdam.
 See :doc:`brain_template_example` for the full walkthrough.
@@ -127,6 +127,8 @@ About Me
    :caption: Contents:
 
    quick_start
+   quick_start_brain_registration
+   quick_start_ixi_benchmarking
    brain_template_example
    models/index
    api

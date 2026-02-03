@@ -1,9 +1,18 @@
-Brain template example (LUMIR24)
+Brain template example
 ================================
 
 This example builds a population brain template from the LUMIR24 dataset using
 **TransMorphTVF**, **VFA**, or **ConvexAdam**. The script is self‑contained
-**except** for the dataset itself: you must download LUMIR24 in advance.
+**except** for the dataset itself: you must download LUMIR24 dataset in advance.
+
+Pipeline overview
+-----------------
+1. Initialize the model (TransMorphTVF, VFA, or ConvexAdam).
+2. For a set number of iterations:
+    - Register all subjects to the current template.
+    - Average the deformed images in either log‑domain (velocity) or
+      displacement field domain to form a new template.
+3. Save the intermediate templates as NIfTI files.
 
 Prerequisites
 -------------

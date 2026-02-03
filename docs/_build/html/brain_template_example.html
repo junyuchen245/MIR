@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Brain template example (LUMIR24) &mdash; MIR 0.0.1 documentation</title>
+  <title>Brain template example &mdash; MIR 0.0.1 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
 
@@ -45,7 +45,8 @@
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="quick_start.html">Quick Start</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Brain template example (LUMIR24)</a><ul>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Brain template example</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#pipeline-overview">Pipeline overview</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#prerequisites">Prerequisites</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#dataset-requirement">Dataset requirement</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#run-the-example">Run the example</a></li>
@@ -72,7 +73,7 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">Brain template example (LUMIR24)</li>
+      <li class="breadcrumb-item active">Brain template example</li>
       <li class="wy-breadcrumbs-aside">
             <a href="_sources/brain_template_example.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -82,11 +83,27 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="brain-template-example-lumir24">
-<h1>Brain template example (LUMIR24)<a class="headerlink" href="#brain-template-example-lumir24" title="Permalink to this heading"></a></h1>
+  <section id="brain-template-example">
+<h1>Brain template example<a class="headerlink" href="#brain-template-example" title="Permalink to this heading"></a></h1>
 <p>This example builds a population brain template from the LUMIR24 dataset using
 <strong>TransMorphTVF</strong>, <strong>VFA</strong>, or <strong>ConvexAdam</strong>. The script is self‑contained
-<strong>except</strong> for the dataset itself: you must download LUMIR24 in advance.</p>
+<strong>except</strong> for the dataset itself: you must download LUMIR24 dataset in advance.</p>
+<section id="pipeline-overview">
+<h2>Pipeline overview<a class="headerlink" href="#pipeline-overview" title="Permalink to this heading"></a></h2>
+<ol class="arabic simple">
+<li><p>Initialize the model (TransMorphTVF, VFA, or ConvexAdam).</p></li>
+<li><dl class="simple">
+<dt>For a set number of iterations:</dt><dd><ul class="simple">
+<li><p>Register all subjects to the current template.</p></li>
+<li><p>Average the deformed images in either log‑domain (velocity) or
+displacement field domain to form a new template.</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p>Save the intermediate templates as NIfTI files.</p></li>
+</ol>
+</section>
 <section id="prerequisites">
 <h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Permalink to this heading"></a></h2>
 <ul class="simple">

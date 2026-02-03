@@ -19,7 +19,7 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Brain template example (LUMIR24)" href="brain_template_example.html" />
+    <link rel="next" title="Brain registration (affine + deformable)" href="quick_start_brain_registration.html" />
     <link rel="prev" title="MIR Documentation" href="index.html" /> 
 </head>
 
@@ -44,19 +44,10 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Quick Start</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#ixi-benchmarking-i-m-still-working-on-this-section">IXI Benchmarking (I’m still working on this section)</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#notebook-snippets">Notebook snippets</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#imports-and-setup">Imports and setup</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#dataset-paths">Dataset paths</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#model-factory-functions">Model factory functions</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#data-download-and-extraction">Data download and extraction</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#inference-loop">Inference loop</a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="brain_template_example.html">Brain template example (LUMIR24)</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Quick Start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quick_start_brain_registration.html">Brain registration (affine + deformable)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quick_start_ixi_benchmarking.html">IXI benchmarking quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="brain_template_example.html">Brain template example</a></li>
 <li class="toctree-l1"><a class="reference internal" href="models/index.html">Models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a></li>
 </ul>
@@ -87,193 +78,11 @@
              
   <section id="quick-start">
 <h1>Quick Start<a class="headerlink" href="#quick-start" title="Permalink to this heading"></a></h1>
-<section id="ixi-benchmarking-i-m-still-working-on-this-section">
-<h2>IXI Benchmarking (I’m still working on this section)<a class="headerlink" href="#ixi-benchmarking-i-m-still-working-on-this-section" title="Permalink to this heading"></a></h2>
-<p>Use the IXI benchmarking scripts in
-<a class="reference external" href="https://github.com/junyuchen245/MIR/tree/main/tutorials/IXI_benchmarking">tutorials/IXI_benchmarking</a>
-to run quick comparisons across models. The
-notebook in <a class="reference external" href="https://github.com/junyuchen245/MIR/blob/main/tutorials/IXI_benchmarking/IXI_benchmarking.ipynb">tutorials/IXI_benchmarking/IXI_benchmarking.ipynb</a>
-contains the full workflow, and the commands below run the core benchmarks.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="w"> </span><span class="nb">cd</span><span class="w"> </span>tutorials/IXI_benchmarking
-python3.8<span class="w"> </span>-u<span class="w"> </span>train_TransMorph.py
-python3.8<span class="w"> </span>-u<span class="w"> </span>train_TransMorphTVF.py
-python3.8<span class="w"> </span>-u<span class="w"> </span>train_SITReg.py
-python3.8<span class="w"> </span>-u<span class="w"> </span>train_SITReg_SPR.py
-</pre></div>
-</div>
-</section>
-<section id="notebook-snippets">
-<h2>Notebook snippets<a class="headerlink" href="#notebook-snippets" title="Permalink to this heading"></a></h2>
-<section id="imports-and-setup">
-<h3>Imports and setup<a class="headerlink" href="#imports-and-setup" title="Permalink to this heading"></a></h3>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">torch.utils.tensorboard</span> <span class="kn">import</span> <span class="n">SummaryWriter</span>
-<span class="kn">import</span> <span class="nn">os</span>
-<span class="kn">import</span> <span class="nn">sys</span>
-<span class="kn">import</span> <span class="nn">glob</span>
-
-<span class="kn">from</span> <span class="nn">torch.utils.data</span> <span class="kn">import</span> <span class="n">DataLoader</span>
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">import</span> <span class="nn">torch</span>
-<span class="kn">from</span> <span class="nn">torch</span> <span class="kn">import</span> <span class="n">optim</span>
-<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
-<span class="kn">from</span> <span class="nn">natsort</span> <span class="kn">import</span> <span class="n">natsorted</span>
-<span class="kn">from</span> <span class="nn">torchvision</span> <span class="kn">import</span> <span class="n">transforms</span>
-
-<span class="kn">from</span> <span class="nn">MIR.models</span> <span class="kn">import</span> <span class="n">SpatialTransformer</span><span class="p">,</span> <span class="n">EncoderFeatureExtractor</span><span class="p">,</span> <span class="n">SITReg</span><span class="p">,</span> <span class="n">VFA</span><span class="p">,</span> <span class="n">TransMorphTVF</span><span class="p">,</span> <span class="n">TransMorph</span><span class="p">,</span> <span class="n">convex_adam_MIND</span>
-<span class="kn">from</span> <span class="nn">MIR.models.SITReg</span> <span class="kn">import</span> <span class="n">ReLUFactory</span><span class="p">,</span> <span class="n">GroupNormalizerFactory</span>
-<span class="kn">from</span> <span class="nn">MIR.models.SITReg.composable_mapping</span> <span class="kn">import</span> <span class="n">DataFormat</span>
-<span class="kn">from</span> <span class="nn">MIR.models.SITReg.deformation_inversion_layer.fixed_point_iteration</span> <span class="kn">import</span> <span class="p">(</span>
-    <span class="n">AndersonSolver</span><span class="p">,</span>
-    <span class="n">AndersonSolverArguments</span><span class="p">,</span>
-    <span class="n">MaxElementWiseAbsStopCriterion</span><span class="p">,</span>
-    <span class="n">RelativeL2ErrorStopCriterion</span><span class="p">,</span>
-<span class="p">)</span>
-<span class="kn">import</span> <span class="nn">MIR.models.convexAdam.configs_ConvexAdam_MIND</span> <span class="k">as</span> <span class="nn">CONFIGS_CVXAdam</span>
-<span class="kn">import</span> <span class="nn">MIR.models.configs_TransMorph</span> <span class="k">as</span> <span class="nn">configs_TransMorph</span>
-<span class="kn">import</span> <span class="nn">MIR.models.configs_VFA</span> <span class="k">as</span> <span class="nn">CONFIGS_VFA</span>
-<span class="kn">from</span> <span class="nn">data</span> <span class="kn">import</span> <span class="n">datasets</span><span class="p">,</span> <span class="n">trans</span>
-<span class="kn">import</span> <span class="nn">torch.nn.functional</span> <span class="k">as</span> <span class="nn">F</span>
-</pre></div>
-</div>
-</section>
-<section id="dataset-paths">
-<h3>Dataset paths<a class="headerlink" href="#dataset-paths" title="Permalink to this heading"></a></h3>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">H</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">D</span> <span class="o">=</span> <span class="mi">160</span><span class="p">,</span> <span class="mi">192</span><span class="p">,</span> <span class="mi">224</span>
-<span class="n">data_dir</span> <span class="o">=</span> <span class="s1">&#39;./IXI_data/&#39;</span>
-</pre></div>
-</div>
-</section>
-<section id="model-factory-functions">
-<h3>Model factory functions<a class="headerlink" href="#model-factory-functions" title="Permalink to this heading"></a></h3>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">transmorph_model</span><span class="p">():</span>
-    <span class="n">scale_factor</span> <span class="o">=</span> <span class="mi">1</span>
-    <span class="n">config</span> <span class="o">=</span> <span class="n">configs_TransMorph</span><span class="o">.</span><span class="n">get_3DTransMorph3Lvl_config</span><span class="p">()</span>
-    <span class="n">config</span><span class="o">.</span><span class="n">img_size</span> <span class="o">=</span> <span class="p">(</span><span class="n">H</span><span class="o">//</span><span class="n">scale_factor</span><span class="p">,</span> <span class="n">W</span><span class="o">//</span><span class="n">scale_factor</span><span class="p">,</span> <span class="n">D</span><span class="o">//</span><span class="n">scale_factor</span><span class="p">)</span>
-    <span class="n">config</span><span class="o">.</span><span class="n">window_size</span> <span class="o">=</span> <span class="p">(</span><span class="n">H</span> <span class="o">//</span> <span class="mi">64</span><span class="p">,</span> <span class="n">W</span> <span class="o">//</span> <span class="mi">64</span><span class="p">,</span> <span class="n">D</span> <span class="o">//</span> <span class="mi">64</span><span class="p">)</span>
-    <span class="n">config</span><span class="o">.</span><span class="n">out_chan</span> <span class="o">=</span> <span class="mi">3</span>
-    <span class="n">TM_model</span> <span class="o">=</span> <span class="n">TransMorph</span><span class="p">(</span><span class="n">config</span><span class="p">)</span><span class="o">.</span><span class="n">cuda</span><span class="p">(</span><span class="s1">&#39;cuda:0&#39;</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">TM_model</span>
-
-<span class="k">def</span> <span class="nf">transmorphTVF_model</span><span class="p">():</span>
-    <span class="n">scale_factor</span> <span class="o">=</span> <span class="mi">2</span>
-    <span class="n">config</span> <span class="o">=</span> <span class="n">configs_TransMorph</span><span class="o">.</span><span class="n">get_3DTransMorph3Lvl_config</span><span class="p">()</span>
-    <span class="n">config</span><span class="o">.</span><span class="n">img_size</span> <span class="o">=</span> <span class="p">(</span><span class="n">H</span><span class="o">//</span><span class="n">scale_factor</span><span class="p">,</span> <span class="n">W</span><span class="o">//</span><span class="n">scale_factor</span><span class="p">,</span> <span class="n">D</span><span class="o">//</span><span class="n">scale_factor</span><span class="p">)</span>
-    <span class="n">config</span><span class="o">.</span><span class="n">window_size</span> <span class="o">=</span> <span class="p">(</span><span class="n">H</span> <span class="o">//</span> <span class="mi">64</span><span class="p">,</span> <span class="n">W</span> <span class="o">//</span> <span class="mi">64</span><span class="p">,</span> <span class="n">D</span> <span class="o">//</span> <span class="mi">64</span><span class="p">)</span>
-    <span class="n">config</span><span class="o">.</span><span class="n">out_chan</span> <span class="o">=</span> <span class="mi">3</span>
-    <span class="n">TMTVF_model</span> <span class="o">=</span> <span class="n">TransMorphTVF</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">time_steps</span><span class="o">=</span><span class="mi">7</span><span class="p">)</span><span class="o">.</span><span class="n">cuda</span><span class="p">(</span><span class="s1">&#39;cuda:0&#39;</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">TMTVF_model</span>
-
-<span class="k">def</span> <span class="nf">vfa_model</span><span class="p">():</span>
-    <span class="n">scale_factor</span> <span class="o">=</span> <span class="mi">1</span>
-    <span class="n">config</span> <span class="o">=</span> <span class="n">CONFIGS_VFA</span><span class="o">.</span><span class="n">get_VFA_default_config</span><span class="p">()</span>
-    <span class="n">config</span><span class="o">.</span><span class="n">img_size</span> <span class="o">=</span> <span class="p">(</span><span class="n">H</span><span class="o">//</span><span class="n">scale_factor</span><span class="p">,</span> <span class="n">W</span><span class="o">//</span><span class="n">scale_factor</span><span class="p">,</span> <span class="n">D</span><span class="o">//</span><span class="n">scale_factor</span><span class="p">)</span>
-    <span class="n">VFA_model</span> <span class="o">=</span> <span class="n">VFA</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;cuda:0&#39;</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">VFA_model</span>
-
-<span class="k">def</span> <span class="nf">create_model</span><span class="p">(</span><span class="n">INPUT_SHAPE</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SITReg</span><span class="p">:</span>
-    <span class="n">feature_extractor</span> <span class="o">=</span> <span class="n">EncoderFeatureExtractor</span><span class="p">(</span>
-        <span class="n">n_input_channels</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
-        <span class="n">activation_factory</span><span class="o">=</span><span class="n">ReLUFactory</span><span class="p">(),</span>
-        <span class="n">n_features_per_resolution</span><span class="o">=</span><span class="p">[</span><span class="mi">12</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="mi">128</span><span class="p">],</span>
-        <span class="n">n_convolutions_per_resolution</span><span class="o">=</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span>
-        <span class="n">input_shape</span><span class="o">=</span><span class="n">INPUT_SHAPE</span><span class="p">,</span>
-        <span class="n">normalizer_factory</span><span class="o">=</span><span class="n">GroupNormalizerFactory</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span>
-    <span class="p">)</span><span class="o">.</span><span class="n">cuda</span><span class="p">()</span>
-    <span class="n">AndersonSolver_forward</span> <span class="o">=</span> <span class="n">AndersonSolver</span><span class="p">(</span>
-        <span class="n">MaxElementWiseAbsStopCriterion</span><span class="p">(</span><span class="n">min_iterations</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">max_iterations</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mf">1e-2</span><span class="p">),</span>
-        <span class="n">AndersonSolverArguments</span><span class="p">(</span><span class="n">memory_length</span><span class="o">=</span><span class="mi">4</span><span class="p">),</span>
-    <span class="p">)</span>
-    <span class="n">AndersonSolver_backward</span> <span class="o">=</span> <span class="n">AndersonSolver</span><span class="p">(</span>
-        <span class="n">RelativeL2ErrorStopCriterion</span><span class="p">(</span><span class="n">min_iterations</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">max_iterations</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mf">1e-2</span><span class="p">),</span>
-        <span class="n">AndersonSolverArguments</span><span class="p">(</span><span class="n">memory_length</span><span class="o">=</span><span class="mi">4</span><span class="p">),</span>
-    <span class="p">)</span>
-    <span class="n">network</span> <span class="o">=</span> <span class="n">SITReg</span><span class="p">(</span>
-        <span class="n">feature_extractor</span><span class="o">=</span><span class="n">feature_extractor</span><span class="p">,</span>
-        <span class="n">n_transformation_convolutions_per_resolution</span><span class="o">=</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span>
-        <span class="n">n_transformation_features_per_resolution</span><span class="o">=</span><span class="p">[</span><span class="mi">12</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="mi">128</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="mi">256</span><span class="p">],</span>
-        <span class="n">max_control_point_multiplier</span><span class="o">=</span><span class="mf">0.99</span><span class="p">,</span>
-        <span class="n">affine_transformation_type</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-        <span class="n">input_voxel_size</span><span class="o">=</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span>
-        <span class="n">input_shape</span><span class="o">=</span><span class="n">INPUT_SHAPE</span><span class="p">,</span>
-        <span class="n">transformation_downsampling_factor</span><span class="o">=</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span>
-        <span class="n">forward_fixed_point_solver</span><span class="o">=</span><span class="n">AndersonSolver_forward</span><span class="p">,</span>
-        <span class="n">backward_fixed_point_solver</span><span class="o">=</span><span class="n">AndersonSolver_backward</span><span class="p">,</span>
-        <span class="n">activation_factory</span><span class="o">=</span><span class="n">ReLUFactory</span><span class="p">(),</span>
-        <span class="n">normalizer_factory</span><span class="o">=</span><span class="n">GroupNormalizerFactory</span><span class="p">(</span><span class="mi">4</span><span class="p">),</span>
-    <span class="p">)</span><span class="o">.</span><span class="n">cuda</span><span class="p">()</span>
-    <span class="k">return</span> <span class="n">network</span>
-
-<span class="k">def</span> <span class="nf">sitreg_model</span><span class="p">():</span>
-    <span class="k">return</span> <span class="n">create_model</span><span class="p">((</span><span class="n">H</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">D</span><span class="p">))</span><span class="o">.</span><span class="n">cuda</span><span class="p">(</span><span class="s1">&#39;cuda:0&#39;</span><span class="p">)</span>
-
-<span class="k">def</span> <span class="nf">convexadam_model</span><span class="p">():</span>
-    <span class="n">config</span> <span class="o">=</span> <span class="n">CONFIGS_CVXAdam</span><span class="o">.</span><span class="n">get_ConvexAdam_MIND_brain_default_config</span><span class="p">()</span>
-    <span class="n">model</span> <span class="o">=</span> <span class="n">convex_adam_MIND</span>
-    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;model&#39;</span><span class="p">:</span> <span class="n">model</span><span class="p">,</span> <span class="s1">&#39;config&#39;</span><span class="p">:</span> <span class="n">config</span><span class="p">}</span>
-
-<span class="n">models_dict</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s1">&#39;TransMorph&#39;</span><span class="p">:</span> <span class="n">transmorph_model</span><span class="p">,</span>
-    <span class="s1">&#39;TransMorphTVF&#39;</span><span class="p">:</span> <span class="n">transmorphTVF_model</span><span class="p">,</span>
-    <span class="s1">&#39;VFA&#39;</span><span class="p">:</span> <span class="n">vfa_model</span><span class="p">,</span>
-    <span class="s1">&#39;SITReg&#39;</span><span class="p">:</span> <span class="n">sitreg_model</span><span class="p">,</span>
-    <span class="s1">&#39;ConvexAdam-MIND&#39;</span><span class="p">:</span> <span class="n">convexadam_model</span><span class="p">,</span>
-<span class="p">}</span>
-</pre></div>
-</div>
-</section>
-<section id="data-download-and-extraction">
-<h3>Data download and extraction<a class="headerlink" href="#data-download-and-extraction" title="Permalink to this heading"></a></h3>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">data_dir</span><span class="p">):</span>
-    <span class="kn">import</span> <span class="nn">gdown</span>
-    <span class="n">file_id</span> <span class="o">=</span> <span class="s1">&#39;1-VQewCVNj5eTtc3eQGhTM2yXBQmgm8Ol&#39;</span>
-    <span class="n">url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;https://drive.google.com/uc?id=</span><span class="si">{</span><span class="n">file_id</span><span class="si">}</span><span class="s2">&quot;</span>
-    <span class="n">gdown</span><span class="o">.</span><span class="n">download</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="s1">&#39;IXI_data.zip&#39;</span><span class="p">,</span> <span class="n">quiet</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-    <span class="kn">import</span> <span class="nn">zipfile</span>
-    <span class="k">with</span> <span class="n">zipfile</span><span class="o">.</span><span class="n">ZipFile</span><span class="p">(</span><span class="s1">&#39;IXI_data.zip&#39;</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">zip_ref</span><span class="p">:</span>
-        <span class="n">zip_ref</span><span class="o">.</span><span class="n">extractall</span><span class="p">(</span><span class="s1">&#39;./&#39;</span><span class="p">)</span>
-    <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="s1">&#39;IXI_data.zip&#39;</span><span class="p">)</span>
-
-<span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">data_dir</span><span class="p">):</span>
-    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Data directory not found and download failed.&#39;</span><span class="p">)</span>
-</pre></div>
-</div>
-</section>
-<section id="inference-loop">
-<h3>Inference loop<a class="headerlink" href="#inference-loop" title="Permalink to this heading"></a></h3>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">spatial_trans</span> <span class="o">=</span> <span class="n">SpatialTransformer</span><span class="p">((</span><span class="n">H</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">D</span><span class="p">))</span><span class="o">.</span><span class="n">cuda</span><span class="p">()</span>
-
-<span class="k">def</span> <span class="nf">inference</span><span class="p">(</span><span class="n">model_name</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">moving</span><span class="p">,</span> <span class="n">fixed</span><span class="p">):</span>
-    <span class="k">if</span> <span class="n">model_name</span> <span class="o">==</span> <span class="s2">&quot;TransMorph&quot;</span> <span class="ow">or</span> <span class="n">model_name</span> <span class="o">==</span> <span class="s1">&#39;VFA&#39;</span><span class="p">:</span>
-        <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
-            <span class="n">model</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
-            <span class="n">moving</span> <span class="o">=</span> <span class="n">moving</span><span class="o">.</span><span class="n">cuda</span><span class="p">()</span>
-            <span class="n">fixed</span> <span class="o">=</span> <span class="n">fixed</span><span class="o">.</span><span class="n">cuda</span><span class="p">()</span>
-            <span class="n">flow</span> <span class="o">=</span> <span class="n">model</span><span class="p">((</span><span class="n">moving</span><span class="p">,</span> <span class="n">fixed</span><span class="p">))</span>
-    <span class="k">elif</span> <span class="n">model_name</span> <span class="o">==</span> <span class="s2">&quot;TransMorphTVF&quot;</span><span class="p">:</span>
-        <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
-            <span class="n">model</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
-            <span class="n">moving</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">avg_pool3d</span><span class="p">(</span><span class="n">moving</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">cuda</span><span class="p">()</span>
-            <span class="n">fixed</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">avg_pool3d</span><span class="p">(</span><span class="n">fixed</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">cuda</span><span class="p">()</span>
-            <span class="n">flow</span> <span class="o">=</span> <span class="n">model</span><span class="p">((</span><span class="n">moving</span><span class="p">,</span> <span class="n">fixed</span><span class="p">))</span>
-            <span class="n">flow</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">interpolate</span><span class="p">(</span><span class="n">flow</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">H</span><span class="p">,</span> <span class="n">W</span><span class="p">,</span> <span class="n">D</span><span class="p">),</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;trilinear&#39;</span><span class="p">,</span> <span class="n">align_corners</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">*</span> <span class="mf">2.0</span>
-    <span class="k">elif</span> <span class="n">model_name</span> <span class="o">==</span> <span class="s2">&quot;SITReg&quot;</span><span class="p">:</span>
-        <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
-            <span class="n">model</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
-            <span class="n">moving</span> <span class="o">=</span> <span class="n">moving</span><span class="o">.</span><span class="n">cuda</span><span class="p">()</span>
-            <span class="n">fixed</span> <span class="o">=</span> <span class="n">fixed</span><span class="o">.</span><span class="n">cuda</span><span class="p">()</span>
-            <span class="n">mapping_pair</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">moving</span><span class="p">,</span> <span class="n">fixed</span><span class="p">,</span> <span class="n">mappings_for_levels</span><span class="o">=</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="kc">False</span><span class="p">),))[</span><span class="mi">0</span><span class="p">]</span>
-            <span class="n">flow</span> <span class="o">=</span> <span class="n">mapping_pair</span><span class="o">.</span><span class="n">forward_mapping</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">data_format</span><span class="o">=</span><span class="n">DataFormat</span><span class="o">.</span><span class="n">voxel_displacements</span><span class="p">())</span><span class="o">.</span><span class="n">generate_values</span><span class="p">()</span>
-    <span class="k">elif</span> <span class="n">model_name</span> <span class="o">==</span> <span class="s2">&quot;ConvexAdam&quot;</span><span class="p">:</span>
-        <span class="n">moving</span> <span class="o">=</span> <span class="n">moving</span><span class="o">.</span><span class="n">cuda</span><span class="p">()</span>
-        <span class="n">fixed</span> <span class="o">=</span> <span class="n">fixed</span><span class="o">.</span><span class="n">cuda</span><span class="p">()</span>
-        <span class="n">convexadam</span> <span class="o">=</span> <span class="n">model</span><span class="p">()[</span><span class="s1">&#39;model&#39;</span><span class="p">]</span>
-        <span class="n">config</span> <span class="o">=</span> <span class="n">model</span><span class="p">()[</span><span class="s1">&#39;config&#39;</span><span class="p">]</span>
-        <span class="n">flow</span> <span class="o">=</span> <span class="n">convexadam</span><span class="p">(</span><span class="n">moving</span><span class="p">,</span> <span class="n">fixed</span><span class="p">,</span> <span class="n">config</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">flow</span>
-</pre></div>
-</div>
-</section>
-</section>
+<p>Choose a task-specific quick start:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="quick_start_brain_registration.html"><span class="doc">Brain registration (affine + deformable)</span></a></p></li>
+<li><p><a class="reference internal" href="quick_start_ixi_benchmarking.html"><span class="doc">IXI benchmarking quick start</span></a></p></li>
+</ul>
 </section>
 
 
@@ -281,7 +90,7 @@ python3.8<span class="w"> </span>-u<span class="w"> </span>train_SITReg_SPR.py
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="index.html" class="btn btn-neutral float-left" title="MIR Documentation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="brain_template_example.html" class="btn btn-neutral float-right" title="Brain template example (LUMIR24)" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="quick_start_brain_registration.html" class="btn btn-neutral float-right" title="Brain registration (affine + deformable)" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

@@ -45,7 +45,9 @@
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="quick_start.html">Quick Start</a></li>
-<li class="toctree-l1"><a class="reference internal" href="brain_template_example.html">Brain template example (LUMIR24)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quick_start_brain_registration.html">Brain registration (affine + deformable)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quick_start_ixi_benchmarking.html">IXI benchmarking quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="brain_template_example.html">Brain template example</a></li>
 <li class="toctree-l1"><a class="reference internal" href="models/index.html">Models</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">API Reference</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="api/MIR.models.html">MIR.models</a></li>
@@ -55,6 +57,13 @@
 <li class="toctree-l2"><a class="reference internal" href="api/MIR.accuracy_measures.html">MIR.accuracy_measures</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#MIR.models.AdvancedDecoder3D"><code class="docutils literal notranslate"><span class="pre">AdvancedDecoder3D</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#MIR.models.AdvancedDecoder3D.forward"><code class="docutils literal notranslate"><span class="pre">AdvancedDecoder3D.forward()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#MIR.models.AffineReg3D"><code class="docutils literal notranslate"><span class="pre">AffineReg3D</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#MIR.models.AffineReg3D.apply_affine"><code class="docutils literal notranslate"><span class="pre">AffineReg3D.apply_affine()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#MIR.models.AffineReg3D.forward"><code class="docutils literal notranslate"><span class="pre">AffineReg3D.forward()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#MIR.models.AffineReg3D.optimize"><code class="docutils literal notranslate"><span class="pre">AffineReg3D.optimize()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#MIR.models.AffineReg3D.reset_parameters"><code class="docutils literal notranslate"><span class="pre">AffineReg3D.reset_parameters()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#MIR.models.AffineTransformer"><code class="docutils literal notranslate"><span class="pre">AffineTransformer</span></code></a><ul>
@@ -139,6 +148,10 @@
 <li class="toctree-l2"><a class="reference internal" href="#MIR.models.MeanStream"><code class="docutils literal notranslate"><span class="pre">MeanStream</span></code></a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#MIR.models.MeanStream.forward"><code class="docutils literal notranslate"><span class="pre">MeanStream.forward()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#MIR.models.MeanStream.mean_update"><code class="docutils literal notranslate"><span class="pre">MeanStream.mean_update()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#MIR.models.PreAffineToTemplate"><code class="docutils literal notranslate"><span class="pre">PreAffineToTemplate</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#MIR.models.PreAffineToTemplate.forward"><code class="docutils literal notranslate"><span class="pre">PreAffineToTemplate.forward()</span></code></a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#MIR.models.ReLUFactory"><code class="docutils literal notranslate"><span class="pre">ReLUFactory</span></code></a><ul>
@@ -476,7 +489,7 @@
 <tr class="row-odd"><td><p><a class="reference internal" href="#module-MIR.models" title="MIR.models"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MIR.models</span></code></a></p></td>
 <td><p>Model zoo and configuration helpers for MIR registration pipelines.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="api/MIR.utils.html#module-MIR.utils" title="MIR.utils"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MIR.utils</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#module-MIR.utils" title="MIR.utils"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MIR.utils</span></code></a></p></td>
 <td><p>Utility helpers for registration, training, visualization, and IO.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#module-MIR.image_similarity" title="MIR.image_similarity"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MIR.image_similarity</span></code></a></p></td>
@@ -518,6 +531,100 @@
 <dt class="sig sig-object py" id="MIR.models.AdvancedDecoder3D.forward">
 <span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x_feats</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">torch.Tensor</span></span></span><a class="reference internal" href="_modules/MIR/models/Segmentation_Heads.html#AdvancedDecoder3D.forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#MIR.models.AdvancedDecoder3D.forward" title="Permalink to this definition"></a></dt>
 <dd><p>Run decoder forward pass.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="MIR.models.AffineReg3D">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">MIR.models.</span></span><span class="sig-name descname"><span class="pre">AffineReg3D</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/MIR/models/affine_reg.html#AffineReg3D"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#MIR.models.AffineReg3D" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code></p>
+<p>3D affine registration with configurable degrees of freedom. This is an optimization-based approach, not deep learning-based.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>vol_shape</strong> – Spatial shape tuple (D, H, W).</p></li>
+<li><p><strong>dof</strong> – Degrees of freedom, one of: “affine”, “rigid”, “translation”, “scaling”.</p></li>
+<li><p><strong>scales</strong> – Multi-scale factors (e.g., (0.25, 0.5, 1)).</p></li>
+<li><p><strong>loss_funcs</strong> – Loss names per scale (“mse”, “l1”, “ncc”, “fastncc”, “pcc”, “localcorrratio”, “corrratio”, “ssim3d”, “mutualinformation”, “localmutualinformation”, “mind”).</p></li>
+<li><p><strong>loss_weights</strong> – Optional loss weights per scale.</p></li>
+<li><p><strong>mode</strong> – Sampling mode for SpatialTransformer.</p></li>
+<li><p><strong>batch_size</strong> – Parameter batch size (defaults to 1).</p></li>
+<li><p><strong>match_fixed</strong> – If True, pad/crop inputs to fixed image shape.</p></li>
+<li><p><strong>pad_mode</strong> – Padding mode for size matching.</p></li>
+<li><p><strong>pad_value</strong> – Constant value for padding (if pad_mode == “constant”).</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="MIR.models.AffineReg3D.apply_affine">
+<span class="sig-name descname"><span class="pre">apply_affine</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">moving</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">torch.Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">affine</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">torch.Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">invert</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_shape</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">torch.Tensor</span></span></span><a class="reference internal" href="_modules/MIR/models/affine_reg.html#AffineReg3D.apply_affine"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#MIR.models.AffineReg3D.apply_affine" title="Permalink to this definition"></a></dt>
+<dd><p>Apply a given affine matrix to the moving image.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>moving</strong> – Moving image tensor (B, C, D, H, W).</p></li>
+<li><p><strong>affine</strong> – Affine matrix with shape (3,4), (B,3,4), (4,4), or (B,4,4).</p></li>
+<li><p><strong>invert</strong> – If True, apply the inverse affine.</p></li>
+<li><p><strong>target_shape</strong> – Optional target shape for padding/cropping.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Warped image tensor (B, C, D, H, W).</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="MIR.models.AffineReg3D.forward">
+<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">moving</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">torch.Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fixed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">torch.Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_shape</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/MIR/models/affine_reg.html#AffineReg3D.forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#MIR.models.AffineReg3D.forward" title="Permalink to this definition"></a></dt>
+<dd><p>Compute affine registration at full resolution.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>moving</strong> – Moving image tensor (B, C, D, H, W).</p></li>
+<li><p><strong>fixed</strong> – Fixed image tensor (B, C, D, H, W).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>warped, flow, affine, loss, losses (single entry).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Dict with keys</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="MIR.models.AffineReg3D.optimize">
+<span class="sig-name descname"><span class="pre">optimize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">moving</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">torch.Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fixed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">torch.Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_shape</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">optimizer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">torch.optim.Optimizer</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">optimizer_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'lbfgs'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.01</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">steps</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">200</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">steps_per_scale</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Sequence</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_history</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normalize</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lbfgs_history_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/MIR/models/affine_reg.html#AffineReg3D.optimize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#MIR.models.AffineReg3D.optimize" title="Permalink to this definition"></a></dt>
+<dd><p>Optimize affine parameters to align moving to fixed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>moving</strong> – Moving image tensor (B, C, D, H, W).</p></li>
+<li><p><strong>fixed</strong> – Fixed image tensor (B, C, D, H, W).</p></li>
+<li><p><strong>target_shape</strong> – Optional target spatial shape for padding/cropping.</p></li>
+<li><p><strong>optimizer</strong> – Optional optimizer. If None, optimizer_name is used.</p></li>
+<li><p><strong>optimizer_name</strong> – “lbfgs” or “adam” when optimizer is None.</p></li>
+<li><p><strong>lr</strong> – Learning rate for optimizer if optimizer is None.</p></li>
+<li><p><strong>steps</strong> – Number of optimization steps (used if steps_per_scale is None).</p></li>
+<li><p><strong>steps_per_scale</strong> – Optional per-scale step counts matching self.scales.</p></li>
+<li><p><strong>return_history</strong> – Whether to return loss history.</p></li>
+<li><p><strong>normalize</strong> – Whether to normalize images before optimization.</p></li>
+<li><p><strong>lbfgs_history_size</strong> – History size for LBFGS.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Tuple of (output_dict, loss_history) if return_history else output_dict.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="MIR.models.AffineReg3D.reset_parameters">
+<span class="sig-name descname"><span class="pre">reset_parameters</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/MIR/models/affine_reg.html#AffineReg3D.reset_parameters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#MIR.models.AffineReg3D.reset_parameters" title="Permalink to this definition"></a></dt>
+<dd><p>Reset learnable parameters to identity transform.</p>
 </dd></dl>
 
 </dd></dl>
@@ -1075,6 +1182,38 @@ while still supporting num_workers and automatic collation.</p>
 <dt class="sig sig-object py" id="MIR.models.MeanStream.mean_update">
 <span class="sig-name descname"><span class="pre">mean_update</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pre_mean</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pre_count</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pre_cap</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/MIR/models/atlas_builder.html#MeanStream.mean_update"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#MIR.models.MeanStream.mean_update" title="Permalink to this definition"></a></dt>
 <dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="MIR.models.PreAffineToTemplate">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">MIR.models.</span></span><span class="sig-name descname"><span class="pre">PreAffineToTemplate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/MIR/models/affine_reg.html#PreAffineToTemplate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#MIR.models.PreAffineToTemplate" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code></p>
+<p>Affine pre-alignment to a fixed template before deformable registration.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>mode</strong> – Interpolation mode for SpatialTransformer.</p></li>
+<li><p><strong>template_type</strong> – Template name to load (“lumir” or “mni”).</p></li>
+<li><p><strong>batch_size</strong> – Batch size for affine parameters.</p></li>
+<li><p><strong>dof</strong> – Degrees of freedom for affine model.</p></li>
+<li><p><strong>scales</strong> – Multi-scale factors for loss computation.</p></li>
+<li><p><strong>loss_funcs</strong> – Loss names per scale.</p></li>
+<li><p><strong>device</strong> – Device for the affine model and template.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="MIR.models.PreAffineToTemplate.forward">
+<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">torch.Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">optimize</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/MIR/models/affine_reg.html#PreAffineToTemplate.forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#MIR.models.PreAffineToTemplate.forward" title="Permalink to this definition"></a></dt>
+<dd><p>Forward pass of the affine registration module
+:param x: Input image tensor (B, C, H, W, D)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Affine registered image tensor (B, C, H, W, D)</p>
+</dd>
+</dl>
+</dd></dl>
 
 </dd></dl>
 

@@ -1,4 +1,4 @@
-﻿MIR.models.convexAdam
+MIR.models.convexAdam
 =====================
 
 .. automodule:: MIR.models.convexAdam

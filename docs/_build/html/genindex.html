@@ -42,7 +42,9 @@
               <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="quick_start.html">Quick Start</a></li>
-<li class="toctree-l1"><a class="reference internal" href="brain_template_example.html">Brain template example (LUMIR24)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quick_start_brain_registration.html">Brain registration (affine + deformable)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quick_start_ixi_benchmarking.html">IXI benchmarking quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="brain_template_example.html">Brain template example</a></li>
 <li class="toctree-l1"><a class="reference internal" href="models/index.html">Models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a></li>
 </ul>
@@ -88,6 +90,7 @@
  | <a href="#L"><strong>L</strong></a>
  | <a href="#M"><strong>M</strong></a>
  | <a href="#N"><strong>N</strong></a>
+ | <a href="#O"><strong>O</strong></a>
  | <a href="#P"><strong>P</strong></a>
  | <a href="#R"><strong>R</strong></a>
  | <a href="#S"><strong>S</strong></a>
@@ -127,12 +130,18 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api.html#MIR.models.AdvancedDecoder3D">AdvancedDecoder3D (class in MIR.models)</a>
 </li>
+      <li><a href="api.html#MIR.models.AffineReg3D">AffineReg3D (class in MIR.models)</a>
+</li>
       <li><a href="api.html#MIR.models.AffineTransformer">AffineTransformer (class in MIR.models)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api.html#MIR.models.AffineTransformer.apply_affine">apply_affine() (MIR.models.AffineTransformer method)</a>
+      <li><a href="api.html#MIR.models.AffineReg3D.apply_affine">apply_affine() (MIR.models.AffineReg3D method)</a>
+
+      <ul>
+        <li><a href="api.html#MIR.models.AffineTransformer.apply_affine">(MIR.models.AffineTransformer method)</a>
 </li>
+      </ul></li>
       <li><a href="api.html#MIR.utils.AverageMeter">AverageMeter (class in MIR.utils)</a>
 </li>
   </ul></td>
@@ -336,6 +345,8 @@
 </li>
         <li><a href="api.html#MIR.models.AdvancedDecoder3D.forward">(MIR.models.AdvancedDecoder3D method)</a>
 </li>
+        <li><a href="api.html#MIR.models.AffineReg3D.forward">(MIR.models.AffineReg3D method)</a>
+</li>
         <li><a href="api.html#MIR.models.AffineTransformer.forward">(MIR.models.AffineTransformer method)</a>
 </li>
         <li><a href="api.html#MIR.models.ConvNeXtSynthHead3D.forward">(MIR.models.ConvNeXtSynthHead3D method)</a>
@@ -367,6 +378,8 @@
         <li><a href="api.html#MIR.models.HyperVxmDense.forward">(MIR.models.HyperVxmDense method)</a>
 </li>
         <li><a href="api.html#MIR.models.MeanStream.forward">(MIR.models.MeanStream method)</a>
+</li>
+        <li><a href="api.html#MIR.models.PreAffineToTemplate.forward">(MIR.models.PreAffineToTemplate method)</a>
 </li>
         <li><a href="api.html#MIR.models.SITReg.forward">(MIR.models.SITReg method)</a>
 </li>
@@ -703,6 +716,13 @@
 </li>
       </ul></li>
       <li>
+    MIR.models.affine_reg
+
+      <ul>
+        <li><a href="api/MIR.models.affine_reg.html#module-MIR.models.affine_reg">module</a>
+</li>
+      </ul></li>
+      <li>
     MIR.models.atlas_builder
 
       <ul>
@@ -978,6 +998,8 @@
 </li>
         <li><a href="api.html#module-MIR.models">MIR.models</a>, <a href="api/MIR.models.html#module-MIR.models">[1]</a>
 </li>
+        <li><a href="api/MIR.models.affine_reg.html#module-MIR.models.affine_reg">MIR.models.affine_reg</a>
+</li>
         <li><a href="api/MIR.models.atlas_builder.html#module-MIR.models.atlas_builder">MIR.models.atlas_builder</a>
 </li>
         <li><a href="api/MIR.models.configs_TransMorph.html#module-MIR.models.configs_TransMorph">MIR.models.configs_TransMorph</a>
@@ -1078,6 +1100,14 @@
   </ul></td>
 </tr></table>
 
+<h2 id="O">O</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api.html#MIR.models.AffineReg3D.optimize">optimize() (MIR.models.AffineReg3D method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
 <h2 id="P">P</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
@@ -1085,13 +1115,15 @@
 </li>
       <li><a href="api.html#MIR.image_similarity.PCC">PCC (class in MIR.image_similarity)</a>, <a href="api/MIR.image_similarity.PCC.html#MIR.image_similarity.PCC">[1]</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api.html#MIR.image_similarity.PCC.pcc">pcc() (MIR.image_similarity.PCC method)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api.html#MIR.image_similarity.MIND_loss.pdist_squared">pdist_squared() (MIR.image_similarity.MIND_loss method)</a>
 </li>
       <li><a href="api.html#MIR.utils.pkload">pkload() (in module MIR.utils)</a>
+</li>
+      <li><a href="api.html#MIR.models.PreAffineToTemplate">PreAffineToTemplate (class in MIR.models)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -1103,13 +1135,15 @@
 </li>
       <li><a href="api.html#MIR.models.RegistrationHead">RegistrationHead (class in MIR.models)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api.html#MIR.models.ReLUFactory">ReLUFactory (class in MIR.models)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api.html#MIR.utils.resample_to_orginal_space_and_save">resample_to_orginal_space_and_save() (in module MIR.utils)</a>
 </li>
       <li><a href="api.html#MIR.utils.AverageMeter.reset">reset() (MIR.utils.AverageMeter method)</a>
+</li>
+      <li><a href="api.html#MIR.models.AffineReg3D.reset_parameters">reset_parameters() (MIR.models.AffineReg3D method)</a>
 </li>
   </ul></td>
 </tr></table>

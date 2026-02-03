@@ -1,4 +1,4 @@
-﻿MIR.models.registration\_utils
+MIR.models.registration\_utils
 ==============================
 
 .. automodule:: MIR.models.registration_utils
