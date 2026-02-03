@@ -24,7 +24,7 @@ class CorrRatio(torch.nn.Module):
 
         """Sigma for Gaussian approx."""
         sigma = np.mean(np.diff(bin_centers)) * sigma_ratio
-        print(sigma)
+        #print(sigma)
 
         self.preterm = 2 / (2 * sigma ** 2)
 
@@ -107,7 +107,7 @@ class LocalCorrRatio(torch.nn.Module):
 
         """Sigma for Gaussian approx."""
         sigma = np.mean(np.diff(bin_centers)) * sigma_ratio
-        print(sigma)
+        #print(sigma)
 
         self.preterm = 2 / (2 * sigma ** 2)
         self.win = win

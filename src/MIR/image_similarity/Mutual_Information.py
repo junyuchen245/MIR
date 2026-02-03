@@ -22,7 +22,7 @@ class MutualInformation(torch.nn.Module):
 
         """Sigma for Gaussian approx."""
         sigma = np.mean(np.diff(bin_centers)) * sigma_ratio
-        print(sigma)
+        #print(sigma)
 
         self.preterm = 1 / (2 * sigma ** 2)
         self.bin_centers = bin_centers
@@ -43,9 +43,9 @@ class MutualInformation(torch.nn.Module):
         y_pred = torch.clamp(y_pred, 0., self.max_clip)
         y_true = torch.clamp(y_true, 0, self.max_clip)
 
-        y_true = y_true.view(y_true.shape[0], -1)
+        y_true = y_true.reshape(y_true.shape[0], -1)
         y_true = torch.unsqueeze(y_true, 2)
-        y_pred = y_pred.view(y_pred.shape[0], -1)
+        y_pred = y_pred.reshape(y_pred.shape[0], -1)
         y_pred = torch.unsqueeze(y_pred, 2)
 
         nb_voxels = y_pred.shape[1]  # total num of voxels
