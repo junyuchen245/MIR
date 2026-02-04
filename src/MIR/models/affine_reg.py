@@ -21,7 +21,10 @@ from MIR.image_similarity import (
     SSIM3D,
     MutualInformation,
     localMutualInformation,
+    MattesMutualInformation,
+    NormalizedMutualInformation,
     MIND_loss,
+    NormalizedGradientFieldLoss,
 )
 
 
@@ -32,7 +35,7 @@ class AffineReg3D(nn.Module):
         vol_shape: Spatial shape tuple (D, H, W).
         dof: Degrees of freedom, one of: "affine", "rigid", "translation", "scaling".
         scales: Multi-scale factors (e.g., (0.25, 0.5, 1)).
-        loss_funcs: Loss names per scale ("mse", "l1", "ncc", "fastncc", "pcc", "localcorrratio", "corrratio", "ssim3d", "mutualinformation", "localmutualinformation", "mind").
+        loss_funcs: Loss names per scale ("mse", "l1", "ncc", "fastncc", "pcc", "localcorrratio", "corrratio", "ssim3d", "mutualinformation", "localmutualinformation", "mind", "mattes", "nmi", "ngf").
         loss_weights: Optional loss weights per scale.
         mode: Sampling mode for SpatialTransformer.
         batch_size: Parameter batch size (defaults to 1).
@@ -291,6 +294,12 @@ class AffineReg3D(nn.Module):
             return MutualInformation()
         if name == "localmutualinformation":
             return localMutualInformation()
+        if name == "mattes":
+            return MattesMutualInformation()
+        if name in {"nmi", "normalizedmutualinformation"}:
+            return NormalizedMutualInformation()
+        if name in {"ngf", "normalizedgradientfield"}:
+            return NormalizedGradientFieldLoss()
         if name == "mind":
             return MIND_loss()
         raise ValueError(f"Unsupported loss name: {name}")

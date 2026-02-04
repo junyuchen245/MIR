@@ -70,8 +70,6 @@ def main():
         mask_nib = reorient_image_to_match(template_nib, mask_nib)
 
     img_nib = reorient_image_to_match(template_nib, img_nib)
-    affine_type = 'Affine'
-    affine_metric = 'meanSquares'
     tar_pixdim = [1.0, 1.0, 1.0]  # Target pixel dimensions
     img_pixdim = img_nib.header.structarr['pixdim'][1:-4]
     img_npy = img_nib.get_fdata()

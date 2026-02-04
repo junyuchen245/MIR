@@ -199,3 +199,109 @@ class localMutualInformation(torch.nn.Module):
             Scalar loss.
         """
         return -self.local_mi(y_true, y_pred)
+
+
+class MattesMutualInformation(torch.nn.Module):
+    """Mattes mutual information with Parzen windowing (differentiable).
+
+    Uses a cubic B-spline Parzen window for the fixed image and a linear
+    (first-order) Parzen window for the moving image, following the common
+    Mattes MI formulation.
+    """
+
+    def __init__(self, num_bin: int = 32, minval: float = 0.0, maxval: float = 1.0, eps: float = 1e-6):
+        super().__init__()
+        self.num_bins = int(num_bin)
+        self.minval = float(minval)
+        self.maxval = float(maxval)
+        self.eps = float(eps)
+
+        bin_centers = torch.linspace(self.minval, self.maxval, self.num_bins)
+        self.register_buffer("bin_centers", bin_centers)
+        self.bin_width = (self.maxval - self.minval) / (self.num_bins - 1)
+
+    @staticmethod
+    def _bspline_cubic(u: torch.Tensor) -> torch.Tensor:
+        """Cubic B-spline kernel for |u|."""
+        au = torch.abs(u)
+        w = torch.zeros_like(au)
+        mask1 = au < 1
+        mask2 = (au >= 1) & (au < 2)
+        w[mask1] = (4 - 6 * au[mask1] ** 2 + 3 * au[mask1] ** 3) / 6.0
+        w[mask2] = ((2 - au[mask2]) ** 3) / 6.0
+        return w
+
+    @staticmethod
+    def _linear(u: torch.Tensor) -> torch.Tensor:
+        """Linear (first-order) kernel for |u|."""
+        au = torch.abs(u)
+        return torch.clamp(1.0 - au, min=0.0)
+
+    def _parzen_weights(self, x: torch.Tensor, kernel: str) -> torch.Tensor:
+        """Compute Parzen window weights for input samples.
+
+        Args:
+            x: Tensor (B, N).
+            kernel: "bspline" or "linear".
+
+        Returns:
+            Weights tensor (B, N, num_bins).
+        """
+        x = torch.clamp(x, self.minval, self.maxval)
+        u = (x.unsqueeze(-1) - self.bin_centers.to(x.device)) / self.bin_width
+        if kernel == "bspline":
+            return self._bspline_cubic(u)
+        if kernel == "linear":
+            return self._linear(u)
+        raise ValueError("kernel must be 'bspline' or 'linear'.")
+
+    def forward(self, y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
+        """Return negative Mattes mutual information as a loss.
+
+        Args:
+            y_true: Fixed image tensor (B, 1, ...).
+            y_pred: Moving image tensor (B, 1, ...).
+
+        Returns:
+            Scalar loss.
+        """
+        y_true = y_true.reshape(y_true.shape[0], -1)
+        y_pred = y_pred.reshape(y_pred.shape[0], -1)
+
+        w_fix = self._parzen_weights(y_true, kernel="bspline")
+        w_mov = self._parzen_weights(y_pred, kernel="linear")
+
+        nb_voxels = y_true.shape[1]
+        pxy = torch.bmm(w_fix.permute(0, 2, 1), w_mov) / (nb_voxels + self.eps)
+        px = torch.mean(w_fix, dim=1, keepdim=True)
+        py = torch.mean(w_mov, dim=1, keepdim=True)
+
+        pxpy = torch.bmm(px.permute(0, 2, 1), py) + self.eps
+        mi = torch.sum(pxy * torch.log((pxy + self.eps) / pxpy), dim=(1, 2))
+        return -mi.mean()
+
+
+class NormalizedMutualInformation(MattesMutualInformation):
+    """Normalized mutual information (NMI) using Mattes-style Parzen windows.
+
+    NMI = (H(X) + H(Y)) / H(X, Y)
+    """
+
+    def forward(self, y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
+        y_true = y_true.reshape(y_true.shape[0], -1)
+        y_pred = y_pred.reshape(y_pred.shape[0], -1)
+
+        w_fix = self._parzen_weights(y_true, kernel="bspline")
+        w_mov = self._parzen_weights(y_pred, kernel="linear")
+
+        nb_voxels = y_true.shape[1]
+        pxy = torch.bmm(w_fix.permute(0, 2, 1), w_mov) / (nb_voxels + self.eps)
+        px = torch.mean(w_fix, dim=1) + self.eps  # (B, num_bins)
+        py = torch.mean(w_mov, dim=1) + self.eps
+
+        hx = -torch.sum(px * torch.log(px), dim=1)
+        hy = -torch.sum(py * torch.log(py), dim=1)
+        hxy = -torch.sum(pxy * torch.log(pxy + self.eps), dim=(1, 2))
+
+        nmi = (hx + hy) / (hxy + self.eps)
+        return -nmi.mean()
