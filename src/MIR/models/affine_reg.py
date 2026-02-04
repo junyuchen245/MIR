@@ -11,6 +11,7 @@ import torch.nn as nn
 import torch.nn.functional as nnf
 import nibabel as nib
 from MIR.models.registration_utils import SpatialTransformer
+from MIR.models.convexAdam.convex_adam_utils import MINDSSC, correlate, coupled_convex
 from MIR.image_similarity import (
     NCC_vxm,
     PCC,
@@ -431,6 +432,132 @@ class AffineReg3D(nn.Module):
         normalized = torch.clamp(normalized, 0.0, 1.0)
         return normalized
 
+    def _estimate_affine_from_flow(
+        self,
+        flow: torch.Tensor,
+        sample_stride: int = 4,
+    ) -> torch.Tensor:
+        """Estimate a 3x4 affine matrix from a displacement field.
+
+        Args:
+            flow: Displacement field (B, 3, D, H, W).
+            sample_stride: Subsampling stride for least-squares fitting.
+
+        Returns:
+            Affine matrix tensor (B, 3, 4) in voxel coordinates.
+        """
+        if flow.dim() != 5:
+            raise ValueError("flow must have shape (B, 3, D, H, W)")
+        batch_size, _, d, h, w = flow.shape
+        device = flow.device
+        dtype = flow.dtype
+
+        zs = torch.arange(0, d, device=device, dtype=dtype)
+        ys = torch.arange(0, h, device=device, dtype=dtype)
+        xs = torch.arange(0, w, device=device, dtype=dtype)
+        grid_z, grid_y, grid_x = torch.meshgrid(zs, ys, xs, indexing="ij")
+        grid = torch.stack([grid_z, grid_y, grid_x], dim=0)
+
+        grid = grid[:, ::sample_stride, ::sample_stride, ::sample_stride]
+        flow_sub = flow[:, :, ::sample_stride, ::sample_stride, ::sample_stride]
+
+        grid_flat = grid.reshape(3, -1).T  # (N, 3)
+        ones = torch.ones((grid_flat.shape[0], 1), device=device, dtype=dtype)
+        x_aug = torch.cat([grid_flat, ones], dim=1)  # (N, 4)
+
+        affines = []
+        for b in range(batch_size):
+            y = (grid_flat + flow_sub[b].reshape(3, -1).T)  # (N, 3)
+            sol = torch.linalg.lstsq(x_aug, y).solution  # (4, 3)
+            affines.append(sol.T)
+        return torch.stack(affines, dim=0)
+
+    def _init_params_from_affine(
+        self,
+        affine: torch.Tensor,
+        shape: Tuple[int, int, int],
+        steps: int = 25,
+        lr: float = 1e-2,
+    ) -> None:
+        """Initialize affine parameters from a target affine matrix.
+
+        Args:
+            affine: Affine matrix (B, 3, 4) in voxel coordinates.
+            shape: Spatial shape (D, H, W).
+            steps: Optimization steps for parameter fitting.
+            lr: Learning rate for parameter fitting.
+        """
+        if affine.dim() == 2:
+            affine = affine.unsqueeze(0)
+        batch_size = affine.shape[0]
+        device = affine.device
+        dtype = affine.dtype
+
+        linear_target = affine[:, :, :3]
+        trans_target = affine[:, :, 3]
+        center = torch.tensor([(s - 1) / 2 for s in shape], device=device, dtype=dtype).view(1, 3)
+        trans_centered = trans_target + torch.bmm(linear_target, center.unsqueeze(-1)).squeeze(-1) - center
+
+        if isinstance(self.trans, nn.Parameter):
+            with torch.no_grad():
+                self.trans.copy_(trans_centered)
+
+        params = []
+        for p in (self.rot, self.log_scale, self.shear):
+            if isinstance(p, nn.Parameter) and p.requires_grad:
+                params.append(p)
+
+        if not params:
+            return
+
+        optimizer = torch.optim.Adam(params, lr=lr)
+        for _ in range(int(steps)):
+            optimizer.zero_grad(set_to_none=True)
+            mat = self._affine_matrix(batch_size, device=device, dtype=dtype)
+            loss = nnf.mse_loss(mat[:, :, :3], linear_target)
+            loss.backward()
+            optimizer.step()
+
+    def _convex_mind_affine_init(
+        self,
+        moving: torch.Tensor,
+        fixed: torch.Tensor,
+        grid_sp: int = 6,
+        disp_hw: int = 4,
+        mind_r: int = 1,
+        mind_d: int = 2,
+        sample_stride: int = 4,
+    ) -> None:
+        """Initialize affine parameters using convex MIND-based coarse flow."""
+        if moving.dim() != 5 or fixed.dim() != 5:
+            raise ValueError("Expected 5D tensors (B, C, D, H, W).")
+
+        device = moving.device
+        dtype = moving.dtype
+        shape = tuple(moving.shape[2:])
+
+        with torch.no_grad():
+            mind_fix = MINDSSC(fixed, radius=mind_r, dilation=mind_d, device=device)
+            mind_mov = MINDSSC(moving, radius=mind_r, dilation=mind_d, device=device)
+
+            mind_fix_s = nnf.avg_pool3d(mind_fix, grid_sp, stride=grid_sp)
+            mind_mov_s = nnf.avg_pool3d(mind_mov, grid_sp, stride=grid_sp)
+            n_ch = mind_fix_s.shape[1]
+
+            ssd, ssd_argmin = correlate(mind_fix_s, mind_mov_s, disp_hw, grid_sp, shape, n_ch)
+
+            disp_mesh_t = nnf.affine_grid(
+                disp_hw * torch.eye(3, 4, device=device, dtype=dtype).unsqueeze(0),
+                (1, 1, disp_hw * 2 + 1, disp_hw * 2 + 1, disp_hw * 2 + 1),
+                align_corners=True,
+            ).permute(0, 4, 1, 2, 3).reshape(3, -1, 1)
+
+            disp_soft = coupled_convex(ssd, ssd_argmin, disp_mesh_t, grid_sp, shape)
+            disp_hr = nnf.interpolate(disp_soft, size=shape, mode="trilinear", align_corners=False) * grid_sp
+
+        affine_init = self._estimate_affine_from_flow(disp_hr, sample_stride=sample_stride)
+        self._init_params_from_affine(affine_init, shape)
+
     def optimize(
         self,
         moving: torch.Tensor,
@@ -445,6 +572,12 @@ class AffineReg3D(nn.Module):
         verbose: bool = False,
         normalize: bool = True,
         lbfgs_history_size: int = 10,
+        mind_init: bool = False,
+        mind_init_grid_sp: int = 6,
+        mind_init_disp_hw: int = 4,
+        mind_init_mind_r: int = 1,
+        mind_init_mind_d: int = 2,
+        mind_init_sample_stride: int = 4,
     ):
         """Optimize affine parameters to align moving to fixed.
 
@@ -460,6 +593,12 @@ class AffineReg3D(nn.Module):
             return_history: Whether to return loss history.
             normalize: Whether to normalize images before optimization.
             lbfgs_history_size: History size for LBFGS.
+            mind_init: Whether to run a short MIND-based pre-alignment stage.
+            mind_init_grid_sp: Grid spacing for convex MIND initialization.
+            mind_init_disp_hw: Displacement half-width for convex MIND initialization.
+            mind_init_mind_r: MIND radius for convex MIND initialization.
+            mind_init_mind_d: MIND dilation for convex MIND initialization.
+            mind_init_sample_stride: Subsampling stride when fitting affine from convex flow.
 
         Returns:
             Tuple of (output_dict, loss_history) if return_history else output_dict.
@@ -496,46 +635,72 @@ class AffineReg3D(nn.Module):
         if normalize:
             moving = self._normalize_image(moving)
             fixed = self._normalize_image(fixed)
-        if steps_per_scale is not None and len(steps_per_scale) != len(self.scales):
-            raise ValueError("steps_per_scale must match number of scales.")
+        def _run_optimization(
+            scales: Sequence[float],
+            steps_per_scale_local: Optional[Sequence[int]],
+            loss_funcs_local: Sequence[str],
+            optimizer_local: torch.optim.Optimizer,
+            log_prefix: str,
+        ) -> None:
+            if steps_per_scale_local is not None and len(steps_per_scale_local) != len(scales):
+                raise ValueError("steps_per_scale must match number of scales.")
 
-        for scale_idx, scale in enumerate(self.scales):
-            scale_steps = steps_per_scale[scale_idx] if steps_per_scale is not None else steps
-            for step in range(int(scale_steps)):
-                if scale == 1.0:
-                    mov = moving
-                    fix = fixed
-                else:
-                    mov = nnf.interpolate(moving, scale_factor=scale, mode="trilinear", align_corners=False)
-                    fix = nnf.interpolate(fixed, scale_factor=scale, mode="trilinear", align_corners=False)
-                    mov = self._pad_or_crop(mov, tuple(fix.shape[2:]), self.pad_mode, self.pad_value)
+            for scale_idx, scale in enumerate(scales):
+                scale_steps = steps_per_scale_local[scale_idx] if steps_per_scale_local is not None else steps
+                for step in range(int(scale_steps)):
+                    if scale == 1.0:
+                        mov = moving
+                        fix = fixed
+                    else:
+                        mov = nnf.interpolate(moving, scale_factor=scale, mode="trilinear", align_corners=False)
+                        fix = nnf.interpolate(fixed, scale_factor=scale, mode="trilinear", align_corners=False)
+                        mov = self._pad_or_crop(mov, tuple(fix.shape[2:]), self.pad_mode, self.pad_value)
 
-                shape = tuple(mov.shape[2:])
-                transformer = self._get_transformer(shape).to(mov.device)
-                loss_name = self.loss_funcs[min(scale_idx, len(self.loss_funcs) - 1)]
-                loss_fn = self._resolve_loss(loss_name)
+                    shape = tuple(mov.shape[2:])
+                    transformer = self._get_transformer(shape).to(mov.device)
+                    loss_name = loss_funcs_local[min(scale_idx, len(loss_funcs_local) - 1)]
+                    loss_fn = self._resolve_loss(loss_name)
 
-                def closure():
-                    optimizer.zero_grad(set_to_none=True)
-                    flow = self._affine_to_flow(shape, mov.shape[0], mov.device, mov.dtype)
-                    warped = transformer(mov, flow)
-                    loss_val = loss_fn(fix, warped)
-                    loss_val.backward()
-                    return loss_val
+                    def closure():
+                        optimizer_local.zero_grad(set_to_none=True)
+                        flow = self._affine_to_flow(shape, mov.shape[0], mov.device, mov.dtype)
+                        warped = transformer(mov, flow)
+                        loss_val = loss_fn(fix, warped)
+                        loss_val.backward()
+                        return loss_val
 
-                if isinstance(optimizer, torch.optim.LBFGS):
-                    loss = optimizer.step(closure)
-                else:
-                    loss = closure()
-                    optimizer.step()
+                    if isinstance(optimizer_local, torch.optim.LBFGS):
+                        loss = optimizer_local.step(closure)
+                    else:
+                        loss = closure()
+                        optimizer_local.step()
 
-                if return_history:
-                    loss_history.append(float(loss.detach().cpu()))
-                if verbose and (step == 0 or step == scale_steps - 1 or (step + 1) % 10 == 0):
-                    print(
-                        f"[AffineReg3D] scale {scale_idx + 1}/{len(self.scales)} step {step + 1}/{scale_steps} "
-                        f"loss={loss.item():.6f}"
-                    )
+                    if return_history:
+                        loss_history.append(float(loss.detach().cpu()))
+                    if verbose and (step == 0 or step == scale_steps - 1 or (step + 1) % 10 == 0):
+                        print(
+                            f"{log_prefix} scale {scale_idx + 1}/{len(scales)} step {step + 1}/{scale_steps} "
+                            f"loss={loss.item():.6f}"
+                        )
+
+        if mind_init:
+            self._convex_mind_affine_init(
+                moving=moving,
+                fixed=fixed,
+                grid_sp=mind_init_grid_sp,
+                disp_hw=mind_init_disp_hw,
+                mind_r=mind_init_mind_r,
+                mind_d=mind_init_mind_d,
+                sample_stride=mind_init_sample_stride,
+            )
+
+        _run_optimization(
+            scales=self.scales,
+            steps_per_scale_local=steps_per_scale,
+            loss_funcs_local=self.loss_funcs,
+            optimizer_local=optimizer,
+            log_prefix="[AffineReg3D]",
+        )
 
         output = self.forward(moving_, fixed, target_shape=target_shape)
 
