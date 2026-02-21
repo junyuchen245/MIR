@@ -24,7 +24,7 @@ python3.8 -m pip install -e .
 ## Quick start: IXI benchmarking
 
 You can quickly benchmark several models on the IXI dataset using the scripts in
-[tutorials/IXI_benchmarking](tutorials/IXI_benchmarking). See the README there for
+[tutorials/IXI_benchmarking](https://github.com/junyuchen245/MIR/tree/main/tutorials/IXI_benchmarking). See the README there for
 dataset download and run commands.
 
 ## Platform notes
