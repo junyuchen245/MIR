@@ -1,4 +1,3 @@
-from torch.utils.tensorboard import SummaryWriter
 import os
 import sys
 import glob
@@ -106,12 +105,12 @@ def create_model():
         normalizer_factory=GroupNormalizerFactory(4),
             ).cuda()
     spr_head = SPRHead(SPR_IN_CHANNELS).cuda()
-    return network, feature_extractor, spr_head
+    return network, spr_head
 
 def main():
     batch_size = 1
     weights = [1, 3.35, 0.18] # loss weights
-    save_dir = 'SITRegSPR_IXI_ncc_{}_LocalGrad3d_{}_logBeta_{}/'.format(weights[0], weights[1], weights[2])
+    save_dir = 'SITRegSPR_ncc_{}_LocalGrad3d_{}_logBeta_{}/'.format(weights[0], weights[1], weights[2])
     if not os.path.exists('experiments/'+save_dir):
         os.makedirs('experiments/'+save_dir)
     if not os.path.exists('logs/'+save_dir):
@@ -119,15 +118,16 @@ def main():
     sys.stdout = Logger('logs/'+save_dir)
     lr = 0.0001 #learning rate
     epoch_start = 0
-    max_epoch = 500 #max traning epoch
+    max_epoch = 250 #max traning epoch
     cont_training = False #if continue training
 
     '''
     Initialize model
     '''
     H, W, D = INPUT_SHAPE
-    model, feature_extractor, spr_head = create_model()
+    model, spr_head = create_model()
     model.cuda()
+    feature_extractor = model._feature_extractor
     '''
     Initialize spatial transformation function
     '''
@@ -163,7 +163,7 @@ def main():
     train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=8, pin_memory=True)
     val_loader = DataLoader(val_set, batch_size=1, shuffle=False, num_workers=8, pin_memory=True, drop_last=True)
     optimizer = optim.AdamW(
-        model.parameters(),
+        list(model.parameters()) + list(spr_head.parameters()),
         lr=updated_lr,
         weight_decay=0,
         amsgrad=True,
@@ -178,7 +178,6 @@ def main():
     criterion_ncc = NCC_vxm()
     criterion_reg = logBeta()
     criterion_reg2 = LocalGrad3d(penalty='l2')
-    writer = SummaryWriter(log_dir='logs/'+save_dir)
     for epoch in range(epoch_start, max_epoch):
         print('Training Starts')
         '''
@@ -242,8 +241,7 @@ def main():
                                                                                             loss_ncc.item(),
                                                                                             loss_reg.item(),
                                                                                             loss_reg2.item()))
-
-        writer.add_scalar('Loss/train', loss_all.avg, epoch)
+            
         print('Epoch {} loss {:.4f}'.format(epoch, loss_all.avg))
         '''
         Validation
@@ -260,7 +258,6 @@ def main():
                 flow = mapping_to_flow(mapping_pair.forward_mapping)
                 #flow = F.interpolate(flow.cuda(), scale_factor=2, mode='trilinear', align_corners=False) * 2
                 def_out = spatial_trans_nn(x_seg.cuda().float(), flow)
-                def_grid = spatial_trans(grid_img.float(), flow)
                 dsc = dice_val_VOI(def_out.long(), y_seg.long(), eval_labels=VOI_lbls)
                 eval_dsc.update(dsc.item(), x.size(0))
                 print(eval_dsc.avg)
@@ -271,31 +268,7 @@ def main():
             'best_dsc': best_dsc,
             'optimizer': optimizer.state_dict(),
         }, save_dir='experiments/' + save_dir, filename='dsc{:.4f}.pth.tar'.format(eval_dsc.avg))
-        plt.switch_backend('agg')
-        pred_fig = comput_fig(flow)
-        grid_fig = comput_fig(def_grid)
-        x_fig = comput_fig(x)
-        tar_fig = comput_fig(y)
-        writer.add_figure('Grid', grid_fig, epoch)
-        plt.close(grid_fig)
-        writer.add_figure('moving', x_fig, epoch)
-        plt.close(x_fig)
-        writer.add_figure('fixed', tar_fig, epoch)
-        plt.close(tar_fig)
-        writer.add_figure('deformed', pred_fig, epoch)
-        plt.close(pred_fig)
         loss_all.reset()
-    writer.close()
-
-def comput_fig(img):
-    img = img.detach().cpu().numpy()[0, 0, 48:64, :, :]
-    fig = plt.figure(figsize=(12,12), dpi=180)
-    for i in range(img.shape[0]):
-        plt.subplot(4, 4, i + 1)
-        plt.axis('off')
-        plt.imshow(img[i, :, :], cmap='gray')
-    fig.subplots_adjust(wspace=0, hspace=0)
-    return fig
 
 def adjust_learning_rate(optimizer, epoch, MAX_EPOCHES, INIT_LR, power=0.9):
     for param_group in optimizer.param_groups:

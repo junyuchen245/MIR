@@ -10,6 +10,12 @@ ModelWeights = {
     'VFA-SynthHead': {'wts':'17Dn5xXTnVs0LB35IWOM22F6d5BORbgRH', 'wts_key':'state_dict'},
     'MedIA-TM-SPR-Beta-autoPET': {'wts':'1NCdoK4khv4j8JAjlgeJo6EB4dSQr83r6', 'wts_key':'state_dict'},
     'MedIA-TM-SPR-Gaussian-autoPET': {'wts':'1WqiR5YB8ypx-NUvYU_kQMb3edRVOLi09', 'wts_key':'state_dict'},
+    'VFA-IXI-Atlas2Subject': {'wts':'1bw57iW8V1uRicGP298Lw7qihlaYqqnC5', 'wts_key':'state_dict'},
+    'TransMorph-IXI-Atlas2Subject': {'wts':'1EgpjJ7S4qjK3o1Ew8UcCBF01g5x0N2ot', 'wts_key':'state_dict'},
+    'TransMorphTVF-IXI-Atlas2Subject': {'wts':'1IlqloZ_3XZkbYrzRwE3uAEsgiIoi7vY4', 'wts_key':'state_dict'},
+    'VFA-SPR-IXI-Atlas2Subject': {'wts':'1DifJUBmR8RBETo2FXAhzbjjSA7JFexKY', 'wts_key':'state_dict'},
+    'SITReg-IXI-Atlas2Subject': {'wts':'1sW7WnaGwfq9CzQF5iCtiAx6AVY7-dsMd', 'wts_key':'state_dict'},
+    'SITReg-SPR-IXI-Atlas2Subject': {'wts':'1E5-7QPvrQ3PanhAhlXPQj-2Qa25259cu', 'wts_key':'state_dict'},
 }
 
 DatasetJSONs = {

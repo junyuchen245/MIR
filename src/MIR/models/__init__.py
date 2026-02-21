@@ -16,6 +16,7 @@ from .configs_VFA import get_VFA_default_config
 from .Synthesis_Heads import SynthesisHead3DAdvanced, SynthesisHead3D, EfficientAdvancedSynthHead3D, ConvNeXtSynthHead3D
 from .Segmentation_Heads import AdvancedDecoder3D
 from .convexAdam import convex_adam_MIND, convex_adam_MIND_SPR, convex_adam_seg_features, convex_adam_features, convex_adam_vfa, get_ConvexAdam_MIND_brain_default_config
+
 try:
     from . import fireants
 except Exception:  # pragma: no cover - optional dependency
@@ -108,5 +109,16 @@ __all__ = [
     'EfficientAdvancedSynthHead3D',
     'ConvNeXtSynthHead3D',
     'AdvancedDecoder3D',
+    'DeedsBCVConfig',
+    'DeedsBCVPt',
+    'DeedsBCVFullConfig',
+    'DeedsBCVFullPt',
+    'DeedsBCVHybridConfig',
+    'DeedsBCVAffineConfig',
+    'DeedsBCVAffinePt',
+    'deeds_bcv_pt',
+    'deeds_bcv_full_pt',
+    'deeds_bcv_hybrid',
+    'deeds_bcv_affine_pt',
     *(['fireants'] if fireants is not None else []),
 ]

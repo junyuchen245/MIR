@@ -10,10 +10,10 @@ import matplotlib.pyplot as plt
 from natsort import natsorted
 from torchvision import transforms
 
-from MIR.models import SpatialTransformer, EncoderFeatureExtractor, SITReg, VFA, TransMorphTVF, TransMorph
+from MIR.models import SpatialTransformer, EncoderFeatureExtractor, SITReg, VFA, TransMorphTVF, TransMorph, VFASPR
 from MIR.utils import Logger, AverageMeter, mk_grid_img
 from MIR.image_similarity import NCC_vxm
-from MIR.deformation_regularizer import Grad3d
+from MIR.deformation_regularizer import LocalGrad3d, logBeta
 from MIR.accuracy_measures import dice_val_VOI
 import MIR.models.configs_VFA as CONFIGS_VFA
 
@@ -36,8 +36,8 @@ def to_cuda(batch):
 
 def main():
     batch_size = 1
-    weights = [1, 1] # loss weights
-    save_dir = 'VFA_ncc_{}_diffusion_{}/'.format(weights[0], weights[1])
+    weights = [1, 3.35, 0.18] # loss weights
+    save_dir = 'VFASPR_ncc_{}_LocalGrad3d_{}_logBeta_{}/'.format(weights[0], weights[1], weights[2])
     if not os.path.exists('experiments/'+save_dir):
         os.makedirs('experiments/'+save_dir)
     if not os.path.exists('logs/'+save_dir):
@@ -56,7 +56,7 @@ def main():
     config = CONFIGS_VFA.get_VFA_default_config()
     config.img_size = (H//scale_factor, W//scale_factor, D//scale_factor)
     print(config)
-    model = VFA(config, device='cuda:0')
+    model = VFASPR(config, device='cuda:0', SVF=True)
     model.cuda()
     '''
     Initialize spatial transformation function
@@ -106,7 +106,8 @@ def main():
 
     best_dsc = 0
     criterion_ncc = NCC_vxm()
-    criterion_reg = Grad3d(penalty='l2')
+    criterion_reg = logBeta()
+    criterion_reg2 = LocalGrad3d(penalty='l2')
     for epoch in range(epoch_start, max_epoch):
         print('Training Starts')
         '''
@@ -116,35 +117,41 @@ def main():
         idx = 0
         for data in train_loader:
             idx += 1
+            
+            beta_weight = 1. + weights[2]
+            
             model.train()
             adjust_learning_rate(optimizer, epoch, max_epoch, lr)
             x, y = (t.float() for t in to_cuda(data[:2]))
-            flow = model((x,y))
+            flow, spatial_wts = model((x,y))
             output = spatial_trans(x, flow)
             loss_ncc = criterion_ncc(output, y) * weights[0]
-            loss_reg = criterion_reg(flow, y) * weights[1]
-            loss = loss_ncc + loss_reg
+            loss_reg = criterion_reg(spatial_wts, weights[1])
+            loss_reg2 = criterion_reg2(flow, spatial_wts) * beta_weight
+            loss = loss_ncc + loss_reg + loss_reg2
                 
             loss_all.update(loss.item(), y.numel())
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
-            flow = model((y,x))
+            flow, spatial_wts = model((y,x))
             output = spatial_trans(y, flow)
             loss_ncc = criterion_ncc(output, x) * weights[0]
-            loss_reg = criterion_reg(flow, x) * weights[1]
-            loss = loss_ncc + loss_reg
+            loss_reg = criterion_reg(spatial_wts, weights[1])
+            loss_reg2 = criterion_reg2(flow, spatial_wts) * beta_weight
+            loss = loss_ncc + loss_reg + loss_reg2
             loss_all.update(loss.item(), x.numel())
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
 
-            print('Iter {} of {} loss {:.4f}, Img Sim: {:.6f}, Reg: {:.6f}'.format(idx, len(train_loader),
+            print('Iter {} of {} loss {:.4f}, Img Sim: {:.6f}, Reg: {:.6f}, Reg2: {:.6f}'.format(idx, len(train_loader),
                                                                                             loss.item(),
                                                                                             loss_ncc.item(),
-                                                                                            loss_reg.item()))
+                                                                                            loss_reg.item(),
+                                                                                            loss_reg2.item()))
 
         print('Epoch {} loss {:.4f}'.format(epoch, loss_all.avg))
         '''
@@ -157,8 +164,7 @@ def main():
                 x, y, x_seg, y_seg = to_cuda(data)
                 x = x.float()
                 y = y.float()
-                flow = model((x,y))
-                #flow = F.interpolate(flow.cuda(), scale_factor=2, mode='trilinear', align_corners=False) * 2
+                flow, spatial_wts = model((x,y))
                 def_out = spatial_trans_nn(x_seg.cuda().float(), flow)
                 dsc = dice_val_VOI(def_out.long(), y_seg.long(), eval_labels=VOI_lbls)
                 eval_dsc.update(dsc.item(), x.size(0))

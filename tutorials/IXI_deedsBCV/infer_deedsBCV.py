@@ -15,6 +15,7 @@ from data import datasets, trans
 
 ATLAS_DIR = "/scratch2/jchen/DATA/IXI/atlas.pkl"
 VAL_DIR = "/scratch2/jchen/DATA/IXI/Val/"
+OUTPUT_DIR = "IXI_deedsBCV_val_outputs"
 VOI_lbls = [1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20, 21, 22, 23, 25, 26, 27, 28, 29, 30, 31, 32, 34, 36]
 
 
@@ -28,6 +29,7 @@ def load_flow(flow_prefix: str) -> torch.Tensor:
 
 
 def main():
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
     deeds_exe = get_deedsbcv_executable("deedsBCV")
 
     test_composed = trans.Compose([
@@ -46,9 +48,9 @@ def main():
     dsc_vals = []
     for i, data in enumerate(val_loader):
         x, y, x_seg, y_seg = [t.cuda() for t in data]
-        x_path = "moving.nii.gz"
-        y_path = "fixed.nii.gz"
-        out_prefix = "dense_disp"
+        x_path = os.path.join(OUTPUT_DIR, "moving.nii.gz")
+        y_path = os.path.join(OUTPUT_DIR, "fixed.nii.gz")
+        out_prefix = os.path.join(OUTPUT_DIR, "dense_disp")
 
         nib.Nifti1Image(x[0, 0].detach().cpu().numpy(), np.eye(4)).to_filename(x_path)
         nib.Nifti1Image(y[0, 0].detach().cpu().numpy(), np.eye(4)).to_filename(y_path)
