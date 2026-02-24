@@ -1,19 +1,110 @@
 IXI benchmarking quick start
 ============================
 
-Use the IXI benchmarking scripts in
+Use the IXI benchmarking workflow in
 `tutorials/IXI_benchmarking <https://github.com/junyuchen245/MIR/tree/main/tutorials/IXI_benchmarking>`_
-to run quick comparisons across models. The
-notebook in `tutorials/IXI_benchmarking/IXI_benchmarking.ipynb <https://github.com/junyuchen245/MIR/blob/main/tutorials/IXI_benchmarking/IXI_benchmarking.ipynb>`_
-contains the full workflow, and the commands below run the core benchmarks.
+to run quick comparisons across registration models on IXI.
+The notebook
+`tutorials/IXI_benchmarking/IXI_benchmarking.ipynb <https://github.com/junyuchen245/MIR/blob/main/tutorials/IXI_benchmarking/IXI_benchmarking.ipynb>`_
+is the canonical end-to-end benchmark pipeline.
+
+Models covered
+--------------
+
+- ``TransMorph``
+- ``TransMorphTVF``
+- ``VFA``
+- ``VFA-SPR``
+- ``SITReg``
+- ``SITReg-SPR``
+- ``ConvexAdam-MIND``
+
+Model references
+----------------
+
+- ``TransMorph``:
+    `TransMorph: Transformer for Unsupervised Medical Image Registration (MedIA 2022) <https://arxiv.org/abs/2111.10480>`_
+- ``TransMorphTVF``:
+    `Unsupervised Learning of Diffeomorphic Image Registration via TransMorph (WBIR 2022) <https://link.springer.com/chapter/10.1007/978-3-031-11203-4_11>`_
+- ``VFA``:
+    `Vector Field Attention for Deformable Image Registration (JMI 2024) <https://www.spiedigitallibrary.org/journals/journal-of-medical-imaging/volume-11/issue-6/064001/Vector-field-attention-for-deformable-image-registration/10.1117/1.JMI.11.6.064001.full>`_
+- ``VFA-SPR``:
+    Uses the VFA backbone with SPR regularization from
+    `Unsupervised Learning of Spatially Varying Regularization for Diffeomorphic Image Registration (MedIA 2025) <https://arxiv.org/abs/2412.17982>`_.
+- ``SITReg``:
+    `SITReg: Multi-resolution architecture for symmetric, inverse consistent, and topology preserving image registration (MELBA 2024) <https://www.melba-journal.org/papers/2024:026.html>`_
+- ``SITReg-SPR``:
+    Uses the SITReg backbone with SPR regularization from
+    `Unsupervised Learning of Spatially Varying Regularization for Diffeomorphic Image Registration (MedIA 2025) <https://arxiv.org/abs/2412.17982>`_.
+- ``ConvexAdam-MIND``:
+    `ConvexAdam: Self-configuring dual-optimization-based 3D medical image registration (IEEE TMI 2024) <https://ieeexplore.ieee.org/abstract/document/10681158>`_
+
+Environment setup
+-----------------
 
 .. code-block:: bash
 
-   cd tutorials/IXI_benchmarking
-   python3.8 -u train_TransMorph.py
-   python3.8 -u train_TransMorphTVF.py
-   python3.8 -u train_SITReg.py
-   python3.8 -u train_SITReg_SPR.py
+    python3.8 -m pip install -U pip
+    python3.8 -m pip install -e .
+    python3.8 -m pip install gdown nibabel scipy matplotlib pandas natsort
+
+Run benchmark (notebook)
+------------------------
+
+1. Open ``IXI_benchmarking.ipynb``.
+2. Run all cells from top to bottom.
+3. Ensure ``models_dict`` includes the exact model set you want.
+4. Run the evaluation loop and analysis cells.
+
+Data and pretrained weights
+---------------------------
+
+The notebook automatically downloads:
+
+- IXI test data zip (if missing), then extracts to ``./IXI_data/``
+- Pretrained model checkpoints to ``./pretrain_wts/``
+
+Expected files:
+
+- ``./IXI_data/Test/*.pkl``
+- ``./IXI_data/atlas.pkl``
+- ``./pretrain_wts/*.pth.tar``
+
+Outputs
+-------
+
+Per-model CSVs are written to ``./results``:
+
+- ``./results/TransMorph.csv``
+- ``./results/TransMorphTVF.csv``
+- ``./results/VFA.csv``
+- ``./results/VFA-SPR.csv``
+- ``./results/SITReg.csv``
+- ``./results/SITReg-SPR.csv``
+- ``./results/ConvexAdam-MIND.csv``
+
+Each CSV includes organ-wise Dice plus:
+
+- ``ndv``: non-diffeomorphic volume percentage
+- ``ndp``: non-diffeomorphic points percentage
+
+The final analysis cell aggregates Dice, prints summary statistics, and creates comparative boxplots.
+
+Reproducibility checklist
+-------------------------
+
+- Keep image size fixed at ``(160, 192, 224)``.
+- Keep ``batch_size=1`` for stable memory usage.
+- Use the same pretrained checkpoint files across all models.
+- For strict reproducibility, set random seeds and deterministic PyTorch options before model creation.
+
+Troubleshooting
+---------------
+
+- If data download fails, verify Google Drive access and rerun the download cell.
+- If package import fails, install missing dependencies in the active Python environment.
+- If CUDA memory is insufficient, run one model at a time and free other GPU processes.
+- ``deedsBCV`` is only supported on Linux and requires the executable in path/discovery.
 
 Notebook snippets
 -----------------

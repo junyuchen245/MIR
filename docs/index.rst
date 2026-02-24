@@ -42,13 +42,14 @@ Quick start: IXI benchmarking
 Benchmark multiple registration models on the IXI dataset using the scripts in
 `tutorials/IXI_benchmarking <https://github.com/junyuchen245/MIR/tree/main/tutorials/IXI_benchmarking>`_.
 
+The recommended workflow is the notebook
+`IXI_benchmarking.ipynb <https://github.com/junyuchen245/MIR/blob/main/tutorials/IXI_benchmarking/IXI_benchmarking.ipynb>`_,
+which downloads required data/checkpoints, runs inference benchmarks, and writes per-model CSV outputs in ``results/``.
+
 .. code-block:: bash
 
    cd tutorials/IXI_benchmarking
-   python3.8 -u train_TransMorph.py
-   python3.8 -u train_TransMorphTVF.py
-   python3.8 -u train_SITReg.py
-   python3.8 -u train_SITReg_SPR.py
+   # Open IXI_benchmarking.ipynb and run all cells
 
 Example: Brain template construction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

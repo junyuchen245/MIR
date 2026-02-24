@@ -27,6 +27,9 @@ You can quickly benchmark several models on the IXI dataset using the scripts in
 [tutorials/IXI_benchmarking](https://github.com/junyuchen245/MIR/tree/main/tutorials/IXI_benchmarking). See the README there for
 dataset download and run commands.
 
+Canonical workflow: run `IXI_benchmarking.ipynb` in that directory. The notebook handles dataset/checkpoint download, evaluates
+`TransMorph`, `TransMorphTVF`, `VFA`, `VFA-SPR`, `SITReg`, `SITReg-SPR`, and `ConvexAdam-MIND`, and writes per-model CSV metrics to `results/`.
+
 ## Platform notes
 
 - deedsBCV integration is **Linux-only**. Windows users can still use MIR, but deedsBCV functionality is unavailable.
