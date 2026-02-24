@@ -26,7 +26,7 @@ It benchmarks:
 - VFA:
   - Liu, Yihao, et al. "Vector field attention for deformable image registration." Journal of Medical Imaging 11.6 (2024): 064001.
 - SITReg:
-  - Honkamaa, Joel, and Pekka Marttinen. "SITReg: Multi-resolution architecture for symmetric, inverse consistent, and topology preserving image registration." JMLB 2 (2024): 2148-2194.
+  - Honkamaa, Joel, and Pekka Marttinen. "SITReg: Multi-resolution architecture for symmetric, inverse consistent, and topology preserving image registration." MELBA (2024): 2148-2194.
 - ConvexAdam:
   - Siebert, Hanna, et al. "Convexadam: Self-configuring dual-optimization-based 3d multitask medical image registration." IEEE TMI 44.2 (2024): 738-748.
 
