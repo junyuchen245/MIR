@@ -3,24 +3,23 @@ build/
 dist/
 src/*.egg-info/
 tutorials/lumir25_SITReg/
-src/MIR/models/SITReg/
-
+# ignore fireants due to license restrictions
+src/MIR/models/fireants/ 
+tutorials/IPEN_registration/
 # Ignore any folder named "experiments" or "logs" anywhere in the repo
 **/experiments/
 **/logs/
-**/atlas/
-**/__pycache__/
 **/pretrained_wts/
-**/convexadam_outputs/
-**/template_outputs*/
-**/population_stats*/
-**/output_*/
-**/preflight_previews/
-tutorials/JHU_FDG/batch*/
-**/run_log.json
-**/skip_log.csv
-**/temp_*.png
-**/temp_*.nii.gz
+**/atlas/
+**/template_outputs/
+**/__pycache__/
+
 # Ignore compiled Python artifacts everywhere
 *.py[cod]
 *.$py.class
+
+tutorials/PSMA_*/
+tutorials/HECKTOR25/
+tutorials/JHU_FDG/
+tutorials/Wholebody_PETCT_Atlas/
+# git rm --cached -r . removing all cached files before git add .
