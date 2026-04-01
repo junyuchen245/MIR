@@ -1,22 +1,45 @@
-'''
-Global regularizers for deformation regularization.
-Modified and tested by:
-Junyu Chen
-jchen245@jhmi.edu
-Johns Hopkins University
-'''
+"""Global regularizers for deformation regularization."""
+
+from __future__ import annotations
 
 import torch
-import MIR.utils.registration_utils as reg_utils
 import torch.nn.functional as nnf
+import MIR.utils.registration_utils as reg_utils
+
+
+def _apply_penalty(tensor: torch.Tensor, penalty: str) -> torch.Tensor:
+    """Apply the configured penalty while preserving legacy behavior."""
+    if penalty == 'l2':
+        return tensor.pow(2)
+    return tensor
+
+
+def _gradient_loss_2d(y_pred: torch.Tensor, penalty: str) -> torch.Tensor:
+    """Compute the mean 2D finite-difference gradient penalty."""
+    dy = torch.abs(y_pred[:, :, 1:, :] - y_pred[:, :, :-1, :])
+    dx = torch.abs(y_pred[:, :, :, 1:] - y_pred[:, :, :, :-1])
+
+    dx = _apply_penalty(dx, penalty)
+    dy = _apply_penalty(dy, penalty)
+    return (torch.mean(dx) + torch.mean(dy)) / 2.0
+
+
+def _gradient_loss_3d(y_pred: torch.Tensor, penalty: str) -> torch.Tensor:
+    """Compute the mean 3D finite-difference gradient penalty."""
+    dy = torch.abs(y_pred[:, :, 1:, :, :] - y_pred[:, :, :-1, :, :])
+    dx = torch.abs(y_pred[:, :, :, 1:, :] - y_pred[:, :, :, :-1, :])
+    dz = torch.abs(y_pred[:, :, :, :, 1:] - y_pred[:, :, :, :, :-1])
+
+    dx = _apply_penalty(dx, penalty)
+    dy = _apply_penalty(dy, penalty)
+    dz = _apply_penalty(dz, penalty)
+    return (torch.mean(dx) + torch.mean(dy) + torch.mean(dz)) / 3.0
 
 class Grad2D(torch.nn.Module):
-    """
-    2D gradient loss.
-    """
+    """2D gradient loss."""
 
     def __init__(self, penalty='l1', loss_mult=None):
-        super(Grad2D, self).__init__()
+        super().__init__()
         self.penalty = penalty
         self.loss_mult = loss_mult
 
@@ -30,27 +53,18 @@ class Grad2D(torch.nn.Module):
         Returns:
             Scalar gradient penalty.
         """
-        dy = torch.abs(y_pred[:, :, 1:, :] - y_pred[:, :, :-1, :])
-        dx = torch.abs(y_pred[:, :, :, 1:] - y_pred[:, :, :, :-1])
-
-        if self.penalty == 'l2':
-            dy = dy * dy
-            dx = dx * dx
-
-        d = torch.mean(dx) + torch.mean(dy)
-        grad = d / 2.0
+        #del y_true
+        grad = _gradient_loss_2d(y_pred, self.penalty)
 
         if self.loss_mult is not None:
             grad *= self.loss_mult
         return grad
 
 class Grad3d(torch.nn.Module):
-    """
-    3D gradient loss.
-    """
+    """3D gradient loss."""
 
     def __init__(self, penalty='l1', loss_mult=None):
-        super(Grad3d, self).__init__()
+        super().__init__()
         self.penalty = penalty
         self.loss_mult = loss_mult
 
@@ -64,30 +78,18 @@ class Grad3d(torch.nn.Module):
         Returns:
             Scalar gradient penalty.
         """
-        dy = torch.abs(y_pred[:, :, 1:, :, :] - y_pred[:, :, :-1, :, :])
-        dx = torch.abs(y_pred[:, :, :, 1:, :] - y_pred[:, :, :, :-1, :])
-        dz = torch.abs(y_pred[:, :, :, :, 1:] - y_pred[:, :, :, :, :-1])
-
-        if self.penalty == 'l2':
-            dy = dy * dy
-            dx = dx * dx
-            dz = dz * dz
-
-        d = torch.mean(dx) + torch.mean(dy) + torch.mean(dz)
-        grad = d / 3.0
+        #del y_true
+        grad = _gradient_loss_3d(y_pred, self.penalty)
 
         if self.loss_mult is not None:
             grad *= self.loss_mult
         return grad
 
 class Grad3DiTV(torch.nn.Module):
-    """
-    3D gradient Isotropic TV loss.
-    """
+    """3D isotropic TV loss."""
 
     def __init__(self):
-        super(Grad3DiTV, self).__init__()
-        a = 1
+        super().__init__()
 
     def forward(self, y_pred, y_true):
         """Compute isotropic total-variation loss in 3D.
@@ -99,30 +101,38 @@ class Grad3DiTV(torch.nn.Module):
         Returns:
             Scalar TV penalty.
         """
+        #del y_true
         dy = torch.abs(y_pred[:, :, 1:, 1:, 1:] - y_pred[:, :, :-1, 1:, 1:])
         dx = torch.abs(y_pred[:, :, 1:, 1:, 1:] - y_pred[:, :, 1:, :-1, 1:])
         dz = torch.abs(y_pred[:, :, 1:, 1:, 1:] - y_pred[:, :, 1:, 1:, :-1])
-        dy = dy * dy
-        dx = dx * dx
-        dz = dz * dz
-        d = torch.mean(torch.sqrt(dx+dy+dz+1e-6))
-        grad = d / 3.0
-        return grad
+
+        dy = dy.pow(2)
+        dx = dx.pow(2)
+        dz = dz.pow(2)
+        return torch.mean(torch.sqrt(dx + dy + dz + 1e-6)) / 3.0
 
 class DisplacementRegularizer(torch.nn.Module):
     """Compute displacement-field regularization energies."""
+
     def __init__(self, energy_type):
         super().__init__()
         self.energy_type = energy_type
 
-    def gradient_dx(self, fv): return (fv[:, 2:, 1:-1, 1:-1] - fv[:, :-2, 1:-1, 1:-1]) / 2
+    @staticmethod
+    def gradient_dx(fv):
+        return (fv[:, 2:, 1:-1, 1:-1] - fv[:, :-2, 1:-1, 1:-1]) / 2
 
-    def gradient_dy(self, fv): return (fv[:, 1:-1, 2:, 1:-1] - fv[:, 1:-1, :-2, 1:-1]) / 2
+    @staticmethod
+    def gradient_dy(fv):
+        return (fv[:, 1:-1, 2:, 1:-1] - fv[:, 1:-1, :-2, 1:-1]) / 2
 
-    def gradient_dz(self, fv): return (fv[:, 1:-1, 1:-1, 2:] - fv[:, 1:-1, 1:-1, :-2]) / 2
+    @staticmethod
+    def gradient_dz(fv):
+        return (fv[:, 1:-1, 1:-1, 2:] - fv[:, 1:-1, 1:-1, :-2]) / 2
 
-    def gradient_txyz(self, Txyz, fn):
-        return torch.stack([fn(Txyz[:,i,...]) for i in [0, 1, 2]], dim=1)
+    @staticmethod
+    def gradient_txyz(txyz, gradient_fn):
+        return torch.stack([gradient_fn(txyz[:, axis, ...]) for axis in (0, 1, 2)], dim=1)
 
     def compute_gradient_norm(self, displacement, flag_l1=False):
         """Compute L1/L2 gradient norm of a displacement field.
@@ -140,8 +150,8 @@ class DisplacementRegularizer(torch.nn.Module):
         if flag_l1:
             norms = torch.abs(dTdx) + torch.abs(dTdy) + torch.abs(dTdz)
         else:
-            norms = dTdx**2 + dTdy**2 + dTdz**2
-        return torch.mean(norms)/3.0
+            norms = dTdx.pow(2) + dTdy.pow(2) + dTdz.pow(2)
+        return torch.mean(norms) / 3.0
 
     def compute_bending_energy(self, displacement):
         """Compute bending energy of a displacement field.
@@ -161,7 +171,14 @@ class DisplacementRegularizer(torch.nn.Module):
         dTdxy = self.gradient_txyz(dTdx, self.gradient_dy)
         dTdyz = self.gradient_txyz(dTdy, self.gradient_dz)
         dTdxz = self.gradient_txyz(dTdx, self.gradient_dz)
-        return torch.mean(dTdxx**2 + dTdyy**2 + dTdzz**2 + 2*dTdxy**2 + 2*dTdxz**2 + 2*dTdyz**2)
+        return torch.mean(
+            dTdxx.pow(2)
+            + dTdyy.pow(2)
+            + dTdzz.pow(2)
+            + 2 * dTdxy.pow(2)
+            + 2 * dTdxz.pow(2)
+            + 2 * dTdyz.pow(2)
+        )
 
     def forward(self, disp, _):
         if self.energy_type == 'bending':
@@ -173,167 +190,125 @@ class DisplacementRegularizer(torch.nn.Module):
         else:
             raise Exception('Not recognised local regulariser!')
         return energy
-    
+
 class GradICON3d(torch.nn.Module):
-    """
-    Gradient‑ICON loss for 3‑D displacement fields.
-    Penalises the Frobenius‑norm of the Jacobian of the
-    composition Φ^{AB}∘Φ^{BA} (forward ◦ inverse).
-    """
+    """Gradient-ICON loss for 3D displacement fields."""
 
     def __init__(self, flow_shape, penalty='l2', loss_mult=None, both_dirs=False, device='cpu'):
-        """
-        Args
-        ----
-        stn        : instance of SpatialTransformer (warps tensors by displacements)
-        penalty    : 'l1' or 'l2'
-        loss_mult  : optional scalar multiplier
-        both_dirs  : if True also penalise the reverse composition
-                     Φ^{BA}∘Φ^{AB} and average the two losses
-        """
+        """Initialize the GradICON penalty module."""
         super().__init__()
         if penalty not in ('l1', 'l2'):
             raise ValueError("penalty must be 'l1' or 'l2'")
-        self.stn        = reg_utils.SpatialTransformer(flow_shape).to(device)
-        self.penalty    = penalty
-        self.loss_mult  = loss_mult
-        self.both_dirs  = both_dirs
+        self.stn = reg_utils.SpatialTransformer(flow_shape).to(device)
+        self.penalty = penalty
+        self.loss_mult = loss_mult
+        self.both_dirs = both_dirs
 
     @staticmethod
-    def _grad3d(disp, p):
-        """finite‑difference gradient loss for one displacement"""
-        dy = torch.abs(disp[:, :, 1:, :, :] - disp[:, :, :-1, :, :])
-        dx = torch.abs(disp[:, :, :, 1:, :] - disp[:, :, :, :-1, :])
-        dz = torch.abs(disp[:, :, :, :, 1:] - disp[:, :, :, :, :-1])
-
-        if p == 'l2':
-            dy = dy * dy
-            dx = dx * dx
-            dz = dz * dz
-        return (dx.mean() + dy.mean() + dz.mean()) / 3.0
+    def _grad3d(disp, penalty):
+        """Compute a finite-difference gradient loss for one displacement."""
+        return _gradient_loss_3d(disp, penalty)
 
     def forward(self, flow_fwd, flow_inv):
-        """
-        Returns
-        -------
-        loss : scalar GradICON penalty
-        """
-        # Φ^{AB}∘Φ^{BA} − Id   (displacement form)
+        """Compute the GradICON penalty for forward and inverse flows."""
         comp_f = flow_inv + self.stn(flow_fwd, flow_inv)
-        loss   = self._grad3d(comp_f, self.penalty)
+        loss = self._grad3d(comp_f, self.penalty)
 
         if self.both_dirs:
-            # Φ^{BA}∘Φ^{AB} − Id
             comp_b = flow_fwd + self.stn(flow_inv, flow_fwd)
-            loss   = 0.5 * (loss + self._grad3d(comp_b, self.penalty))
+            loss = 0.5 * (loss + self._grad3d(comp_b, self.penalty))
 
         if self.loss_mult is not None:
             loss *= self.loss_mult
         return loss
 
 class GradICONExact3d(torch.nn.Module):
-    """
-    Paper‑faithful Gradient‑ICON for 3‑D flows
-    """
+    """Paper-faithful Gradient-ICON for 3D flows."""
 
-    def __init__(self, vol_shape, penalty='l2',
-                 both_dirs=False, device='cpu'):
+    def __init__(self, vol_shape, penalty='l2', both_dirs=False, device='cpu'):
         super().__init__()
         if penalty not in ('l1', 'l2'):
             raise ValueError("penalty must be 'l1' or 'l2'")
         self.D, self.H, self.W = vol_shape
-        self.penalty   = penalty
+        self.penalty = penalty
         self.both_dirs = both_dirs
-        self.device    = device
+        self.device = device
 
-        # unchanged voxelmorph ST‑N
         self.stn = reg_utils.SpatialTransformer(vol_shape).to(device)
 
-        # Δx = 1e‑3 in unit‑cube coords  →  voxel step
-        self.dx_vox = torch.tensor([s - 1 for s in vol_shape],
-                                   dtype=torch.float32, device=device) * 1e-3
+        self.dx_vox = torch.tensor(
+            [size - 1 for size in vol_shape],
+            dtype=torch.float32,
+            device=device,
+        ) * 1e-3
 
-        # full identity grid in voxel coords (D,H,W,3)
         z = torch.linspace(0, self.D - 1, self.D, device=device)
         y = torch.linspace(0, self.H - 1, self.H, device=device)
         x = torch.linspace(0, self.W - 1, self.W, device=device)
         zz, yy, xx = torch.meshgrid(z, y, x, indexing='ij')
-        self.grid_full = torch.stack([xx, yy, zz], dim=-1).view(-1, 3)  # (N,3)
-        self.Nsub = self.grid_full.size(0) // 8                         # vox/2³
+        self.grid_full = torch.stack([xx, yy, zz], dim=-1).view(-1, 3)
+        self.Nsub = self.grid_full.size(0) // 8
 
         self.register_buffer('eye3', torch.eye(3))
 
-    # ---------------------------------------------------------------- utilities
     @staticmethod
-    def _fro(diff, p):
-        if p == 'l1':
-            return diff.abs().sum((-2, -1))       # ||·||_F  (L¹)
-        else:
-            return diff.pow(2).sum((-2, -1))      # ||·||_F²
+    def _fro(diff, penalty):
+        if penalty == 'l1':
+            return diff.abs().sum((-2, -1))
+        return diff.pow(2).sum((-2, -1))
 
-    # ---------------------------------------------------------------- helpers
     def _compose_disp(self, flow_fwd, flow_inv):
-        """
-        Returns displacement of Φ_AB∘Φ_BA on the voxel grid (B,3,D,H,W)
-        """
-        return flow_inv + self.stn(flow_fwd, flow_inv)    # exactly as in your code
+        """Return the displacement of the composed transform on the voxel grid."""
+        return flow_inv + self.stn(flow_fwd, flow_inv)
 
     def _jacobian_samples(self, disp, pts_vox):
-        """
-        disp       : (B,3,D,H,W) displacement field in *voxel* units
-        pts_vox    : (B,N,3) random sample points in *voxel* coords
-        returns    : (B,N,3,3) finite‑difference Jacobian at those points
-        """
+        """Sample a finite-difference Jacobian at random voxel locations."""
         B, N, _ = pts_vox.shape
 
-        # helper to sample disp at arbitrary pts via grid_sample
         def sample(f, p):
-            p_norm = p.clone()                            # [0,1]³ → [-1,1]³
+            p_norm = p.clone()
             p_norm[..., 0] = 2 * (p[..., 0] / (self.W - 1) - 0.5)
             p_norm[..., 1] = 2 * (p[..., 1] / (self.H - 1) - 0.5)
             p_norm[..., 2] = 2 * (p[..., 2] / (self.D - 1) - 0.5)
             g = p_norm.view(B, N, 1, 1, 3)
-            v = nnf.grid_sample(f, g, align_corners=False,
-                              mode='bilinear', padding_mode='border')
-            return v.view(B, 3, N).permute(0, 2, 1)       # B×N×3
+            v = nnf.grid_sample(
+                f,
+                g,
+                align_corners=False,
+                mode='bilinear',
+                padding_mode='border',
+            )
+            return v.view(B, 3, N).permute(0, 2, 1)
 
-        # Φ(x) = x + disp(x)
-        x      = pts_vox                                   # B×N×3
-        phi_x  = x + sample(disp, x)
+        x = pts_vox
+        phi_x = x + sample(disp, x)
 
         grads = []
-        # finite differences: (Φ(x+Δx e_i) - Φ(x)) / Δx
         for axis, dx in enumerate(self.dx_vox):
-            x_shift    = x.clone()
+            x_shift = x.clone()
             x_shift[..., axis] += dx
-            phi_shift  = x_shift + sample(disp, x_shift)
+            phi_shift = x_shift + sample(disp, x_shift)
             grads.append((phi_shift - phi_x) / dx)
 
-        return torch.stack(grads, dim=-1)                  # B×N×3×3
+        return torch.stack(grads, dim=-1)
 
-    # ---------------------------------------------------------------- forward
     def forward(self, flow_fwd, flow_inv):
-        """
-        flow_fwd, flow_inv : (B,3,D,H,W) voxel‑unit displacements
-        """
+        """Compute the exact GradICON penalty for sampled voxel locations."""
         B = flow_fwd.size(0)
 
-        # uniform random sub‑sample of voxel centres
-        idx  = torch.randperm(self.grid_full.size(0), device=self.device)[:self.Nsub]
-        pts0 = self.grid_full[idx].unsqueeze(0).repeat(B, 1, 1)  # B×Ns×3
+        idx = torch.randperm(self.grid_full.size(0), device=self.device)[:self.Nsub]
+        pts0 = self.grid_full[idx].unsqueeze(0).repeat(B, 1, 1)
 
-        # Φ_AB∘Φ_BA displacement field
         comp_disp = self._compose_disp(flow_fwd, flow_inv)
 
-        # Jacobian of composition at sampled points
-        J  = self._jacobian_samples(comp_disp, pts0)
-        diff = J - self.eye3.to(J.device)                                # ∇Φ − I
+        J = self._jacobian_samples(comp_disp, pts0)
+        diff = J - self.eye3.to(J.device)
         loss = self._fro(diff, self.penalty).mean()
 
-        if self.both_dirs:                                  # reverse term
+        if self.both_dirs:
             comp_disp_b = self._compose_disp(flow_inv, flow_fwd)
-            J_b  = self._jacobian_samples(comp_disp_b, pts0)
+            J_b = self._jacobian_samples(comp_disp_b, pts0)
             diff_b = J_b - self.eye3
-            loss   = 0.5 * (loss + self._fro(diff_b, self.penalty).mean())
+            loss = 0.5 * (loss + self._fro(diff_b, self.penalty).mean())
 
         return loss

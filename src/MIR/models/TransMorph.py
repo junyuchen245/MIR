@@ -24,7 +24,7 @@ import MIR.models.registration_utils as utils
 import MIR.models.Deformable_Swin_Transformer as dswin
 import MIR.models.Deformable_Swin_Transformer_v2 as dswin_v2
 import numpy as np
-
+import torch.nn.functional as F
 class Conv3dReLU(nn.Sequential):
     """3D convolution + normalization + LeakyReLU block."""
     def __init__(
@@ -824,6 +824,108 @@ class TransMorphAffine(nn.Module):
         scl = torch.clamp(scl, min=0, max=5)
         shr = torch.clamp(shr_, min=-1, max=1) * np.pi  # shr = torch.tanh(shr) * np.pi
         return aff, scl, trans, shr#, aff_, scl_, trans_, shr_
+
+class TransMorphTVFAutoPETAtlas(nn.Module):
+    def __init__(self, config, time_steps=5):
+        '''
+        Multi-resolution TransMorph
+        '''
+        super(TransMorphTVFAutoPETAtlas, self).__init__()
+        if_convskip = config.if_convskip
+        self.if_convskip = if_convskip
+        if_transskip = config.if_transskip
+        self.if_transskip = if_transskip
+        embed_dim = config.embed_dim
+        self.time_steps = time_steps
+        self.img_size = config.img_size
+        self.transformer = swin.SwinTransformer(patch_size=config.patch_size,
+                                           in_chans=config.in_chans,
+                                           embed_dim=config.embed_dim,
+                                           depths=config.depths,
+                                           num_heads=config.num_heads,
+                                           window_size=config.window_size,
+                                           mlp_ratio=config.mlp_ratio,
+                                           qkv_bias=config.qkv_bias,
+                                           drop_rate=config.drop_rate,
+                                           drop_path_rate=config.drop_path_rate,
+                                           ape=config.ape,
+                                           spe=config.spe,
+                                           patch_norm=config.patch_norm,
+                                           use_checkpoint=config.use_checkpoint,
+                                           out_indices=config.out_indices,
+                                           pat_merg_rf=config.pat_merg_rf,
+                                           )
+        self.up0 = DecoderBlock(embed_dim * 4, embed_dim * 2, skip_channels=embed_dim * 2 if if_transskip else 0,
+                                use_batchnorm=False)
+        self.up1 = DecoderBlock(embed_dim * 2, embed_dim, skip_channels=embed_dim if if_transskip else 0,
+                                use_batchnorm=False)  # 384, 20, 20, 64
+        self.up2 = DecoderBlock(embed_dim, embed_dim//2, skip_channels=embed_dim//2 if if_transskip else 0,
+                                use_batchnorm=False)  # 384, 20, 20, 64
+        self.c1 = Conv3dReLU(2, embed_dim//2, 3, 1, use_batchnorm=False)
+        self.avg_pool = nn.AvgPool3d(3, stride=2, padding=1)
+        self.reg_heads = nn.ModuleList()
+        self.up3s = nn.ModuleList()
+        self.cs = nn.ModuleList()
+        for t in range(self.time_steps):
+            self.cs.append(Conv3dReLU(2, embed_dim // 2, 3, 1, use_batchnorm=False))
+            self.reg_heads.append(RegistrationHead(in_channels=config.reg_head_chan, out_channels=3, kernel_size=3, ))
+            self.up3s.append(DecoderBlock(embed_dim//2, config.reg_head_chan, skip_channels=embed_dim // 2 if if_convskip else 0,
+                                   use_batchnorm=False))
+        self.spatial_trans_half = utils.SpatialTransformer(config.img_size)
+        self.spatial_trans = utils.SpatialTransformer(
+            (config.img_size[0] * 2, config.img_size[1] * 2, config.img_size[2] * 2))
+        self.reg_head = RegistrationHead(
+            in_channels=config.reg_head_chan,
+            out_channels=3,
+            kernel_size=3,
+        )
+        self.upsamp = nn.Upsample(scale_factor=2, mode="trilinear", align_corners=False)
+        self.integrate = utils.VecInt((config.img_size[0] * 2, config.img_size[1] * 2, config.img_size[2] * 2), 7)
+
+    def forward(self, inputs):
+        source, target = inputs
+        mov, fix = F.avg_pool3d(source, 2), F.avg_pool3d(target, 2)
+        x_cat = torch.cat((mov, fix), dim=1)
+        x_s1 = self.avg_pool(x_cat)
+        out_feats = self.transformer(x_cat)  # (B, n_patch, hidden)
+        if self.if_convskip:
+            f3 = self.c1(x_s1)
+        else:
+            f3 = None
+        if self.if_transskip:
+            f1 = out_feats[-2]
+            f2 = out_feats[-3]
+        else:
+            f1 = None
+            f2 = None
+
+        x = self.up0(out_feats[-1], f1)
+        x = self.up1(x, f2)
+        xx = self.up2(x, f3)
+        def_x = mov.clone()
+        flow_previous = 0
+        flows = []
+
+        # flow integration
+        xs = 0
+        for t in range(self.time_steps):
+            f_out = self.cs[t](torch.cat((def_x, fix), dim=1))
+            x = self.up3s[t](xx, f_out)
+            xs += x
+            flow = self.reg_heads[t](x)
+            flows.append(flow)
+            flow_new = flow_previous + self.spatial_trans_half(flow, flow)
+            def_x = self.spatial_trans_half(mov, flow_new)
+            flow_previous = flow_new
+        flow = flow_new
+        pos_flow = F.interpolate(flow.cuda(), scale_factor=2, mode='trilinear', align_corners=False) * 2
+        neg_flow = -pos_flow
+        pos_flow = self.integrate(pos_flow)
+        neg_flow = self.integrate(neg_flow)
+        def_sor = self.spatial_trans(source, pos_flow)
+        def_tar = self.spatial_trans(target, neg_flow)
+        
+        return def_sor, def_tar, pos_flow, neg_flow
 
 CONFIGS = {
     'TransMorph-3-LVL': configs.get_3DTransMorph3Lvl_config(),

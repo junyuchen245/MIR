@@ -765,16 +765,31 @@ class PreAffineToTemplate(nn.Module):
 
     def _resolve_template_path(self, name: str) -> Path:
         """Resolve template path from package resources with source-tree fallback."""
+        direct_path = Path(name).expanduser()
+        if direct_path.is_file():
+            return direct_path.resolve()
+
+        cwd_path = (Path.cwd() / direct_path).resolve()
+        if cwd_path.is_file():
+            return cwd_path
+
         try:
             package_root = resources.files("MIR")
-            candidate = package_root.joinpath("templates", name)
+            candidate = package_root.joinpath("templates", direct_path.name)
             if candidate.is_file():
-                return Path(candidate)
+                with resources.as_file(candidate) as resolved_path:
+                    return resolved_path
         except Exception:
             pass
-        repo_templates = Path(__file__).resolve().parents[2] / "templates" / name
-        if repo_templates.exists():
+
+        package_templates = Path(__file__).resolve().parents[1] / "templates" / direct_path.name
+        if package_templates.is_file():
+            return package_templates
+
+        repo_templates = Path(__file__).resolve().parents[3] / "tutorials" / "brain_MRI_preprocessing" / direct_path.name
+        if repo_templates.is_file():
             return repo_templates
+
         raise FileNotFoundError(f"Template not found: {name}")
 
     def forward(self, x: torch.Tensor, optimize: bool = True, verbose: bool = False):

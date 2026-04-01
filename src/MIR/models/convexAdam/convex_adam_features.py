@@ -24,6 +24,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from scipy.ndimage import distance_transform_edt as edt
 from typing import Tuple
+from MIR.models.registration_utils import VecInt
 from MIR.models.convexAdam.convex_adam_utils import (MINDSSC, correlate, coupled_convex,
                                           inverse_consistency, validate_image)
 
@@ -72,6 +73,60 @@ def extract_features(
     return features_fix, features_mov
 
 
+def _compute_convex_initial_disp(
+    features_fix: torch.Tensor,
+    features_mov: torch.Tensor,
+    grid_sp: int,
+    disp_hw: int,
+    ic: bool,
+    device: torch.device,
+    dtype: torch.dtype,
+    full_shape: Tuple[int, int, int],
+) -> torch.Tensor:
+    H, W, D = full_shape
+    n_ch = features_fix.shape[1]
+
+    ssd, ssd_argmin = correlate(features_fix, features_mov, disp_hw, grid_sp, (H, W, D), n_ch)
+    disp_mesh_t = F.affine_grid(
+        disp_hw * torch.eye(3, 4).to(device).to(dtype).unsqueeze(0),
+        (1, 1, disp_hw * 2 + 1, disp_hw * 2 + 1, disp_hw * 2 + 1),
+        align_corners=True,
+    ).permute(0, 4, 1, 2, 3).reshape(3, -1, 1)
+
+    disp_soft = coupled_convex(ssd, ssd_argmin, disp_mesh_t, grid_sp, (H, W, D))
+
+    if not ic:
+        return disp_soft
+
+    scale = torch.tensor([H // grid_sp - 1, W // grid_sp - 1, D // grid_sp - 1]).view(1, 3, 1, 1, 1).to(device).to(dtype) / 2
+    ssd_rev, ssd_argmin_rev = correlate(features_mov, features_fix, disp_hw, grid_sp, (H, W, D), n_ch)
+    disp_soft_rev = coupled_convex(ssd_rev, ssd_argmin_rev, disp_mesh_t, grid_sp, (H, W, D))
+    disp_ice, _ = inverse_consistency((disp_soft / scale).flip(1), (disp_soft_rev / scale).flip(1), iter=15)
+    return F.interpolate(disp_ice.flip(1) * scale * grid_sp, size=(H, W, D), mode='trilinear', align_corners=False)
+
+
+def _triple_average(field: torch.Tensor, kernel_size: int = 3, padding: int = 1) -> torch.Tensor:
+    return F.avg_pool3d(
+        F.avg_pool3d(
+            F.avg_pool3d(field, kernel_size, stride=1, padding=padding),
+            kernel_size,
+            stride=1,
+            padding=padding,
+        ),
+        kernel_size,
+        stride=1,
+        padding=padding,
+    )
+
+
+def _diffusion_regularization(field: torch.Tensor, lambda_weight: float) -> torch.Tensor:
+    return (
+        lambda_weight * (field[:, :, 1:, :, :] - field[:, :, :-1, :, :]).pow(2).mean()
+        + lambda_weight * (field[:, :, :, 1:, :] - field[:, :, :, :-1, :]).pow(2).mean()
+        + lambda_weight * (field[:, :, :, :, 1:] - field[:, :, :, :, :-1]).pow(2).mean()
+    )
+
+
 def convex_adam_feats(
     img_fixed: Union[torch.Tensor, np.ndarray, nib.Nifti1Image],
     img_moving: Union[torch.Tensor, np.ndarray, nib.Nifti1Image],
@@ -104,32 +159,19 @@ def convex_adam_feats(
         features_fix_smooth = F.avg_pool3d(features_fix, grid_sp, stride=grid_sp)
         features_mov_smooth = F.avg_pool3d(features_mov, grid_sp, stride=grid_sp)
 
-        n_ch = features_fix_smooth.shape[1]
-
     if initial_disp is not None:
         disp_hr = initial_disp
     else:
-        ssd, ssd_argmin = correlate(features_fix_smooth, features_mov_smooth, disp_hw, grid_sp, (H, W, D), n_ch)
-
-        # provide auxiliary mesh grid
-        disp_mesh_t = F.affine_grid(disp_hw * torch.eye(3, 4).to(device).to(dtype).unsqueeze(0), (1, 1, disp_hw * 2 + 1, disp_hw * 2 + 1, disp_hw * 2 + 1), align_corners=True).permute(0, 4, 1, 2, 3).reshape(3, -1, 1)
-
-        # perform coupled convex optimisation
-        disp_soft = coupled_convex(ssd,ssd_argmin,disp_mesh_t,grid_sp,(H,W,D))
-
-        # if "ic" flag is set: make inverse consistent
-        if ic:
-            scale = torch.tensor([H//grid_sp-1,W//grid_sp-1,D//grid_sp-1]).view(1,3,1,1,1).to(device).to(dtype)/2
-
-            ssd_,ssd_argmin_ = correlate(features_mov_smooth,features_fix_smooth,disp_hw,grid_sp,(H,W,D), n_ch)
-
-            disp_soft_ = coupled_convex(ssd_,ssd_argmin_,disp_mesh_t,grid_sp,(H,W,D))
-            disp_ice,_ = inverse_consistency((disp_soft/scale).flip(1),(disp_soft_/scale).flip(1),iter=15)
-
-            disp_hr = F.interpolate(disp_ice.flip(1)*scale*grid_sp,size=(H,W,D),mode='trilinear',align_corners=False)
-        
-        else:
-            disp_hr=disp_soft
+        disp_hr = _compute_convex_initial_disp(
+            features_fix=features_fix_smooth,
+            features_mov=features_mov_smooth,
+            grid_sp=grid_sp,
+            disp_hw=disp_hw,
+            ic=ic,
+            device=device,
+            dtype=dtype,
+            full_shape=(H, W, D),
+        )
     
     # run Adam instance optimisation
     if lambda_weight > 0:
@@ -151,7 +193,7 @@ def convex_adam_feats(
         for iter in range(selected_niter):
             optimizer.zero_grad()
 
-            disp_sample = F.avg_pool3d(F.avg_pool3d(F.avg_pool3d(net[0].weight,3,stride=1,padding=1),3,stride=1,padding=1),3,stride=1,padding=1).permute(0,2,3,4,1)
+            disp_sample = _triple_average(net[0].weight).permute(0,2,3,4,1)
             reg_loss = lambda_weight*((disp_sample[0,:,1:,:]-disp_sample[0,:,:-1,:])**2).mean()+\
             lambda_weight*((disp_sample[0,1:,:,:]-disp_sample[0,:-1,:,:])**2).mean()+\
             lambda_weight*((disp_sample[0,:,:,1:]-disp_sample[0,:,:,:-1])**2).mean()
@@ -190,6 +232,165 @@ def convex_adam_feats(
     else:
         displacements = disp_hr
     return displacements
+
+
+def convex_adam_feats_svf(
+    img_fixed: Union[torch.Tensor, np.ndarray, nib.Nifti1Image],
+    img_moving: Union[torch.Tensor, np.ndarray, nib.Nifti1Image],
+    initial_disp: Optional[torch.Tensor] = None,
+    initial_velocity: Optional[torch.Tensor] = None,
+    lambda_weight: float = 1.25,
+    grid_sp: int = 6,
+    disp_hw: int = 4,
+    selected_niter: int = 80,
+    selected_smooth: int = 0,
+    grid_sp_adam: int = 2,
+    ic: bool = True,
+    svf_steps: int = 7,
+    dtype: torch.dtype = torch.float16,
+    verbose: bool = False,
+    device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
+    save_disp: bool = True,
+    return_velocity: bool = False,
+):
+    """ConvexAdam optimization with an SVF parameterization and forward/reverse outputs."""
+    features_fix = img_fixed.float()
+    features_mov = img_moving.float()
+    if dtype == torch.float16 and device == torch.device("cpu"):
+        print("Warning: float16 is not supported on CPU, using float32 instead")
+        dtype = torch.float32
+
+    _, _, H, W, D = features_fix.shape
+    h_lr, w_lr, d_lr = H // grid_sp_adam, W // grid_sp_adam, D // grid_sp_adam
+
+    t0 = time.time()
+
+    with torch.no_grad():
+        features_fix_smooth = F.avg_pool3d(features_fix, grid_sp, stride=grid_sp)
+        features_mov_smooth = F.avg_pool3d(features_mov, grid_sp, stride=grid_sp)
+
+    if initial_velocity is None:
+        if initial_disp is None:
+            initial_disp = _compute_convex_initial_disp(
+                features_fix=features_fix_smooth,
+                features_mov=features_mov_smooth,
+                grid_sp=grid_sp,
+                disp_hw=disp_hw,
+                ic=ic,
+                device=device,
+                dtype=dtype,
+                full_shape=(H, W, D),
+            )
+        initial_velocity = initial_disp
+
+    with torch.no_grad():
+        patch_features_fix = F.avg_pool3d(features_fix, grid_sp_adam, stride=grid_sp_adam)
+        patch_features_mov = F.avg_pool3d(features_mov, grid_sp_adam, stride=grid_sp_adam)
+
+    velocity_lr = F.interpolate(initial_velocity, size=(h_lr, w_lr, d_lr), mode='trilinear', align_corners=False)
+
+    net = nn.Sequential(nn.Conv3d(3, 1, (h_lr, w_lr, d_lr), bias=False))
+    net[0].weight.data[:] = velocity_lr.float().cpu().data / grid_sp_adam
+    net.to(device)
+    optimizer = torch.optim.Adam(net.parameters(), lr=1)
+
+    integrator_lr = VecInt((h_lr, w_lr, d_lr), svf_steps).to(device)
+    transformer_lr = integrator_lr.transformer
+
+    for iter in range(selected_niter):
+        optimizer.zero_grad()
+
+        velocity_sample = _triple_average(net[0].weight)
+        reg_loss = _diffusion_regularization(velocity_sample, lambda_weight)
+        disp_sample = integrator_lr(velocity_sample.float())
+
+        patch_mov_sampled = transformer_lr(patch_features_mov.float(), disp_sample, padding_mode='border')
+        sampled_cost = (patch_mov_sampled - patch_features_fix).pow(2).mean(1) * 12
+        loss = sampled_cost.mean()
+        (loss + reg_loss).backward()
+        optimizer.step()
+
+    fitted_velocity = velocity_sample.detach()
+
+    if selected_smooth > 0:
+        if selected_smooth % 2 == 0:
+            kernel_smooth = selected_smooth + 1
+            print('selected_smooth should be an odd number, adding 1')
+        else:
+            kernel_smooth = selected_smooth
+        fitted_velocity = _triple_average(fitted_velocity, kernel_size=kernel_smooth, padding=kernel_smooth // 2)
+
+    velocity_hr = F.interpolate(fitted_velocity * grid_sp_adam, size=(H, W, D), mode='trilinear', align_corners=False)
+    integrator_hr = VecInt((H, W, D), svf_steps).to(device)
+    disp_fwd = integrator_hr(velocity_hr.float())
+    disp_rev = integrator_hr((-velocity_hr).float())
+
+    t1 = time.time()
+    case_time = t1 - t0
+    if verbose:
+        print(f'case time: {case_time}')
+
+    if save_disp:
+        fwd = np.stack(
+            (
+                disp_fwd[0, 0].cpu().to(dtype).data.numpy(),
+                disp_fwd[0, 1].cpu().to(dtype).data.numpy(),
+                disp_fwd[0, 2].cpu().to(dtype).data.numpy(),
+            ),
+            3,
+        ).astype(float)
+        rev = np.stack(
+            (
+                disp_rev[0, 0].cpu().to(dtype).data.numpy(),
+                disp_rev[0, 1].cpu().to(dtype).data.numpy(),
+                disp_rev[0, 2].cpu().to(dtype).data.numpy(),
+            ),
+            3,
+        ).astype(float)
+        if return_velocity:
+            vel = np.stack(
+                (
+                    velocity_hr[0, 0].cpu().to(dtype).data.numpy(),
+                    velocity_hr[0, 1].cpu().to(dtype).data.numpy(),
+                    velocity_hr[0, 2].cpu().to(dtype).data.numpy(),
+                ),
+                3,
+            ).astype(float)
+            return fwd, rev, vel
+        return fwd, rev
+
+    if return_velocity:
+        return disp_fwd, disp_rev, velocity_hr
+
+    return disp_fwd, disp_rev
+
+
+def convex_adam_features_svf(
+    img_moving,
+    img_fixed,
+    configs,
+    initial_disp=None,
+    initial_velocity=None,
+):
+    """Feature-space ConvexAdam variant parameterized by an SVF."""
+
+    return convex_adam_feats_svf(
+        img_fixed=img_fixed,
+        img_moving=img_moving,
+        initial_disp=initial_disp,
+        initial_velocity=initial_velocity,
+        lambda_weight=configs.lambda_weight,
+        grid_sp=configs.grid_sp,
+        disp_hw=configs.disp_hw,
+        selected_niter=configs.selected_niter,
+        selected_smooth=configs.selected_smooth,
+        grid_sp_adam=configs.grid_sp_adam,
+        ic=configs.ic,
+        svf_steps=getattr(configs, 'svf_steps', 7),
+        verbose=configs.verbose,
+        save_disp=False,
+        return_velocity=getattr(configs, 'return_velocity', False),
+    )
 
 def convex_adam_features(
     img_moving,

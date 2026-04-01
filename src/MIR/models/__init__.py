@@ -2,7 +2,7 @@
 from .Deformable_Swin_Transformer import DefSwinTransformer
 from .Deformable_Swin_Transformer_v2 import DefSwinTransformerV2
 from .Swin_Transformer import SwinTransformer
-from .TransMorph import Conv3dReLU, DecoderBlock, RegistrationHead, TransMorphAffine, TransMorph, TransMorphTVF, TransMorphTVFSPR, CONFIGS
+from .TransMorph import Conv3dReLU, DecoderBlock, RegistrationHead, TransMorphAffine, TransMorph, TransMorphTVF, TransMorphTVFSPR, TransMorphTVFAutoPETAtlas, CONFIGS
 from .configs_TransMorph import get_3DTransMorphDWin3Lvl_config, get_3DTransMorph3Lvl_config, get_3DTransMorph_config, get_3DTransMorphNoRelativePosEmbd_config, get_3DTransMorphSin_config, get_3DTransMorphLrn_config, get_3DTransMorphNoConvSkip_config, get_3DTransMorphNoTransSkip_config, get_3DTransMorphNoSkip_config, get_3DTransMorphLarge_config, get_3DTransMorphSmall_config, get_3DTransMorphTiny_config, get_3DTransMorphRelativePosEmbdSimple_config
 from .registration_utils import SpatialTransformer, VecInt, AffineTransformer, ensemble_average, invert_warp_via_velocity, fit_warp_to_svf, fit_warp_to_svf_fast
 from .Selfsupervised_Learning_Heads import SSLHeadNLvl, SSLHead1Lvl
@@ -15,7 +15,7 @@ from .atlas_builder import TemplateCreation, MeanStream
 from .configs_VFA import get_VFA_default_config
 from .Synthesis_Heads import SynthesisHead3DAdvanced, SynthesisHead3D, EfficientAdvancedSynthHead3D, ConvNeXtSynthHead3D
 from .Segmentation_Heads import AdvancedDecoder3D
-from .convexAdam import convex_adam_MIND, convex_adam_MIND_SPR, convex_adam_seg_features, convex_adam_features, convex_adam_vfa, get_ConvexAdam_MIND_brain_default_config
+from .convexAdam import convex_adam_MIND, convex_adam_MIND_SVF, convex_adam_MIND_SPR, convex_adam_seg_features, convex_adam_features, convex_adam_features_svf, convex_adam_vfa, get_ConvexAdam_MIND_brain_default_config
 
 try:
     from . import fireants
@@ -35,9 +35,11 @@ except Exception:  # pragma: no cover - optional dependency
     GroupNormalizerFactory = None
 __all__ = [
     'convex_adam_MIND',
+    'convex_adam_MIND_SVF',
     'convex_adam_MIND_SPR',
     'convex_adam_seg_features',
     'convex_adam_features',
+    'convex_adam_features_svf',
     'convex_adam_vfa',
     'get_ConvexAdam_MIND_brain_default_config',
     'DefSwinTransformer',
@@ -50,6 +52,7 @@ __all__ = [
     'TransMorph',
     'TransMorphTVF',
     'TransMorphTVFSPR',
+    'TransMorphTVFAutoPETAtlas',
     'VxmDense',
     'HyperVxmDense',
     'HyperTransMorphTVF',

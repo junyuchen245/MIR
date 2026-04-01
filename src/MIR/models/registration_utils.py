@@ -38,7 +38,7 @@ class SpatialTransformer(nn.Module):
         # see: https://discuss.pytorch.org/t/how-to-register-buffer-without-polluting-state-dict
         self.register_buffer('grid', grid)
 
-    def forward(self, src, flow):
+    def forward(self, src, flow, padding_mode='zeros'):
         """Warp a source tensor with a displacement field.
 
         Args:
@@ -65,8 +65,8 @@ class SpatialTransformer(nn.Module):
             new_locs = new_locs.permute(0, 2, 3, 4, 1)
             new_locs = new_locs[..., [2, 1, 0]]
 
-        return nnf.grid_sample(src, new_locs, align_corners=False, mode=self.mode)
-    
+        return nnf.grid_sample(src, new_locs, align_corners=False, mode=self.mode, padding_mode=padding_mode)
+
 class VecInt(nn.Module):
     """
     Integrates a vector field via scaling and squaring.

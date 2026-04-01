@@ -1,4 +1,6 @@
 from MIR.intensity_normalization.normalize.kde import KDENormalize
+from MIR.intensity_normalization.normalize.fcm import FCMNormalize
+from MIR.intensity_normalization.normalize.nyul import NyulNormalize
 from MIR.intensity_normalization.typing import Modality, TissueType
 import nibabel as nib
 import numpy as np
@@ -32,7 +34,8 @@ def resampling(img_npy, img_pixdim, tar_pixdim, order, mode='constant'):
 
 def intensity_norm(img_npy: np.ndarray, mod: Modality) -> np.ndarray:
     kde_norm = KDENormalize(norm_value=110)
-    out = kde_norm(img_npy.astype(np.float32), modality=mod)
+    nyul_norm = NyulNormalize(norm_value=110)
+    out = nyul_norm(img_npy.astype(np.float32), modality=mod)
     out[out < 0] = 0
     vmax = np.percentile(out[out > 0], 99.9) if np.any(out > 0) else 1.0
     out = np.clip(out / max(vmax, 1e-6), 0, 1).astype(np.float32)

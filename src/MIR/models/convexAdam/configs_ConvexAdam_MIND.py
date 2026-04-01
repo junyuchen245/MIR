@@ -13,6 +13,7 @@ def get_ConvexAdam_MIND_brain_default_config():
     config.selected_niter = 80
     config.selected_smooth = 1
     config.grid_sp_adam = 2
+    config.svf_steps = 7
     config.ic = True
     config.use_mask = False
     config.path_fixed_mask = None
@@ -34,6 +35,7 @@ def get_ConvexAdam_MIND_petct_default_config():
     config.selected_niter = 100
     config.selected_smooth = 1
     config.grid_sp_adam = 2
+    config.svf_steps = 7
     config.ic = True
     config.use_mask = False
     config.path_fixed_mask = None
@@ -56,6 +58,7 @@ def get_ConvexAdam_MIND_lung_default_config():
     config.selected_niter = 80
     config.selected_smooth = 1
     config.grid_sp_adam = 2
+    config.svf_steps = 7
     config.ic = True
     config.use_mask = False
     config.path_fixed_mask = None
