@@ -1,0 +1,47 @@
+Atlas summary mode: families=['z'] | burden=14 | overlap=12 | z=17 | total=17
+Fold 1/10: model=clinical_only | test_n=66 | events=14 | C-index=0.732 | features=11
+Fold 2/10: model=clinical_only | test_n=65 | events=13 | C-index=0.535 | features=11
+Fold 3/10: model=clinical_only | test_n=65 | events=13 | C-index=0.539 | features=11
+Fold 4/10: model=clinical_only | test_n=65 | events=13 | C-index=0.638 | features=11
+Fold 5/10: model=clinical_only | test_n=65 | events=13 | C-index=0.577 | features=11
+Fold 6/10: model=clinical_only | test_n=65 | events=13 | C-index=0.617 | features=11
+Fold 7/10: model=clinical_only | test_n=65 | events=13 | C-index=0.632 | features=11
+Fold 8/10: model=clinical_only | test_n=65 | events=13 | C-index=0.627 | features=11
+Fold 9/10: model=clinical_only | test_n=65 | events=13 | C-index=0.548 | features=11
+Fold 10/10: model=clinical_only | test_n=65 | events=14 | C-index=0.760 | features=11
+Model clinical_only: OOF C-index=0.617
+Fold 1/10: model=clinical_plus_tumor | test_n=66 | events=14 | C-index=0.819 | features=36
+Fold 2/10: model=clinical_plus_tumor | test_n=65 | events=13 | C-index=0.626 | features=36
+Fold 3/10: model=clinical_plus_tumor | test_n=65 | events=13 | C-index=0.734 | features=36
+Fold 4/10: model=clinical_plus_tumor | test_n=65 | events=13 | C-index=0.633 | features=36
+Fold 5/10: model=clinical_plus_tumor | test_n=65 | events=13 | C-index=0.622 | features=36
+Fold 6/10: model=clinical_plus_tumor | test_n=65 | events=13 | C-index=0.572 | features=36
+Fold 7/10: model=clinical_plus_tumor | test_n=65 | events=13 | C-index=0.568 | features=36
+Fold 8/10: model=clinical_plus_tumor | test_n=65 | events=13 | C-index=0.665 | features=36
+Fold 9/10: model=clinical_plus_tumor | test_n=65 | events=13 | C-index=0.606 | features=36
+Fold 10/10: model=clinical_plus_tumor | test_n=65 | events=14 | C-index=0.756 | features=36
+Model clinical_plus_tumor: OOF C-index=0.659
+Fold 1/10: model=clinical_plus_atlas | test_n=66 | events=14 | C-index=0.622 | features=20
+Fold 2/10: model=clinical_plus_atlas | test_n=65 | events=13 | C-index=0.557 | features=20
+Fold 3/10: model=clinical_plus_atlas | test_n=65 | events=13 | C-index=0.664 | features=19
+Fold 4/10: model=clinical_plus_atlas | test_n=65 | events=13 | C-index=0.684 | features=20
+Fold 5/10: model=clinical_plus_atlas | test_n=65 | events=13 | C-index=0.627 | features=21
+Fold 6/10: model=clinical_plus_atlas | test_n=65 | events=13 | C-index=0.675 | features=20
+Fold 7/10: model=clinical_plus_atlas | test_n=65 | events=13 | C-index=0.555 | features=21
+Fold 8/10: model=clinical_plus_atlas | test_n=65 | events=13 | C-index=0.613 | features=20
+Fold 9/10: model=clinical_plus_atlas | test_n=65 | events=13 | C-index=0.492 | features=20
+Fold 10/10: model=clinical_plus_atlas | test_n=65 | events=14 | C-index=0.696 | features=20
+Model clinical_plus_atlas: OOF C-index=0.624
+Fold 1/10: model=clinical_plus_tumor_plus_atlas | test_n=66 | events=14 | C-index=0.796 | features=45
+Fold 2/10: model=clinical_plus_tumor_plus_atlas | test_n=65 | events=13 | C-index=0.642 | features=45
+Fold 3/10: model=clinical_plus_tumor_plus_atlas | test_n=65 | events=13 | C-index=0.749 | features=44
+Fold 4/10: model=clinical_plus_tumor_plus_atlas | test_n=65 | events=13 | C-index=0.638 | features=45
+Fold 5/10: model=clinical_plus_tumor_plus_atlas | test_n=65 | events=13 | C-index=0.620 | features=46
+Fold 6/10: model=clinical_plus_tumor_plus_atlas | test_n=65 | events=13 | C-index=0.589 | features=45
+Fold 7/10: model=clinical_plus_tumor_plus_atlas | test_n=65 | events=13 | C-index=0.570 | features=46
+Fold 8/10: model=clinical_plus_tumor_plus_atlas | test_n=65 | events=13 | C-index=0.660 | features=45
+Fold 9/10: model=clinical_plus_tumor_plus_atlas | test_n=65 | events=13 | C-index=0.570 | features=45
+Fold 10/10: model=clinical_plus_tumor_plus_atlas | test_n=65 | events=14 | C-index=0.761 | features=45
+Model clinical_plus_tumor_plus_atlas: OOF C-index=0.656
+Saved model comparison: population_stats_atlas_rsf_sweep_z/rsf_model_comparison.csv
+Best model: clinical_plus_tumor | OOF C-index=0.659

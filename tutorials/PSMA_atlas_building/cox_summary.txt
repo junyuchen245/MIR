@@ -1,0 +1,8 @@
+Patients N=85, Vmask=1649898
+Events=62, Median time=399.0 days
+Clinical C-index=0.734
+Clinical+VPS C-index=0.742
+Clinical+VPS(orthogonalized) C-index=0.742
+Clinical+VPS(OOF) C-index=0.734
+Clinical+VPS(OOF, orthogonalized) C-index=0.734
+Significant voxels (FDR q<=0.05)=38

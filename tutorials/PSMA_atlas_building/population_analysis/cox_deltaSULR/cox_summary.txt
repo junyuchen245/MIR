@@ -1,0 +1,13 @@
+Patients N=85, Vmask=1649898
+Events=62, Median time=399.0 days
+Clinical C-index=0.734
+Clinical+VPS(baseline) C-index=0.744
+Clinical+VPS⊥(baseline) C-index=0.744
+Clinical+VPS(delta) C-index=0.744
+Clinical+VPS⊥(delta) C-index=0.744
+Clinical+VPS(baseline+delta) C-index=0.753
+Clinical+VPS⊥(baseline+delta) C-index=0.753
+Significant voxels baseline (FDR q<=0.05)=1201
+Significant voxels delta (FDR q<=0.05)=79
+Clinical covariates included: age, log_psa_at_scan (fallback pre/initial), grade_group, t_ord, BMI, indication (primary/recurrence/metastatic), pre_androgen_targeted, pre_cytotoxic.
+Excluded post-PSMA covariates (post_local, post_focal, post_at, post_cyto).
