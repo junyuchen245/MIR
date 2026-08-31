@@ -8,9 +8,6 @@ class SpatialTransformer(nn.Module):
     """
     N-D Spatial Transformer
     Obtained from https://github.com/voxelmorph/voxelmorph
-    Args:
-        size: spatial size of the input tensor
-        mode: interpolation mode, 'bilinear' or 'nearest'
     """
 
     def __init__(self, size, mode='bilinear'):
@@ -31,22 +28,17 @@ class SpatialTransformer(nn.Module):
         grid = torch.unsqueeze(grid, 0)
         grid = grid.type(torch.FloatTensor)
 
-        # registering the grid as a buffer cleanly moves it to the GPU, but it also
-        # adds it to the state dict. this is annoying since everything in the state dict
-        # is included when saving weights to disk, so the model files are way bigger
-        # than they need to be. so far, there does not appear to be an elegant solution.
-        # see: https://discuss.pytorch.org/t/how-to-register-buffer-without-polluting-state-dict
-        self.register_buffer('grid', grid)
+        self.register_buffer('grid', grid, persistent=False)
 
-    def forward(self, src, flow, padding_mode='zeros'):
-        """Warp a source tensor with a displacement field.
+    def forward(self, src, flow):
+        """Warp a source image with a displacement field.
 
         Args:
             src: Source tensor (B, C, ...).
             flow: Displacement field (B, ndim, ...).
 
         Returns:
-            Warped tensor.
+            Warped source tensor.
         """
         # new locations
         new_locs = self.grid + flow
@@ -65,7 +57,7 @@ class SpatialTransformer(nn.Module):
             new_locs = new_locs.permute(0, 2, 3, 4, 1)
             new_locs = new_locs[..., [2, 1, 0]]
 
-        return nnf.grid_sample(src, new_locs, align_corners=False, mode=self.mode, padding_mode=padding_mode)
+        return nnf.grid_sample(src, new_locs, align_corners=True, mode=self.mode)
 
 class VecInt(nn.Module):
     """
