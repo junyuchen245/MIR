@@ -4,12 +4,10 @@
 <a href="https://github.com/junyuchen245/MIR/actions/workflows/tests.yml"><img src="https://github.com/junyuchen245/MIR/actions/workflows/tests.yml/badge.svg" alt="Run Tests"></a>
 <a href="https://github.com/junyuchen245/MIR/actions/workflows/docs.yml"><img src="https://github.com/junyuchen245/MIR/actions/workflows/docs.yml/badge.svg" alt="Build and Deploy Docs"></a>
 
-**MIR** is a PyTorch research toolkit for deformable medical image registration. It bundles the
-registration networks developed around *TransMorph* (TransMorph, VFA, their spatially varying
-regularization and hypernetwork variants, and the new LDDMM models), ports of third-party learned and
-classical methods behind one calling convention, the losses and regularizers used to train them,
-evaluation metrics, and end-to-end tutorials on public benchmarks (IXI, Learn2Reg LUMIR, autoPET) and
-on atlas building.
+**MIR** is a PyTorch research toolkit for deformable medical image registration. It brings
+state-of-the-art registration networks (TransMorph, VFA, SITReg, VoxelMorph, LessNet, Fourier-Net and
+their variants), classical baselines, training losses, evaluation metrics and reproducible benchmark
+pipelines together behind one interface: a `(moving, fixed)` pair in, a dense displacement field out.
 
 **Documentation:** https://junyuchen.me/MIR
 
@@ -18,11 +16,10 @@ on atlas building.
 - **One convention for every model.** A registration network takes a `(moving, fixed)` pair of
   `[B, 1, D, H, W]` tensors and returns a displacement field in voxels that `SpatialTransformer` applies
   to any image or label map. Swapping architectures is a one-line change.
-- **A family of transformation models.** Plain displacements, stationary velocity fields (scaling and
-  squaring), time-varying compositions (TransMorph-TVF) and **LDDMM** geodesic shooting with a learned
-  initial momentum and an exact inverse. The LDDMM layer wraps *any* backbone in the toolkit.
-- **Spatially varying regularization (SPR)** as a learned per-voxel map, either weighting the
-  regularization loss or, in the LDDMM models, setting the kernel scale of the metric itself.
+- **Diffeomorphic by design.** Choose the transformation model: displacement, stationary or time-varying
+  velocity fields, symmetric inverse-consistent mappings, or LDDMM geodesic shooting.
+- **Spatially varying regularization (SPR)**: learn where the deformation should be smooth and where it
+  may be sharp, with a per-voxel regularization map and a Beta prior.
 - **Hypernetwork conditioning** (HyperMorph, HyperTransMorph, HyperVFA) to cover a range of
   regularization strengths with one model.
 - **Classical and third-party baselines** behind the same interface: ConvexAdam, deedsBCV, FireANTs,
@@ -43,8 +40,8 @@ python3.8 -m pip install -e .
 ```
 
 Python 3.8+ is required. deedsBCV is Linux-only; everything else is platform independent.
-See the [installation guide](https://junyuchen.me/MIR/installation.html) for optional dependencies and
-pretrained weights.
+See the [installation guide](https://junyuchen.me/MIR/getting_started/installation.html) for optional
+dependencies and the [pretrained weights](https://junyuchen.me/MIR/user_guide/pretrained_weights.html).
 
 ## Sixty-second example
 
@@ -67,29 +64,21 @@ with torch.no_grad():
 warped = SpatialTransformer(fix.shape[2:]).cuda()(mov, flow)
 ```
 
-Make any backbone diffeomorphic with the LDDMM wrapper:
-
-```python
-from MIR.models import LDDMMWrapper
-model = LDDMMWrapper(backbone, param='shooting', time_steps=7, sigmas=[1, 2, 4, 8]).cuda()
-out = model((mov, fix), return_dict=True)          # flow, inv_flow, energy (regularizer), kernel weights
-```
-
 ## Models
 
 | Family | Summary | Docs |
 |---|---|---|
 | TransMorph, TransMorph-TVF, TransMorph-TVF-SPR, TransMorph-DCA | Swin-Transformer registration networks | [TransMorph](https://junyuchen.me/MIR/models/transmorph.html) |
-| TransMorph-LDDMM, LDDMMWrapper | Time-varying velocity fields: geodesic shooting / relaxation, spatially varying kernels, SPR in the metric, for any backbone | [LDDMM](https://junyuchen.me/MIR/models/lddmm.html) |
 | VFA, VFA-SPR, TransVFA, HyperVFA | Vector field attention | [VFA](https://junyuchen.me/MIR/models/vfa.html) |
 | HyperTransMorph, HyperMorph | Hypernetwork-conditioned regularization | [HyperTransMorph](https://junyuchen.me/MIR/models/hypertransmorph.html) |
 | VoxelMorph, LessNet, Fourier-Net(+) | Convolutional baselines (with SVF and SPR variants) | [VoxelMorph](https://junyuchen.me/MIR/models/voxelmorph.html), [LessNet](https://junyuchen.me/MIR/models/lessnet.html), [Fourier-Net](https://junyuchen.me/MIR/models/fouriernet.html) |
 | SITReg | Symmetric, inverse-consistent, topology-preserving registration | [SITReg](https://junyuchen.me/MIR/models/sitreg.html) |
 | ConvexAdam, FireANTs, deedsBCV | Optimization-based and classical baselines | [ConvexAdam](https://junyuchen.me/MIR/models/convexadam.html), [deedsBCV](https://junyuchen.me/MIR/models/deedsbcv.html) |
+| TransMorph-LDDMM, LDDMMWrapper | Time-varying velocity fields (geodesic shooting) for any backbone | [LDDMM](https://junyuchen.me/MIR/models/lddmm.html) |
 | MultiMorph, TemplateCreation | Atlas construction | [Atlas construction](https://junyuchen.me/MIR/models/multimorph.html) |
 
-Conventions, transformation models (displacement / SVF / TVF / LDDMM) and the loss catalogue are
-explained in [Core concepts](https://junyuchen.me/MIR/concepts.html).
+Conventions, transformation models, regularization, losses, metrics and a complete training recipe are
+explained in the [user guide](https://junyuchen.me/MIR/user_guide/index.html).
 
 ## Tutorials
 
@@ -100,7 +89,6 @@ dataset and model (see the [tutorial catalogue](https://junyuchen.me/MIR/tutoria
 - [`tutorials/brain_registration`](tutorials/brain_registration): affine + deformable brain registration with pretrained weights.
 - [`tutorials/IXI_benchmarking`](tutorials/IXI_benchmarking): benchmark seven models on IXI from a notebook.
 - [`tutorials/lumir25_TransMorph`](tutorials/lumir25_TransMorph): a complete training template (Learn2Reg LUMIR25).
-- [`tutorials/lumir25_TM_LDDMM`](tutorials/lumir25_TM_LDDMM): LDDMM training for TransMorph and for any other backbone.
 - [`tutorials/build_brain_template`](tutorials/build_brain_template): population template construction.
 
 ## Included projects

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="MIR">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2b7bd6"/>
+      <stop offset="1" stop-color="#1b4f8f"/>
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#g)"/>
+  <g fill="none" stroke="#ffffff" stroke-linecap="round" stroke-width="2.6" opacity="0.95">
+    <path d="M12 16 C 24 13, 40 19, 52 16"/>
+    <path d="M12 28 C 22 22, 42 34, 52 28"/>
+    <path d="M12 40 C 24 36, 38 46, 52 40"/>
+    <path d="M12 52 C 24 49, 40 55, 52 52"/>
+    <path d="M16 12 C 13 24, 19 40, 16 52"/>
+    <path d="M28 12 C 22 22, 34 42, 28 52"/>
+    <path d="M40 12 C 36 24, 46 38, 40 52"/>
+    <path d="M52 12 C 49 24, 55 40, 52 52"/>
+  </g>
+</svg>

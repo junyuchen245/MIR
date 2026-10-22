@@ -28,5 +28,5 @@ Heads
   ``EfficientAdvancedSynthHead3D``, ``ConvNeXtSynthHead3D`` (``VFA_image_synthesis``).
 - ``MIR.models.Selfsupervised_Learning_Heads``: ``SSLHeadNLvl``, ``SSLHead1Lvl`` for
   self-supervised pretraining of the encoders.
-- ``MIR.models.lddmm.KernelWeightHead`` and ``SPRHead``: model-agnostic heads that predict
-  kernel-mixture weights or an SPR map from the images and a field (:doc:`lddmm`).
+- ``MIR.models.lddmm.SPRHead`` and ``KernelWeightHead``: model-agnostic heads that predict a spatial
+  regularization map or kernel-mixture weights from the images and a field.

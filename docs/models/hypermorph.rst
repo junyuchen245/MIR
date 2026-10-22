@@ -19,7 +19,7 @@ Usage
    config = configs_VoxelMorph.get_VXM_default_config()
    config.img_size = fix.shape[2:]
    model = HyperVxmDense(config).cuda()
-   flow = model((mov, fix), hyper_weight)
+   flow = model((mov, fix), torch.tensor([[0.3]], device='cuda'))   # regularization weight
 
 Key modules
 -----------

@@ -548,7 +548,7 @@ merged_regions_coarse_from_totalsegv2 = {
     "Paraspinal_muscles": [86, 87],
     "Iliopsoas_muscles": [88, 89],
 
-    # Spinal cord (rarely relevant for PSMA mets, but keep separate)
+    # Spinal cord (rarely relevant for bone metastases, but keep separate)
     "Spinal_cord": [79],
 
     # Costal_cartilage (rarely needed, can be merged with ribs if you like)
@@ -806,7 +806,7 @@ def remap_totalsegmentator_lbls(lbl, total_seg_version='v1', label_scheme='40lbl
         #[86, 87],                                       # 26 "Paraspinal_muscles":
         #[88, 89],                                       # 27 "Iliopsoas_muscles":
 
-        # Spinal cord (rarely relevant for PSMA mets, but keep separate)
+        # Spinal cord (rarely relevant for bone metastases, but keep separate)
         [79],                                          # 28 "Spinal_cord": 13
 
         # Costal_cartilage (rarely needed, can be merged with ribs if you like)

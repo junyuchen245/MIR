@@ -1,192 +1,137 @@
-LDDMM: time-varying velocity fields
-===================================
+LDDMM
+=====
 
 Overview
 --------
 
-The LDDMM components replace the stationary velocity field of a registration network by a
-**time-varying velocity field**. The deformation is the end point of the flow
+Large Deformation Diffeomorphic Metric Mapping models the deformation as the end point of a flow driven
+by a time-varying velocity field,
 
 .. math::
 
    \frac{d\phi_t}{dt} = v_t \circ \phi_t, \qquad \phi_0 = \mathrm{id}, \qquad t \in [0, 1],
 
-where every velocity :math:`v_t` lives in the reproducing-kernel Hilbert space defined by a
-smoothing kernel :math:`K = L^{-1}`. The network predicts the parameters of the flow and the
-flow is integrated inside the model, so feature extraction, velocity field, diffeomorphism
-and image similarity are trained **end to end**. There is no separate "network, then LDDMM
-refinement" stage.
+where each velocity is smoothed by a kernel :math:`K`. In MIR the network predicts the parameters of the
+flow and the integration happens inside the model, so the registration network is trained end to end
+like any other. The result is diffeomorphic, comes with its inverse, and the kinetic energy of the path
+is the regularizer. Use it when an explicit, invertible path between the images is useful (statistics
+on deformations, geodesic interpolation, atlas building), or as an alternative to SVF integration.
 
-Two parameterizations are provided (``param``):
+Variants
+--------
 
 .. list-table::
    :header-rows: 1
-   :widths: 14 30 26 30
+   :widths: 26 50 24
 
-   * - ``param``
-     - The network predicts
-     - Regularizer
-     - Properties
-   * - ``'shooting'`` (default)
-     - the initial momentum :math:`m_0` (one 3-channel field)
-     - :math:`\langle m_0, K m_0\rangle = \|v_0\|_V^2`
-     - geodesic shooting: :math:`m_0` is transported with the conservation law
-       :math:`m_t = |D\psi_t^{-1}| (D\psi_t^{-1})^{\top} m_0 \circ \psi_t^{-1}`,
-       :math:`v_t = K m_t`; kinetic energy is constant along the path; compact
-       representation of the whole deformation
-   * - ``'tvf'``
-     - one pre-velocity :math:`p_t` per time step
-     - :math:`\sum_t \Delta t\, \langle p_t, K p_t\rangle`
-     - relaxation formulation of Beg et al. 2005; more freedom, not a geodesic
+   * - Class
+     - Description
+     - Output
+   * - ``TransMorphLDDMM``
+     - TransMorph encoder and decoder with a momentum head (``param='shooting'``) or per-step heads
+       (``param='tvf'``); compatible with TransMorph / TransMorph-TVF checkpoints.
+     - ``flow`` or a dict
+   * - ``LDDMMWrapper``
+     - The same transformation model around **any** backbone (VFA, VoxelMorph, LessNet, Fourier-Net,
+       SITReg through ``adapter='sitreg'``, or a custom adapter).
+     - ``flow`` or a dict
 
-Forward and inverse maps are integrated jointly with explicit Euler composition over
-``time_steps`` steps, so every model returns both ``flow`` (the displacement that warps the
-moving image) and ``inv_flow``.
+Two parameterizations:
+
+- ``param='shooting'`` (geodesic shooting): the network predicts the initial momentum :math:`m_0`, which
+  is transported with the conservation law; the regularizer is :math:`\langle m_0, K m_0\rangle`, constant
+  along the path.
+- ``param='tvf'`` (relaxation, Beg et al. 2005): the network predicts one velocity per time step; the
+  regularizer is the path energy.
 
 Kernels
 -------
 
-``MIR.models.FourierKernel`` applies :math:`K` in the Fourier domain (periodic boundaries):
-
-- ``kernel='helmholtz'`` (default): :math:`L = (-\alpha \Delta + \gamma)^{s}` with
-  ``alpha``, ``gamma``, ``power``; :math:`\sqrt{\alpha/\gamma}` is the characteristic
-  length in voxels.
-- ``kernel='gaussian'``: a Gaussian or a sum of Gaussians (``sigma``, ``weights``).
-
-``MIR.models.SpatiallyVaryingKernel`` is a multi-Gaussian kernel with **per-voxel mixture
-weights** (Shen, Vialard, Niethammer, NeurIPS 2019):
-
-.. math::
-
-   K_w m = \sum_i \sqrt{w_i}\; G_{\sigma_i} * (\sqrt{w_i}\, m), \qquad w_i(x) \ge 0,\;
-   \sum_i w_i(x) = 1 .
-
-Where the weights favour a large :math:`\sigma` the deformation is smooth, where they favour
-a small one it can be sharp. The weights are advected with the flow and, because the momentum
-conservation law does not depend on the kernel, geodesic shooting still conserves energy.
-
-Spatially varying regularization inside the metric
---------------------------------------------------
-
-Pass ``sigmas=[...]`` to any LDDMM model to use the spatially varying kernel. The weights
-come from one of three sources:
-
-- **Learned mixture (``spr=None``).** A ``KernelWeightHead`` (or a user-supplied callable)
-  predicts a softmax over the Gaussians per voxel; the ``omt`` penalty returned by the model
-  (optimal mass transport, in ``[0, 1]``) charges for moving weight away from the largest
-  :math:`\sigma` and plays the role of a prior. Add ``out['omt'] * omt_weight`` to the loss.
-- **SPR map, kernel mode (``spr='kernel'``).** A TransMorph-SPR style map :math:`\lambda`
-  in :math:`(0, 1]` selects the kernel scale: :math:`\lambda = 1` the smoothest Gaussian,
-  :math:`\lambda = 0` the sharpest, in between linear interpolation along ``sigmas``.
-  Use the same Beta prior as the loss-side SPR models: ``logBeta(out['spr_weight'], 1 + w)``.
-- **SPR map, energy mode (``spr='energy'``).** The stationary kernel is kept and
-  :math:`\lambda` weights the kinetic-energy integrand, the literal counterpart of
-  ``LocalGrad3d(flow, lam)``.
-
-The map :math:`\lambda` comes from a model-agnostic ``SPRHead`` (``spr_source='head'``) or
-from the backbone itself when it is an SPR network returning ``(field, lam)`` such as
-``TransMorphTVFSPR(SVF=False)`` or ``VFASPR(SVF=False)`` (``spr_source='backbone'``).
-
-Models
-------
-
-``TransMorphLDDMM``
-   The dedicated TransMorph variant: Swin encoder and decoder of TransMorph, one momentum
-   head (``shooting``) or per-step heads on the shared decoder (``tvf``), an optional
-   TransMorph-SPR head (``spr=...``) or kernel-weight head (``sigmas=...``) on the decoder
-   features. Compatible with TransMorph / TransMorph-TVF checkpoints through
-   ``load_backbone_weights`` (encoder and decoder are reused, heads start from scratch).
-
-``LDDMMWrapper``
-   Model-agnostic: wraps **any** backbone that maps ``(moving, fixed)`` to a dense
-   3-channel field (TransMorph, VFA, VoxelMorph, LessNet, Fourier-Net, SITReg through
-   ``adapter='sitreg'``, or a custom adapter). The backbone's field is the momentum
-   (``shooting``) or the per-step pre-velocity (``tvf``, the backbone is re-applied at every
-   step to the warped moving image). Build the backbone with its own SVF integration
-   switched off. ``field_scale`` adds a learnable scalar on the backbone field, which is
-   needed when warm-starting from a backbone trained to output displacements: a trained
-   displacement field is far too large and rough to be a momentum, so start at 0.1 to 0.3
-   and let training grow it. ``int_scale=2`` integrates the flow on a grid twice as fine
-   as the backbone output.
+- ``FourierKernel``: Helmholtz :math:`(-\alpha\Delta + \gamma)^{-s}` (default) or Gaussian, applied in
+  the Fourier domain.
+- ``SpatiallyVaryingKernel`` (``sigmas=[...]``): a mixture of Gaussians with per-voxel weights (Shen et al.,
+  NeurIPS 2019), so the smoothness of the deformation varies in space. The weights come from a learned
+  head (with an optimal-mass-transport penalty, ``out['omt']``) or from an SPR map
+  (``spr='kernel'``, see :doc:`../user_guide/regularization`).
 
 Usage
 -----
 
-.. code-block:: python
+.. tab-set::
 
-   from MIR.models import TransMorphLDDMM, LDDMMWrapper, VFA, load_backbone_weights
-   from MIR.deformation_regularizer import logBeta
-   import MIR.models.configs_TransMorph as configs_TransMorph
+   .. tab-item:: TransMorphLDDMM
 
-   # dedicated TransMorph-LDDMM, stationary Helmholtz kernel, geodesic shooting
-   config = configs_TransMorph.get_3DTransMorph3Lvl_config()
-   config.img_size = (80, 112, 96)
-   model = TransMorphLDDMM(config, param='shooting', time_steps=7, alpha=2.0, gamma=1.0, power=2).cuda()
-   out = model((mov, fix), return_dict=True)
-   loss = ncc(warp(mov, out['flow']), fix) + 0.01 * out['energy']
+      .. code-block:: python
 
-   # any backbone, spatially varying kernel with learned mixture weights
-   model = LDDMMWrapper(VFA(vfa_config, device='cuda:0'), param='shooting', time_steps=7,
-                        sigmas=[1, 2, 4, 8]).cuda()
-   out = model((mov, fix), return_dict=True)
-   loss = ncc(warp(mov, out['flow']), fix) + 0.01 * out['energy'] + 0.1 * out['omt']
+         from MIR.models import TransMorphLDDMM
+         import MIR.models.configs_TransMorph as configs_TransMorph
 
-   # your SPR network as the backbone, its weight map setting the kernel scale
-   model = LDDMMWrapper(TransMorphTVFSPR(config, SVF=False), spr='kernel', spr_source='backbone',
-                        sigmas=[1, 2, 3, 4], field_scale=0.2).cuda()
-   out = model((mov, fix), return_dict=True)
-   loss = ncc(warp(mov, out['flow']), fix) + 0.002 * out['energy'] + logBeta()(out['spr_weight'], 1.005)
+         config = configs_TransMorph.get_3DTransMorph3Lvl_config()
+         config.img_size = (80, 112, 96)
+         model = TransMorphLDDMM(config, param='shooting', time_steps=7).cuda()
 
-The output dictionary always contains ``flow``, ``inv_flow``, ``energy`` (differentiable)
-and ``energies`` (detached per-step kinetic energies: their constancy is the diagnostic that
-the geodesic integration is accurate); shooting adds ``momentum``, ``tvf`` adds
-``pre_velocities``, spatially varying kernels add ``kernel_weights`` and ``omt`` or
-``spr_weight``. ``return_path=True`` on the wrapper also returns the intermediate ``flows``
-and ``velocities`` for path visualizations.
+         out = model((mov, fix), return_dict=True)
+         loss = similarity(warp(mov, out['flow']), fix) + 0.01 * out['energy']
+
+   .. tab-item:: Any backbone
+
+      .. code-block:: python
+
+         from MIR.models import LDDMMWrapper, VFA
+
+         backbone = VFA(vfa_config, device='cuda:0')          # its own SVF integration off
+         model = LDDMMWrapper(backbone, param='shooting', time_steps=7).cuda()
+
+         out = model((mov, fix), return_dict=True)
+         loss = similarity(warp(mov, out['flow']), fix) + 0.01 * out['energy']
+
+   .. tab-item:: With an SPR map
+
+      .. code-block:: python
+
+         from MIR.models import LDDMMWrapper, TransMorphTVFSPR
+         from MIR.deformation_regularizer import logBeta
+
+         model = LDDMMWrapper(TransMorphTVFSPR(config, SVF=False), spr='kernel', spr_source='backbone',
+                              sigmas=[1, 2, 3, 4], field_scale=0.2).cuda()
+         out = model((mov, fix), return_dict=True)
+         loss = (similarity(warp(mov, out['flow']), fix) + 0.002 * out['energy']
+                 + logBeta()(out['spr_weight'], 1.005))
+
+The output dict contains ``flow``, ``inv_flow``, ``energy`` (differentiable) and ``energies`` (per-step
+kinetic energies, a diagnostic of integration accuracy), plus ``momentum`` or ``pre_velocities`` and,
+with a spatially varying kernel, ``kernel_weights`` with ``omt`` or ``spr_weight``.
 
 Practical notes
 ---------------
 
-- Kernel parameters are expressed in voxels of the grid the backbone outputs. For a network
-  at half resolution ``sigmas=[1, 2, 3, 4]`` is a good starting range for brains; at full
-  resolution double them.
-- The kinetic energy is not on the scale of a diffusion penalty. Calibrate its weight so
-  that the term is a few percent of the similarity term at convergence; the tutorials
-  record the magnitudes used.
-- Momentum transport samples :math:`m_0` with trilinear interpolation and loses a few
-  percent of kinetic energy over the path for rough momenta; a smoother kernel helps, more
-  time steps do not.
-- The periodic boundary of the FFT is harmless for zero-padded images; crop or pad if the
-  anatomy touches the volume border.
+- Kernel sizes are in voxels of the grid the backbone outputs; ``sigmas=[1, 2, 3, 4]`` suits brain MRI
+  at half resolution.
+- Calibrate the energy weight so the term is a few percent of the similarity term at convergence.
+- When warm-starting from a network trained to output displacements, pass ``field_scale=0.1``-``0.3``:
+  a trained displacement field is too large to be used directly as a momentum.
 
 Key modules
 -----------
 
-- ``MIR.models.lddmm``: ``FourierKernel``, ``SpatiallyVaryingKernel``, ``KernelWeightHead``,
-  ``SPRHead``, ``LDDMMIntegrator``, ``LDDMMWrapper``, ``jacobian_fd``, ``det3x3``,
-  ``load_backbone_weights``
-- ``MIR.models.TransMorphLDDMM``: ``TransMorphLDDMM``
+- ``MIR.models.lddmm``: ``LDDMMWrapper``, ``LDDMMIntegrator``, ``FourierKernel``,
+  ``SpatiallyVaryingKernel``, ``KernelWeightHead``, ``SPRHead``, ``jacobian_fd``, ``det3x3``
+- ``MIR.models.TransMorphLDDMM``
 
 Related tutorials
 -----------------
 
-- `LUMIR25 TransMorph-LDDMM <https://github.com/junyuchen245/MIR/tree/main/tutorials/lumir25_TM_LDDMM>`_
-  (reference implementation: training, evaluation, calibration tables, all flags)
-- `LUMIR25 TransMorph + SPR + LDDMM <https://github.com/junyuchen245/MIR/tree/main/tutorials/lumir25_TM_SPR_LDDMM>`_
-- `LUMIR25 TransMorph + region-specific kernel (OMT) + LDDMM <https://github.com/junyuchen245/MIR/tree/main/tutorials/lumir25_TM_OMT_LDDMM>`_
-- `LUMIR25 SITReg + LDDMM <https://github.com/junyuchen245/MIR/tree/main/tutorials/lumir25_SITReg_LDDMM>`_
-- `LUMIR25 SITReg + SPR + LDDMM <https://github.com/junyuchen245/MIR/tree/main/tutorials/lumir25_SITReg_SPR_LDDMM>`_
+- `LUMIR25 LDDMM <https://github.com/junyuchen245/MIR/tree/main/tutorials/lumir25_TM_LDDMM>`__:
+  training, evaluation and calibration for TransMorph and any other backbone, with ready-made
+  configurations in ``lumir25_TM_SPR_LDDMM``, ``lumir25_TM_OMT_LDDMM``, ``lumir25_SITReg_LDDMM`` and
+  ``lumir25_SITReg_SPR_LDDMM``.
 
 References
 ----------
 
-- Beg, Miller, Trouve, Younes. Computing large deformation metric mappings via geodesic flows
-  of diffeomorphisms. *IJCV* 2005.
-- Vialard, Risser, Rueckert, Cotter. Diffeomorphic 3D image registration via geodesic shooting
-  using an efficient adjoint calculation. *IJCV* 2012.
-- Zhang, Fletcher. Fast diffeomorphic image registration via Fourier-approximated Lie algebras
-  (FLASH). *IJCV* 2019.
+- Beg, Miller, Trouve, Younes. Computing large deformation metric mappings via geodesic flows of
+  diffeomorphisms. *IJCV* 2005.
+- Vialard, Risser, Rueckert, Cotter. Diffeomorphic 3D image registration via geodesic shooting using an
+  efficient adjoint calculation. *IJCV* 2012.
 - Yang, Kwitt, Styner, Niethammer. Quicksilver: fast predictive image registration. *NeuroImage* 2017.
 - Shen, Vialard, Niethammer. Region-specific diffeomorphic metric mapping. *NeurIPS* 2019.
-- Chen et al. Unsupervised learning of spatially varying regularization for diffeomorphic image
-  registration. *Medical Image Analysis* 2025.

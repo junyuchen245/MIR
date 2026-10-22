@@ -22,8 +22,10 @@ Usage
 .. code-block:: python
 
    from MIR.models import HyperTransMorphTVF
+
    model = HyperTransMorphTVF(config, time_steps=7).cuda()
-   flow = model((mov, fix), hyper_weight)        # hyper_weight: regularization weight tensor
+   reg_code = torch.tensor([[0.3]], device='cuda')      # regularization weight, sampled during training
+   flow = model((mov, fix), reg_code)
 
 See the tutorial for the training loop that samples the weight per iteration.
 

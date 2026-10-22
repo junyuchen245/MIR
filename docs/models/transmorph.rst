@@ -45,8 +45,8 @@ Variants
      - Deformable cross-attention transformer (TransMorph-DCA) encoders.
      - as above
    * - ``TransMorphLDDMM``
-     - LDDMM transformation model, see :doc:`lddmm`.
-     - dict
+     - TransMorph with the LDDMM transformation model (:doc:`lddmm`).
+     - ``flow``
 
 Usage
 -----
@@ -86,7 +86,7 @@ Key modules
 - ``MIR.models.TransMorph``, ``MIR.models.configs_TransMorph``
 - ``MIR.models.Swin_Transformer``, ``MIR.models.Deformable_Swin_Transformer``,
   ``MIR.models.Deformable_Swin_Transformer_v2``
-- ``MIR.models.HyperTransMorph`` (:doc:`hypertransmorph`), ``MIR.models.TransMorphLDDMM`` (:doc:`lddmm`)
+- ``MIR.models.HyperTransMorph`` (:doc:`hypertransmorph`)
 
 Related tutorials
 -----------------
@@ -97,7 +97,6 @@ Related tutorials
 - `IXI TransMorph-SPR <https://github.com/junyuchen245/MIR/tree/main/tutorials/IXI_TransMorphSPR>`_
 - `autoPET TransMorph-SPR <https://github.com/junyuchen245/MIR/tree/main/tutorials/autoPET_TransMorphSPR>`_
 - `Brain template construction <https://github.com/junyuchen245/MIR/tree/main/tutorials/build_brain_template>`_
-- `PSMA PET/CT atlas building <https://github.com/junyuchen245/MIR/tree/main/tutorials/PSMA_atlas_building>`_
 
 References
 ----------

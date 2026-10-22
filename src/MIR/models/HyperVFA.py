@@ -79,7 +79,7 @@ def grid_upsample(grid, mode='bilinear', align_corners=True, scale_factor=2):
     """Upsample a sampling grid by a scale factor.
 
     Args:
-        grid: Tensor of shape [B, C, *spatial] containing absolute coordinates.
+        grid: Tensor of shape ``[B, C, *spatial]`` containing absolute coordinates.
         mode: Interpolation mode.
         align_corners: Whether to align corners during interpolation.
         scale_factor: Scale factor to upsample spatial dimensions.
@@ -107,8 +107,8 @@ def grid_sampler(source, grid, mode='bilinear', align_corners=True, normalize=Tr
     """Sample `source` at coordinates defined by `grid`.
 
     Args:
-        source: Tensor of shape [B, C, *spatial].
-        grid: Tensor of shape [B, ndim, *spatial] with absolute coordinates.
+        source: Tensor of shape ``[B, C, *spatial]``.
+        grid: Tensor of shape ``[B, ndim, *spatial]`` with absolute coordinates.
         mode: Interpolation mode for sampling.
         align_corners: Whether to align corners in grid sampling.
         normalize: If True, convert `grid` to normalized [-1, 1] coordinates.
@@ -386,7 +386,7 @@ class Encoder(nn.Module):
     """HyperVFA encoder network.
 
     Inputs:
-        x: Tensor of shape [B, C, *spatial].
+        x: Tensor of shape ``[B, C, *spatial]``.
         hyper_feat: Hyperparameter embedding.
 
     Returns:

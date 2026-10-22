@@ -26,7 +26,7 @@ class ConvBlock(nn.Module):
     """Convolutional block with LeakyReLU for U-Net.
 
     Inputs:
-        x: Tensor of shape [B, C, *spatial].
+        x: Tensor of shape ``[B, C, *spatial]``.
 
     Returns:
         Tensor with updated channels and spatial size.
@@ -52,7 +52,7 @@ class Unet(nn.Module):
     a base feature count and number of levels.
 
     Inputs:
-        x: Tensor of shape [B, 2, *spatial] with concatenated images.
+        x: Tensor of shape ``[B, 2, *spatial]`` with concatenated images.
 
     Returns:
         Tensor of decoded features at full resolution.
@@ -138,7 +138,7 @@ class VxmDense(nn.Module):
     """VoxelMorph network for nonlinear image registration.
 
     Inputs:
-        input_imgs: Tuple `(mov, fix)` of tensors [B, 1, *spatial].
+        input_imgs: Tuple `(mov, fix)` of tensors ``[B, 1, *spatial]``.
 
     Returns:
         Flow tensor, and optionally warped image if `gen_output` is True.

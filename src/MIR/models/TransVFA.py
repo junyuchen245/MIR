@@ -206,7 +206,7 @@ class TransVFA(nn.Module):
         return_all_flows: If True, return flows for all decoder levels.
 
     Forward inputs:
-        sample: Tuple `(mov, fix)` tensors of shape [B, 1, *spatial].
+        sample: Tuple `(mov, fix)` tensors of shape ``[B, 1, *spatial]``.
 
     Forward outputs:
         Flow(s) and optional auxiliary outputs depending on flags.

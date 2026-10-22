@@ -1,0 +1,5 @@
+# Documentation build dependencies (CI: .github/workflows/docs.yml)
+sphinx>=7
+furo>=2024.8.6
+sphinx-design>=0.5
+sphinx-copybutton>=0.5

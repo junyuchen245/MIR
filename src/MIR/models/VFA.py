@@ -9,7 +9,7 @@ def grid_upsample(grid, mode='bilinear', align_corners=True, scale_factor=2):
     """Upsample a sampling grid by a scale factor.
 
     Args:
-        grid: Tensor of shape [B, C, *spatial] containing absolute coordinates.
+        grid: Tensor of shape ``[B, C, *spatial]`` containing absolute coordinates.
         mode: Interpolation mode passed to `torch.nn.functional.interpolate`.
         align_corners: Whether to align corners during interpolation.
         scale_factor: Scale factor to upsample spatial dimensions.
@@ -37,8 +37,8 @@ def grid_sampler(source, grid, mode='bilinear', align_corners=True, normalize=Tr
     """Sample `source` at coordinates defined by `grid`.
 
     Args:
-        source: Tensor of shape [B, C, *spatial].
-        grid: Tensor of shape [B, ndim, *spatial] with absolute coordinates.
+        source: Tensor of shape ``[B, C, *spatial]``.
+        grid: Tensor of shape ``[B, ndim, *spatial]`` with absolute coordinates.
         mode: Interpolation mode for sampling.
         align_corners: Whether to align corners in grid sampling.
         normalize: If True, convert `grid` to normalized [-1, 1] coordinates.
@@ -76,7 +76,7 @@ def normalize_grid(grid):
     """Normalize an absolute coordinate grid to [-1, 1] for grid sampling.
 
     Args:
-        grid: Tensor of shape [B, ndim, *spatial] with absolute coordinates.
+        grid: Tensor of shape ``[B, ndim, *spatial]`` with absolute coordinates.
 
     Returns:
         Tensor of the same shape with normalized coordinates.
@@ -90,12 +90,12 @@ def identity_grid_like(tensor, normalize, padding=0):
     """Return an identity grid matching a reference tensor.
 
     Args:
-        tensor: Reference tensor of shape [B, C, *spatial].
+        tensor: Reference tensor of shape ``[B, C, *spatial]``.
         normalize: If True, return normalized [-1, 1] coordinates.
         padding: Int or sequence of per-dimension padding for the grid.
 
     Returns:
-        Tensor of shape [B, ndim, *spatial] with identity coordinates.
+        Tensor of shape ``[B, ndim, *spatial]`` with identity coordinates.
     """
     with torch.inference_mode():
         dims = tensor.shape[2:]
@@ -125,7 +125,7 @@ def grid_to_flow(grid: torch.Tensor):
     voxel‑displacement field that VoxelMorph’s SpatialTransformer expects.
 
     Args:
-        grid: Tensor of shape [B, ndim, *spatial_dims] with absolute coords.
+        grid: Tensor of shape ``[B, ndim, *spatial_dims]`` with absolute coords.
 
     Returns:
         Tensor of the same shape containing displacements from identity.
@@ -148,7 +148,7 @@ class VFASPR(nn.Module):
         return_full: If True, also return warped images and inverse flow.
 
     Forward inputs:
-        sample: Tuple `(mov, fix)` tensors of shape [B, 1, *spatial].
+        sample: Tuple `(mov, fix)` tensors of shape ``[B, 1, *spatial]``.
 
     Forward outputs:
         Depending on flags, returns flow(s), spatial weights, or a results dict.
@@ -247,7 +247,7 @@ class VFA(nn.Module):
         return_full: If True, also return warped images and inverse flow.
 
     Forward inputs:
-        sample: Tuple `(mov, fix)` tensors of shape [B, 1, *spatial].
+        sample: Tuple `(mov, fix)` tensors of shape ``[B, 1, *spatial]``.
 
     Forward outputs:
         Depending on flags, returns flow(s) or a results dict.
@@ -339,7 +339,7 @@ class SPRDecoder(nn.Module):
         F_feat: Fixed-image features.
 
     Returns:
-        Tensor of spatial weights in [0, 1] with shape [B, 1, *spatial].
+        Tensor of spatial weights in [0, 1] with shape ``[B, 1, *spatial]``.
     """
     def __init__(self, dimension, start_channels):
         super().__init__()
@@ -365,7 +365,7 @@ class Encoder(nn.Module):
     """VFA encoder network.
 
     Inputs:
-        x: Tensor of shape [B, C, *spatial].
+        x: Tensor of shape ``[B, C, *spatial]``.
 
     Returns:
         List of multiscale feature maps ordered from fine to coarse.
@@ -475,7 +475,7 @@ class Decoder(nn.Module):
         """Flatten spatial dimensions and move channels to the last axis.
 
         Args:
-            x: Tensor of shape [B, C, *spatial].
+            x: Tensor of shape ``[B, C, *spatial]``.
 
         Returns:
             Tensor of shape [B, N, C] where N is the flattened spatial size.
@@ -531,13 +531,13 @@ class Decoder(nn.Module):
         """Extract local patches into a token tensor.
 
         Args:
-            x: Tensor of shape [B, C, *spatial].
+            x: Tensor of shape ``[B, C, *spatial]``.
             dim: Spatial dimensionality (2 or 3).
             kernel: Patch size.
             stride: Patch stride.
 
         Returns:
-            Tensor of shape [B, *spatial, P, C] with patch tokens.
+            Tensor of shape ``[B, *spatial, P, C]`` with patch tokens.
         """
         if dim == 3:
             '''from tensor with [Batch x Feature x Height x Weight x Depth],

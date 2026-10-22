@@ -208,7 +208,7 @@ class VecInt(nn.Module):
         """Integrate the vector field.
 
         Args:
-            vec: Tensor of shape [B, C, *spatial].
+            vec: Tensor of shape ``[B, C, *spatial]``.
 
         Returns:
             Integrated vector field tensor.

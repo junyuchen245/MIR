@@ -6,8 +6,7 @@ Overview
 
 ``VxmDense`` is the U-Net registration baseline of Balakrishnan et al., included for
 comparison and as a light-weight backbone (0.3 M parameters with the default feature
-configuration). It predicts a displacement field; wrap it in ``LDDMMWrapper`` for a
-diffeomorphic variant (:doc:`lddmm`).
+configuration). It predicts a displacement field.
 
 Usage
 -----

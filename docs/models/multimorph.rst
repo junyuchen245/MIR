@@ -25,9 +25,6 @@ Related tutorials
 -----------------
 
 - `Brain template construction <https://github.com/junyuchen245/MIR/tree/main/tutorials/build_brain_template>`_
-- `PSMA PET/CT atlas building <https://github.com/junyuchen245/MIR/tree/main/tutorials/PSMA_atlas_building>`_
-- `PSMA atlas building with MultiMorph <https://github.com/junyuchen245/MIR/tree/main/tutorials/PSMA_atlas_building_MultiMorph>`_
-- `Whole-body PET/CT atlas <https://github.com/junyuchen245/MIR/tree/main/tutorials/Wholebody_PETCT_Atlas>`_
 
 References
 ----------

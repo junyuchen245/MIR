@@ -41,3 +41,6 @@ tutorials/BICMAC_PETCT_Atlas/
 # ---- private-repository tooling (tracked only on the private branch) ----
 .gitignore.private
 sync_private.sh
+
+# ---- generated at build time (autosummary) ----
+docs/api/

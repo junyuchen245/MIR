@@ -149,7 +149,7 @@ class Unet(nn.Module):
     """U-Net backbone with hyperparameter conditioning.
 
     Inputs:
-        x: Tensor of shape [B, 2, *spatial] with concatenated images.
+        x: Tensor of shape ``[B, 2, *spatial]`` with concatenated images.
         h: Hyperparameter embedding.
 
     Returns:
@@ -236,7 +236,7 @@ class HyperVxmDense(nn.Module):
     """HyperMorph variant of VoxelMorph with hyperparameter conditioning.
 
     Inputs:
-        input_imgs: Tuple `(mov, fix)` of tensors [B, 1, *spatial].
+        input_imgs: Tuple `(mov, fix)` of tensors ``[B, 1, *spatial]``.
         hyp_val: Tensor of hyperparameter values.
 
     Returns:

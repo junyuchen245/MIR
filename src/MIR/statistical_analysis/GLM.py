@@ -1,14 +1,16 @@
 import torch
 
 def GLM(X, Y, mask=None):
-    '''
-    Perform General Linear Model (GLM) fitting.
-    X: (N, P) design matrix
-    Y: (N, V) data matrix
-    mask: (H, W, D) boolean mask to select voxels (optional)
+    '''Perform General Linear Model (GLM) fitting.
+
+    Args:
+        X: (N, P) design matrix.
+        Y: (N, V) data matrix.
+        mask: (H, W, D) boolean mask to select voxels (optional).
+
     Returns:
-        betas: (P, V) estimated coefficients
-        t_for_col: function to compute t-statistics for a given column
+        betas: (P, V) estimated coefficients.
+        t_for_col: function to compute t-statistics for a given column.
     '''
     if mask is not None:
         mask_vec = mask.reshape(-1).to(Y.device)      # (H*W*D,)

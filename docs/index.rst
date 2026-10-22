@@ -1,273 +1,246 @@
-MIR: Medical Image Registration toolkit
-========================================
+:sd_hide_title:
 
-.. image:: https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square
-   :alt: License: Apache 2.0
-   :target: https://opensource.org/license/apache-2-0
-.. image:: https://github.com/junyuchen245/MIR/actions/workflows/tests.yml/badge.svg
-   :alt: Tests
-   :target: https://github.com/junyuchen245/MIR/actions/workflows/tests.yml
-.. image:: https://github.com/junyuchen245/MIR/actions/workflows/docs.yml/badge.svg
-   :alt: Docs
-   :target: https://github.com/junyuchen245/MIR/actions/workflows/docs.yml
+MIR
+===
 
-**MIR** is a PyTorch research toolkit for deformable medical image registration. It bundles
-the registration networks developed around *TransMorph* (TransMorph, VFA, their spatially
-varying regularization and hypernetwork variants, and the new LDDMM models), ports of
-third-party learning-based and classical methods behind one calling convention, the loss
-functions and regularizers used to train them, evaluation metrics, and end-to-end tutorials
-on public benchmarks (IXI, Learn2Reg LUMIR, autoPET) and on atlas building.
+.. raw:: html
 
-| Documentation: https://junyuchen.me/MIR
-| Source code: https://github.com/junyuchen245/MIR
+   <div class="mir-hero">
+     <span class="mir-eyebrow">PyTorch toolkit for medical image registration</span>
+     <h1 class="mir-title">Deformable registration, <span class="mir-grad">from research to results</span></h1>
+     <p class="mir-lead">
+       MIR brings state-of-the-art registration networks, classical baselines, training losses,
+       evaluation metrics and reproducible benchmark pipelines together behind one simple interface:
+       a <code>(moving, fixed)</code> pair in, a dense displacement field out.
+     </p>
+     <div class="mir-actions">
+       <a class="mir-btn mir-btn-primary" href="getting_started/installation.html">Get started</a>
+       <a class="mir-btn mir-btn-ghost" href="models/index.html">Browse models</a>
+       <a class="mir-btn mir-btn-ghost" href="https://github.com/junyuchen245/MIR">GitHub</a>
+     </div>
+   </div>
 
-Highlights
-----------
+.. container:: mir-figure
 
-- **One convention for every model.** Each registration network takes a ``(moving, fixed)``
-  pair of ``[B, 1, D, H, W]`` tensors and returns a dense displacement field in voxels that
-  ``MIR.models.SpatialTransformer`` applies to any image or label map. Swapping architectures
-  is a one-line change.
-- **A family of transformation models.** Plain displacements, stationary velocity fields
-  (scaling and squaring), time-varying compositions (TransMorph-TVF) and, new, **LDDMM**
-  geodesic shooting with learned initial momentum and an exact inverse map
-  (:doc:`models/lddmm`). The LDDMM layer wraps *any* backbone in the toolkit.
-- **Spatially varying regularization (SPR)** as a learned per-voxel map, either weighting
-  the regularization loss (TransMorph-SPR, VFA-SPR, SITReg-SPR, LessNet-SPR, Fourier-Net-SPR)
-  or, in the LDDMM models, setting the kernel scale of the metric itself.
-- **Hypernetwork conditioning** (HyperMorph, HyperTransMorph, HyperVFA) to train one model
-  across a range of regularization strengths.
-- **Classical and third-party baselines** behind the same interface: ConvexAdam, deedsBCV,
-  FireANTs (greedy / SyN), SITReg, MultiMorph, and intensity-normalization utilities.
-- **Everything needed to train and evaluate**: similarity losses (NCC variants, SSIM, MIND,
-  mutual information, correlation ratio, Dice), regularizers (diffusion, local / spatially
-  weighted, Beta priors, GradICON, KL), Jacobian-based folding metrics, Dice utilities,
-  data augmentation, and a registry of pretrained weights.
+   .. image:: _static/hero_registration.png
+      :alt: A brain MRI pair registered with TransMorph-TVF: moving, fixed, warped moving, deformed grid and log Jacobian determinant
 
-Installation
+.. container:: mir-caption
+
+   A LUMIR brain MRI pair registered with TransMorph-TVF: moving, fixed and warped images, the deformation
+   and its log Jacobian determinant (folding in 0.003% of voxels).
+
+Why MIR
+-------
+
+.. grid:: 1 2 3 3
+   :gutter: 3
+
+   .. grid-item-card:: :octicon:`plug;1.2em` One interface
+      :link: user_guide/conventions
+      :link-type: doc
+
+      Every model takes ``(moving, fixed)`` and returns a voxel displacement that one
+      ``SpatialTransformer`` applies to images and label maps. Swapping architectures is a one-line change.
+
+   .. grid-item-card:: :octicon:`stack;1.2em` A broad model zoo
+      :link: models/index
+      :link-type: doc
+
+      TransMorph, VFA, SITReg, VoxelMorph, LessNet, Fourier-Net, hypernetwork variants, and the
+      classical ConvexAdam, deedsBCV and FireANTs, all callable the same way.
+
+   .. grid-item-card:: :octicon:`git-merge;1.2em` Diffeomorphic by design
+      :link: user_guide/transformations
+      :link-type: doc
+
+      Choose the transformation model: displacement, stationary or time-varying velocity fields,
+      symmetric inverse-consistent mappings, or LDDMM geodesic shooting.
+
+   .. grid-item-card:: :octicon:`meter;1.2em` Spatially varying regularization
+      :link: user_guide/regularization
+      :link-type: doc
+
+      Learn where the deformation should be smooth and where it may be sharp, with Beta priors,
+      hypernetwork-conditioned strength, or weighted metrics.
+
+   .. grid-item-card:: :octicon:`tools;1.2em` Training toolbox
+      :link: user_guide/losses_metrics
+      :link-type: doc
+
+      NCC, SSIM, MIND, mutual information, correlation ratio and Dice losses; diffusion, local and
+      GradICON regularizers; Jacobian-based folding metrics; contrast augmentation.
+
+   .. grid-item-card:: :octicon:`verified;1.2em` Pretrained and benchmarked
+      :link: user_guide/pretrained_weights
+      :link-type: doc
+
+      Weights for brain MRI (LUMIR, IXI) and PET/CT (autoPET), and end-to-end tutorials that reproduce
+      Learn2Reg and IXI benchmarks.
+
+A first look
 ------------
 
-MIR requires Python 3.8 or newer and a CUDA-enabled PyTorch build. Install PyTorch first,
-then install MIR in editable mode from the repository root:
+.. tab-set::
 
-.. code-block:: bash
+   .. tab-item:: Register with a pretrained model
 
-   git clone https://github.com/junyuchen245/MIR.git
-   cd MIR
-   python3.8 -m pip install -U pip
-   python3.8 -m pip install -e .
+      .. code-block:: python
 
-See :doc:`installation` for optional dependencies, platform notes and how to verify the
-installation.
+         import torch, nibabel as nib
+         from MIR import ModelWeights
+         from MIR.models import VFA, SpatialTransformer
+         import MIR.models.configs_VFA as configs_VFA
 
-Sixty-second example
---------------------
+         load = lambda p: torch.from_numpy(nib.load(p).get_fdata()[None, None]).float().cuda()
+         mov, fix = load('subject.nii.gz'), load('template.nii.gz')
 
-Register a brain MRI to a template with a pretrained VFA model and warp the image:
+         config = configs_VFA.get_VFA_default_config()
+         config.img_size = fix.shape[2:]
+         model = VFA(config, device='cuda:0').cuda().eval()
+         key = ModelWeights['VFA-LUMIR24-MonoModal']['wts_key']
+         model.load_state_dict(torch.load('VFA_LUMIR24.pth')[key])
 
-.. code-block:: python
+         with torch.no_grad():
+             flow = model((mov, fix))          # [1, 3, D, H, W], in voxels
+         warped = SpatialTransformer(fix.shape[2:]).cuda()(mov, flow)
 
-   import torch, nibabel as nib
-   from MIR import ModelWeights
-   from MIR.models import VFA, SpatialTransformer
-   import MIR.models.configs_VFA as configs_VFA
+   .. tab-item:: Train a model
 
-   mov = torch.from_numpy(nib.load('subject.nii.gz').get_fdata()[None, None]).float().cuda()
-   fix = torch.from_numpy(nib.load('template.nii.gz').get_fdata()[None, None]).float().cuda()
+      .. code-block:: python
 
-   config = configs_VFA.get_VFA_default_config()
-   config.img_size = fix.shape[2:]
-   model = VFA(config, device='cuda:0').cuda().eval()
-   model.load_state_dict(torch.load('VFA_LUMIR24.pth')[ModelWeights['VFA-LUMIR24-MonoModal']['wts_key']])
+         from MIR.models import TransMorph, SpatialTransformer
+         from MIR.image_similarity import NCC_vxm
+         from MIR.deformation_regularizer import Grad3d
+         import MIR.models.configs_TransMorph as configs_TransMorph
 
-   with torch.no_grad():
-       flow = model((mov, fix))                      # [1, 3, D, H, W] displacement in voxels
-   warped = SpatialTransformer(fix.shape[2:]).cuda()(mov, flow)
+         config = configs_TransMorph.get_3DTransMorph3Lvl_config()
+         config.img_size = (160, 192, 224)
+         model = TransMorph(config, SVF=True).cuda()   # diffeomorphic (SVF)
+         warp = SpatialTransformer(config.img_size).cuda()
+         similarity, smoothness = NCC_vxm(), Grad3d(penalty='l2')
+         optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4)
 
-The same four lines work for TransMorph, SITReg, LessNet, Fourier-Net and VoxelMorph; the
-LDDMM wrapper adds a diffeomorphic flow and its inverse around any of them:
+         for mov, fix in loader:                       # unsupervised: no labels needed
+             mov, fix = mov.cuda(), fix.cuda()
+             flow = model((mov, fix))
+             loss = similarity(warp(mov, flow), fix) + 1.0 * smoothness(flow, fix)
+             optimizer.zero_grad(); loss.backward(); optimizer.step()
 
-.. code-block:: python
+   .. tab-item:: Evaluate a registration
 
-   from MIR.models import LDDMMWrapper
-   model = LDDMMWrapper(backbone, param='shooting', time_steps=7, sigmas=[1, 2, 4, 8]).cuda()
-   out = model((mov, fix), return_dict=True)       # flow, inv_flow, energy (regularizer), kernel weights
+      .. code-block:: python
 
-Where to go next
-----------------
+         from MIR.models import SpatialTransformer
+         from MIR.accuracy_measures import dice_val_VOI, calc_jac_dets, get_identity_grid, calc_measurements
 
-.. list-table::
-   :widths: 28 72
-   :header-rows: 0
+         warp_labels = SpatialTransformer(fix.shape[2:], mode='nearest').cuda()
+         dice = dice_val_VOI(warp_labels(mov_seg, flow).long(), fix_seg.long(), num_clus=n_labels)
 
-   * - :doc:`installation`
-     - Requirements, optional dependencies, platform notes, verifying the install.
-   * - :doc:`concepts`
-     - Tensor and displacement conventions, the transformation models (displacement, SVF,
-       TVF, LDDMM), spatially varying regularization, losses and metrics.
-   * - :doc:`quick_start`
-     - Task-oriented starts: brain registration with pretrained weights, IXI benchmarking,
-       template construction.
-   * - :doc:`models/index`
-     - One page per model family with variants, usage, pretrained weights and references.
-   * - :doc:`tutorials`
-     - Catalogue of the runnable tutorial folders (training, inference, evaluation).
-   * - :doc:`api`
-     - Auto-generated API reference.
+         disp = flow[0].cpu().numpy()                  # folding metrics
+         jac = calc_jac_dets(disp + get_identity_grid(disp))
+         n_folded, _, folded_volume, _ = calc_measurements(jac, mask)
 
-Choosing a model
-----------------
+Explore the documentation
+-------------------------
 
-.. list-table::
-   :header-rows: 1
-   :widths: 22 30 16 16 16
+.. grid:: 1 2 2 3
+   :gutter: 3
 
-   * - Model
-     - Architecture
-     - Transformation
-     - SPR variant
-     - Page
-   * - TransMorph / TVF
-     - Swin-Transformer encoder, conv decoder
-     - displacement, SVF, TVF composition
-     - TransMorphTVFSPR
-     - :doc:`models/transmorph`
-   * - TransMorph-LDDMM
-     - TransMorph + LDDMM shooting
-     - geodesic (diffeomorphic, invertible)
-     - SPR-scaled kernel
-     - :doc:`models/lddmm`
-   * - LDDMMWrapper
-     - any backbone + LDDMM shooting
-     - geodesic / relaxation
-     - SPR-scaled kernel
-     - :doc:`models/lddmm`
-   * - VFA / TransVFA
-     - vector-field attention
-     - displacement, SVF
-     - VFASPR
-     - :doc:`models/vfa`
-   * - HyperTransMorph / HyperVFA / HyperMorph
-     - hypernetwork-conditioned
-     - as the base model
-     - Hyper*SPR
-     - :doc:`models/hypertransmorph`, :doc:`models/hypermorph`
-   * - VoxelMorph
-     - U-Net
-     - displacement
-     - --
-     - :doc:`models/voxelmorph`
-   * - LessNet, Fourier-Net(+)
-     - light-weight CNNs
-     - displacement, SVF
-     - LessNetSPR, FourierNet(Plus)SPR
-     - :doc:`models/lessnet`, :doc:`models/fouriernet`
-   * - SITReg
-     - multi-resolution symmetric
-     - inverse consistent, topology preserving
-     - separate SPR head (tutorials)
-     - :doc:`models/sitreg`
-   * - ConvexAdam, deedsBCV, FireANTs
-     - classical / optimization-based
-     - discrete, SVF, greedy / SyN
-     - ConvexAdam-SPR, FireANTs-SPR
-     - :doc:`models/convexadam`, :doc:`models/deedsbcv`
-   * - MultiMorph, TemplateCreation
-     - group-wise / atlas building
-     - --
-     - --
-     - :doc:`models/multimorph`
+   .. grid-item-card:: :octicon:`rocket;1.2em` Getting started
+      :link: getting_started/installation
+      :link-type: doc
+
+      Install MIR, run a pretrained model, benchmark on IXI, build a template.
+
+   .. grid-item-card:: :octicon:`book;1.2em` User guide
+      :link: user_guide/index
+      :link-type: doc
+
+      Conventions, transformation models, regularization, losses and metrics, training recipes.
+
+   .. grid-item-card:: :octicon:`package;1.2em` Models
+      :link: models/index
+      :link-type: doc
+
+      Every model family with variants, usage, pretrained weights and references.
+
+   .. grid-item-card:: :octicon:`beaker;1.2em` Tutorials
+      :link: tutorials
+      :link-type: doc
+
+      Runnable training and evaluation pipelines for LUMIR, IXI, autoPET and atlas building.
+
+   .. grid-item-card:: :octicon:`code;1.2em` API reference
+      :link: api
+      :link-type: doc
+
+      Auto-generated reference of every module, class and function.
+
+   .. grid-item-card:: :octicon:`mortar-board;1.2em` Publications
+      :link: about/publications
+      :link-type: doc
+
+      The papers implemented in MIR and how to cite them.
 
 Citing MIR
 ----------
 
-If MIR is useful in your work, please cite the paper that introduced the model you used
-(listed on each model page and under :ref:`included-projects`) and link to the repository.
-
-.. _included-projects:
-
-Included projects
------------------
-
-1. **Pretraining Deformable Image Registration Networks with Random Images**
-   *Chen, Junyu, et al.* ***MIDL Short Papers***, *2025.*
-   `Paper <https://openreview.net/forum?id=NJANlZzxfi#discussion>`__ | `Repo <https://github.com/junyuchen245/Pretraining_Image_Registration_DNNs>`__
-
-2. **Correlation Ratio for Unsupervised Learning of Multi-modal Deformable Registration**
-   *Chen, Xiaojian, et al.* ***SPIE Medical Imaging: Image Processing***, *2025.*
-   `Paper <https://www.spiedigitallibrary.org/conference-proceedings-of-spie/13406/1340632/Correlation-ratio-for-unsupervised-learning-of-multi-modal-deformable-registration/10.1117/12.3047699.full>`__ | `Repo <https://github.com/junyuchen245/Correlation_Ratio>`__
-
-3. **Unsupervised Learning of Spatially Varying Regularization for Diffeomorphic Image Registration**
-   *Chen, Junyu, et al.* ***Medical Image Analysis***, *2025.*
-   `Paper <https://arxiv.org/abs/2412.17982>`__ | `Repo <https://github.com/junyuchen245/Spatially-Varying-Regularization-ImgReg>`__
-
-4. **Vector Field Attention for Deformable Image Registration**
-   *Liu, Yihao, et al.* ***Journal of Medical Imaging***, *2024.*
-   `Paper <https://www.spiedigitallibrary.org/journals/journal-of-medical-imaging/volume-11/issue-6/064001/Vector-field-attention-for-deformable-image-registration/10.1117/1.JMI.11.6.064001.full>`__ | `Repo <https://github.com/yihao6/vfa/>`__
-
-5. **Unsupervised Learning of Multi-modal Affine Registration for PET/CT**
-   *Chen, Junyu, et al.* ***IEEE NSS/MIC/RTSD***, *2024.*
-   `Paper <https://arxiv.org/pdf/2409.13863>`__ | `Repo <https://github.com/junyuchen245/Correlation_Ratio>`__
-
-6. **On Finite Difference Jacobian Computation in Deformable Image Registration**
-   *Liu, Yihao, et al.* ***International Journal of Computer Vision***, *2024.*
-   `Paper <https://link.springer.com/article/10.1007/s11263-024-02047-1>`__ | `Repo <https://github.com/yihao6/digital_diffeomorphism>`__
-
-7. **Deformable Cross-Attention Transformer for Medical Image Registration**
-   *Chen, Junyu, et al.* ***MLMI Workshop***, *MICCAI 2023.*
-   `Paper <https://arxiv.org/abs/2303.06179>`__ | `Repo <https://github.com/junyuchen245/TransMorph_DCA>`__
-
-8. **Unsupervised Learning of Diffeomorphic Image Registration via TransMorph**
-   *Chen, Junyu, et al.* ***WBIR***, *2022.*
-   `Paper <https://link.springer.com/chapter/10.1007/978-3-031-11203-4_11>`__ | `Repo <https://github.com/junyuchen245/TransMorph_TVF>`__
-
-9. **TransMorph: Transformer for Unsupervised Medical Image Registration**
-   *Chen, Junyu, et al.* ***Medical Image Analysis***, *2022.*
-   `Paper <https://arxiv.org/abs/2111.10480>`__ | `Repo <https://github.com/junyuchen245/TransMorph_Transformer_for_Medical_Image_Registration>`__
-
-External packages wrapped
--------------------------
-
-1. **Intensity Normalization Toolkit** -- *Reinhold, Jacob C., et al.* ***SPIE MI***, *2019.*
-   `Paper <https://pmc.ncbi.nlm.nih.gov/articles/PMC6758567/>`__ | `Repo <https://github.com/jcreinhold/intensity-normalization>`__
-2. **ConvexAdam: Dual-Optimization-Based 3D Registration** -- *Siebert, Hanna, et al.* ***IEEE TMI***, *2024.*
-   `Paper <https://ieeexplore.ieee.org/abstract/document/10681158>`__ | `Repo <https://github.com/multimodallearning/convexAdam>`__
-3. **MultiMorph: On-demand Atlas Construction** -- *Abulnaga, S. Mazdak, et al.* ***CVPR***, *2025.*
-   `Paper <https://openaccess.thecvf.com/content/CVPR2025/html/Abulnaga_MultiMorph_On-demand_Atlas_Construction_CVPR_2025_paper.html>`__ | `Repo <https://github.com/mabulnaga/multimorph>`__
-4. **SITReg: Multi-resolution architecture for symmetric, inverse consistent, and topology preserving image registration** -- *Honkamaa, Joel, and Pekka Marttinen.* ***MELBA***, *2024.*
-   `Paper <https://www.melba-journal.org/papers/2024:026.html>`__ | `Repo <https://github.com/honkamj/SITReg>`__
-5. **FireANTs** -- GPU implementations of greedy and SyN registration. `Repo <https://github.com/rohitrango/fireants>`__
-6. **deedsBCV** -- `Repo <https://github.com/mattiaspaul/deedsBCV>`__ (Linux only)
-7. **LessNet** and **Fourier-Net / Fourier-Net+** -- *Jia, Xi, et al.* `LessNet <https://github.com/xi-jia/LessNet>`__, `Fourier-Net <https://github.com/xi-jia/Fourier-Net>`__
-
-About the author
-----------------
-
-MIR is developed by `Junyu Chen <https://junyuchen245.github.io>`_ (Johns Hopkins University).
+If MIR is useful in your work, please cite the paper of the model you used (listed on each model page
+and under :doc:`about/publications`) and link to the
+`repository <https://github.com/junyuchen245/MIR>`__.
 
 .. toctree::
-   :maxdepth: 1
    :caption: Getting started
    :hidden:
 
-   installation
-   concepts
-   quick_start
-   quick_start_brain_registration
-   quick_start_ixi_benchmarking
-   brain_template_example
+   getting_started/installation
+   getting_started/quickstart
+   getting_started/brain_registration
+   getting_started/ixi_benchmarking
+   getting_started/brain_template
 
 .. toctree::
-   :maxdepth: 2
+   :caption: User guide
+   :hidden:
+
+   Overview <user_guide/index>
+   user_guide/conventions
+   user_guide/transformations
+   user_guide/regularization
+   user_guide/losses_metrics
+   user_guide/training
+   user_guide/pretrained_weights
+
+.. toctree::
    :caption: Models
    :hidden:
 
-   models/index
+   Overview <models/index>
+   models/transmorph
+   models/vfa
+   models/sitreg
+   models/voxelmorph
+   models/lessnet
+   models/fouriernet
+   models/hypertransmorph
+   models/hypermorph
+   models/lddmm
+   models/convexadam
+   models/deedsbcv
+   models/multimorph
+   models/backbones_and_heads
 
 .. toctree::
-   :maxdepth: 1
    :caption: Tutorials and reference
    :hidden:
 
    tutorials
    api
+
+.. toctree::
+   :caption: About
+   :hidden:
+
+   about/publications
+   about/license
