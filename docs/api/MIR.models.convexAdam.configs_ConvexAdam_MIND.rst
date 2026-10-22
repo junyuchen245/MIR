@@ -15,6 +15,7 @@ MIR.models.convexAdam.configs\_ConvexAdam\_MIND
    
       get_ConvexAdam_MIND_brain_default_config
       get_ConvexAdam_MIND_lung_default_config
+      get_ConvexAdam_MIND_petct_default_config
    
    
 

@@ -25,6 +25,7 @@ MIR.image\_similarity.Dice
    .. autosummary::
    
       DiceLoss
+      SparseDiceLoss
    
    
 

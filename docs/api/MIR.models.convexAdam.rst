@@ -31,6 +31,7 @@ MIR.models.convexAdam
    MIR.models.convexAdam.configs_ConvexAdam_MIND
    MIR.models.convexAdam.convex_adam_MIND
    MIR.models.convexAdam.convex_adam_MIND_SPR
+   MIR.models.convexAdam.convex_adam_MIND_SVF
    MIR.models.convexAdam.convex_adam_VFA
    MIR.models.convexAdam.convex_adam_features
    MIR.models.convexAdam.convex_adam_nnUNet

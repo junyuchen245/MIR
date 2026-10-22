@@ -65,3 +65,27 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 html_theme = "sphinx_rtd_theme"
 html_static_path = ["_static"]
+html_css_files = ["custom.css"]
+html_title = "MIR: Medical Image Registration toolkit"
+html_short_title = "MIR"
+html_theme_options = {
+    "navigation_depth": 3,
+    "collapse_navigation": False,
+    "sticky_navigation": True,
+    "titles_only": False,
+    "prev_next_buttons_location": "both",
+}
+html_context = {
+    "display_github": True,
+    "github_user": "junyuchen245",
+    "github_repo": "MIR",
+    "github_version": "main",
+    "conf_py_path": "/docs/",
+}
+pygments_style = "friendly"
+autodoc_member_order = "bysource"
+napoleon_google_docstring = True
+napoleon_numpy_docstring = False
+# MIR docstrings describe the forward pass with "Forward inputs:" / "Forward outputs:" sections
+napoleon_custom_sections = [("Forward inputs", "params_style"), ("Forward outputs", "returns_style"),
+                            ("Inputs", "params_style"), ("Returns", "returns_style")]

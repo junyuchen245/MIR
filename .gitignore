@@ -1,25 +1,43 @@
-# ignore build artifacts
+# ---- build artifacts ----
 build/
 dist/
 src/*.egg-info/
-tutorials/lumir25_SITReg/
-# ignore fireants due to license restrictions
-src/MIR/models/fireants/ 
-tutorials/IPEN_registration/
-# Ignore any folder named "experiments" or "logs" anywhere in the repo
-**/experiments/
-**/logs/
-**/pretrained_wts/
-**/atlas/
-**/template_outputs/
+docs/_build/
 **/__pycache__/
-
-# Ignore compiled Python artifacts everywhere
 *.py[cod]
 *.$py.class
 
+# ---- training / inference outputs (every tutorial writes these next to its scripts) ----
+**/experiments/
+**/logs/
+**/results/
+**/pretrained_wts/
+**/atlas/
+**/template_outputs/
+
+# ---- weights and image data never belong in the repository ----
+*.pth
+*.pth.tar
+*.pt
+*.nii
+*.nii.gz
+*.npz
+*.npy
+
+# ---- third-party code with license restrictions ----
+src/MIR/models/fireants/
+
+# ---- tutorials that are not released publicly (unpublished work) ----
+tutorials/lumir25_SITReg/
+tutorials/IPEN_registration/
 tutorials/PSMA_*/
+tutorials/PSMAReg/
 tutorials/HECKTOR25/
 tutorials/JHU_FDG/
 tutorials/Wholebody_PETCT_Atlas/
-# git rm --cached -r . removing all cached files before git add .
+tutorials/BIC-MAC/
+tutorials/BICMAC_PETCT_Atlas/
+
+# ---- private-repository tooling (tracked only on the private branch) ----
+.gitignore.private
+sync_private.sh

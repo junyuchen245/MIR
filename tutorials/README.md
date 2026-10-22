@@ -21,6 +21,11 @@ Each tutorial folder contains a runnable script and, when applicable, a README w
 - [lumir24_VFA](https://github.com/junyuchen245/MIR/tree/main/tutorials/lumir24_VFA): VFA pipelines for Learn2Reg 2024.
 - [lumir24_ConvexAdam](https://github.com/junyuchen245/MIR/tree/main/tutorials/lumir24_ConvexAdam): ConvexAdam baselines for Learn2Reg 2024.
 - [lumir25_VFA](https://github.com/junyuchen245/MIR/tree/main/tutorials/lumir25_VFA): VFA pipelines for Learn2Reg 2025.
+- [lumir25_TM_LDDMM](https://github.com/junyuchen245/MIR/tree/main/tutorials/lumir25_TM_LDDMM): LDDMM (time-varying velocity field, geodesic shooting or relaxation) trained end to end on LUMIR25 — TransMorph-LDDMM plus a model-agnostic wrapper for VFA, VoxelMorph, LessNet, Fourier-Net, SITReg.
+- [lumir25_TM_SPR_LDDMM](https://github.com/junyuchen245/MIR/tree/main/tutorials/lumir25_TM_SPR_LDDMM): TransMorph-LDDMM with the TransMorph-SPR weight map setting the per-voxel kernel scale (Beta prior).
+- [lumir25_TM_OMT_LDDMM](https://github.com/junyuchen245/MIR/tree/main/tutorials/lumir25_TM_OMT_LDDMM): TransMorph-LDDMM with an RDMM-style region-specific multi-Gaussian kernel and the optimal-mass-transport penalty.
+- [lumir25_SITReg_LDDMM](https://github.com/junyuchen245/MIR/tree/main/tutorials/lumir25_SITReg_LDDMM): SITReg as the momentum predictor of a geodesic-shooting LDDMM model (model-agnostic wrapper).
+- [lumir25_SITReg_SPR_LDDMM](https://github.com/junyuchen245/MIR/tree/main/tutorials/lumir25_SITReg_SPR_LDDMM): SITReg + model-agnostic SPR head + LDDMM (spatially varying kernel, Beta prior).
 - [lumir25_SITReg](https://github.com/junyuchen245/MIR/tree/main/tutorials/lumir25_SITReg): SITReg pipelines for Learn2Reg 2025.
 - [lumir25_ConvexAdam](https://github.com/junyuchen245/MIR/tree/main/tutorials/lumir25_ConvexAdam): ConvexAdam baselines for Learn2Reg 2025.
 - [autoPET_TransMorphSPR](https://github.com/junyuchen245/MIR/tree/main/tutorials/autoPET_TransMorphSPR): PET/CT registration with TransMorph SPR.

@@ -1,4 +1,4 @@
-﻿MIR.image\_similarity
+MIR.image\_similarity
 =====================
 
 .. automodule:: MIR.image_similarity
@@ -33,6 +33,7 @@
    MIR.image_similarity.MIND_SSC
    MIR.image_similarity.Mutual_Information
    MIR.image_similarity.NCC
+   MIR.image_similarity.NGF
    MIR.image_similarity.PCC
    MIR.image_similarity.SSIM
    MIR.image_similarity.Segmentation_Overlap

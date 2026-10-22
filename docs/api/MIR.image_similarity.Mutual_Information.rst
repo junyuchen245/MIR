@@ -17,7 +17,9 @@ MIR.image\_similarity.Mutual\_Information
 
    .. autosummary::
    
+      MattesMutualInformation
       MutualInformation
+      NormalizedMutualInformation
       localMutualInformation
    
    

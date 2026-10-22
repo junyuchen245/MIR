@@ -5,6 +5,7 @@ from .other_utils import pkload, savepkl, write2csv, process_label, CenterCropPa
 from .visualization_utils import mk_grid_img, get_cmap, pca_reduce_channels_cpu
 from .segmentation_utils import sliding_window_inference, sliding_window_inference_multires
 from .deedsbcv_binary import get_deedsbcv_dir, get_deedsbcv_executable
+from .dicom_utils import scan_dicom_dir, print_dicom_info
 __all__ = [
     'SpatialTransformer',
     'VecInt',
@@ -29,5 +30,7 @@ __all__ = [
     'load_partial_weights',
     'resample_to_orginal_space_and_save',
     'make_affine_from_pixdim',
-    'zoom_img'
+    'zoom_img',
+    'scan_dicom_dir',
+    'print_dicom_info'
 ]

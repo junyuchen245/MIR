@@ -39,7 +39,7 @@ import re
 import torch
 import warnings
 
-_ver = torch.__version__        # e.g. '2.1.0+cu121', '1.13.1a0', …
+_ver = str(getattr(torch, "__version__", ""))   # e.g. '2.1.0+cu121', '1.13.1a0', … (str() keeps doc builds with a mocked torch working)
 
 m = re.match(r"(\d+)\.(\d+)", _ver)
 if m:

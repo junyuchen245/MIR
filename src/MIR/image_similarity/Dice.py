@@ -1,8 +1,10 @@
 """Dice loss and helper utilities for segmentation evaluation."""
 
+import random
+from typing import Callable, Optional
+
 import torch
 import torch.nn as nn
-import random
 
 class DiceLoss(nn.Module):
     """Dice loss"""
@@ -39,6 +41,44 @@ class DiceLoss(nn.Module):
         dsc = (1-torch.mean(dsc))
         return dsc
 
+
+class SparseDiceLoss(nn.Module):
+    """Sampled multi-class Dice over integer labels without dense full one-hot."""
+
+    def __init__(
+        self,
+        num_classes: int,
+        K: int = 16,
+        include_bg: bool = False,
+        present_only: bool = True,
+        dice_loss: Optional[nn.Module] = None,
+    ):
+        super().__init__()
+        self.num_classes = int(num_classes)
+        self.K = int(K)
+        self.include_bg = bool(include_bg)
+        self.present_only = bool(present_only)
+        self.dice_loss = dice_loss if dice_loss is not None else DiceLoss(num_class=num_classes, one_hot=False)
+
+    def forward(
+        self,
+        src_lbl_int: torch.Tensor,
+        tgt_lbl_int: torch.Tensor,
+        flow_src2tgt: torch.Tensor,
+        warp_fn: Callable[[torch.Tensor, torch.Tensor], torch.Tensor],
+    ) -> torch.Tensor:
+        return sparse_dice_from_int_labels(
+            src_lbl_int=src_lbl_int,
+            tgt_lbl_int=tgt_lbl_int,
+            flow_src2tgt=flow_src2tgt,
+            warp_fn=warp_fn,
+            num_classes=self.num_classes,
+            K=self.K,
+            include_bg=self.include_bg,
+            present_only=self.present_only,
+            dice_loss=self.dice_loss,
+        )
+
 @torch.no_grad()
 def sample_label_indices(num_classes: int,
                          K: int,
@@ -59,22 +99,30 @@ def sample_label_indices(num_classes: int,
     Returns:
         Tensor of sampled class indices (K,).
     """
+    if K <= 0:
+        raise ValueError("K must be positive.")
+
+    all_classes = list(range(num_classes))
+    if not include_bg and 0 in all_classes:
+        all_classes.remove(0)
+
     if present_only:
         lbl = y_true_int if y_true_int.dim() == 4 else y_true_int.squeeze(1)
         present = torch.unique(lbl).tolist()
         if not include_bg and 0 in present:
             present.remove(0)
-        pool = present if present else list(range(num_classes))
+        pool = present if present else list(all_classes)
     else:
-        pool = list(range(num_classes))
-        if not include_bg and 0 in pool:
-            pool.remove(0)
+        pool = list(all_classes)
+
+    if not pool:
+        raise ValueError("No valid label classes available for sparse Dice sampling.")
 
     # sample without replacement; if pool < K, pad arbitrarily
     if len(pool) >= K:
         idx = random.sample(pool, K)
     else:
-        extra = [c for c in range(num_classes) if (include_bg or c != 0) and c not in pool]
+        extra = [c for c in all_classes if c not in pool]
         idx = pool + extra[:max(0, K - len(pool))]
     return torch.tensor(idx, device=device, dtype=torch.long)
 

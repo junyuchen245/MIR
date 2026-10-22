@@ -1,4 +1,4 @@
-﻿MIR.models
+MIR.models
 ==========
 
 .. automodule:: MIR.models
@@ -29,9 +29,11 @@
 
    MIR.models.Deformable_Swin_Transformer
    MIR.models.Deformable_Swin_Transformer_v2
+   MIR.models.FourierNet
    MIR.models.HyperMorph
    MIR.models.HyperTransMorph
    MIR.models.HyperVFA
+   MIR.models.LessNet
    MIR.models.MultiMorph
    MIR.models.SITReg
    MIR.models.Segmentation_Heads
@@ -39,15 +41,19 @@
    MIR.models.Swin_Transformer
    MIR.models.Synthesis_Heads
    MIR.models.TransMorph
+   MIR.models.TransMorphLDDMM
    MIR.models.TransVFA
    MIR.models.VFA
    MIR.models.VoxelMorph
    MIR.models.affine_reg
    MIR.models.atlas_builder
+   MIR.models.configs_FourierNet
+   MIR.models.configs_LessNet
    MIR.models.configs_TransMorph
    MIR.models.configs_VFA
    MIR.models.configs_VoxelMorph
    MIR.models.convexAdam
    MIR.models.fireants
+   MIR.models.lddmm
    MIR.models.registration_utils
 

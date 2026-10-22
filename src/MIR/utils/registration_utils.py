@@ -37,7 +37,7 @@ class SpatialTransformer(nn.Module):
 
     def forward(self, src, flow):
         """Warp a source image with a displacement field.
-
+`
         Args:
             src: Source tensor (B, C, ...).
             flow: Displacement field (B, ndim, ...).

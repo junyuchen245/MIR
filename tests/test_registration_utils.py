@@ -12,6 +12,12 @@ def test_spatial_transformer_zero_flow_shape_finite_3d():
     assert torch.isfinite(out).all()
 
 
+def test_spatial_transformer_grid_not_persistent():
+    st = SpatialTransformer((24, 24, 24))
+
+    assert 'grid' not in st.state_dict()
+
+
 def test_vecint_zero_steps_identity():
     torch.manual_seed(0)
     vec = torch.randn(1, 3, 24, 24, 24)

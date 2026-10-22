@@ -1,4 +1,4 @@
-﻿MIR.utils
+MIR.utils
 =========
 
 .. automodule:: MIR.utils
@@ -28,6 +28,7 @@
    :recursive:
 
    MIR.utils.deedsbcv_binary
+   MIR.utils.dicom_utils
    MIR.utils.other_utils
    MIR.utils.registration_utils
    MIR.utils.segmentation_utils

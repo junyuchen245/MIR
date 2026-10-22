@@ -14,6 +14,7 @@ MIR.models.configs\_TransMorph
    .. autosummary::
    
       get_3DTransMorph3Lvl_config
+      get_3DTransMorphAtlas3Lvl_config
       get_3DTransMorphAutoPET3Lvl_config
       get_3DTransMorphDWin3Lvl_config
       get_3DTransMorphLarge_config

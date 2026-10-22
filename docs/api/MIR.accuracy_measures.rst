@@ -1,4 +1,4 @@
-﻿MIR.accuracy\_measures
+MIR.accuracy\_measures
 ======================
 
 .. automodule:: MIR.accuracy_measures

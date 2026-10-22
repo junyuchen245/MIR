@@ -8,6 +8,9 @@ class SpatialTransformer(nn.Module):
     """
     N-D Spatial Transformer
     Obtained from https://github.com/voxelmorph/voxelmorph
+    Args:
+        size: spatial size of the input tensor
+        mode: interpolation mode, 'bilinear' or 'nearest'
     """
 
     def __init__(self, size, mode='bilinear'):
@@ -30,15 +33,15 @@ class SpatialTransformer(nn.Module):
 
         self.register_buffer('grid', grid, persistent=False)
 
-    def forward(self, src, flow):
-        """Warp a source image with a displacement field.
+    def forward(self, src, flow, padding_mode='zeros'):
+        """Warp a source tensor with a displacement field.
 
         Args:
             src: Source tensor (B, C, ...).
             flow: Displacement field (B, ndim, ...).
 
         Returns:
-            Warped source tensor.
+            Warped tensor.
         """
         # new locations
         new_locs = self.grid + flow
@@ -57,7 +60,7 @@ class SpatialTransformer(nn.Module):
             new_locs = new_locs.permute(0, 2, 3, 4, 1)
             new_locs = new_locs[..., [2, 1, 0]]
 
-        return nnf.grid_sample(src, new_locs, align_corners=True, mode=self.mode)
+        return nnf.grid_sample(src, new_locs, align_corners=True, mode=self.mode, padding_mode=padding_mode)
 
 class VecInt(nn.Module):
     """

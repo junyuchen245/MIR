@@ -1,4 +1,4 @@
-﻿MIR.deformation\_regularizer
+MIR.deformation\_regularizer
 ============================
 
 .. automodule:: MIR.deformation_regularizer

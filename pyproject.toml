@@ -31,6 +31,10 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["black", "pytest"]
+dicom = ["pydicom"]
+
+[project.scripts]
+mir-dicom-info = "MIR.utils.dicom_utils:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}    # <-- tell it that your packages live in src/
