@@ -104,5 +104,19 @@ Feature learning
    * - ``VFA_image_seg``, ``VFA_image_synthesis``
      - Segmentation and synthesis heads on pretrained VFA features.
 
+Deployment
+----------
+
+.. list-table::
+   :header-rows: 1
+   :widths: 34 66
+
+   * - Folder
+     - Contents
+   * - ``web_playground_HyperVFASPR_2D``
+     - Train 2D HyperVFA-SPR / HyperVFA on IXI slices, export to ONNX and run them in a web page with ONNX
+       Runtime Web: the `live playground <https://junyuchen.me/playground/>`__
+       (:doc:`user_guide/browser_deployment`).
+
 Pretrained weights and dataset files used by the tutorials are listed in
 :doc:`user_guide/pretrained_weights`.

@@ -21,22 +21,24 @@ class HyperConv(nn.Module):
         self.padding = padding
         self.ks = kernel_size
         self.if_bias = bias
+        self.ndims = ndims
 
     def forward(self, x, hyp_feat):
         """Apply hyper-conditioned convolution.
 
         Args:
-            x: Feature tensor.
+            x: Feature tensor of shape ``[B, C, *spatial]`` (2D or 3D, see ``ndims``).
             hyp_feat: Hyperparameter embedding.
 
         Returns:
             Tensor after applying predicted weights and bias.
         """
-        kernel = self.linear_conv(hyp_feat).reshape([self.out_channels, self.in_channels, self.ks, self.ks, self.ks])
-        out = nnf.conv3d(x, kernel, stride=self.stride, padding=self.padding)
+        kernel = self.linear_conv(hyp_feat).reshape([self.out_channels, self.in_channels] + [self.ks] * self.ndims)
+        conv = nnf.conv2d if self.ndims == 2 else nnf.conv3d
+        out = conv(x, kernel, stride=self.stride, padding=self.padding)
         if self.if_bias:
-            bias= self.linear_bias(hyp_feat).unsqueeze(2).unsqueeze(2).unsqueeze(2)
-            out = out+bias
+            bias = self.linear_bias(hyp_feat).reshape([1, self.out_channels] + [1] * self.ndims)
+            out = out + bias
         return out
 
 class HyperBlocks(nn.Module):
@@ -74,6 +76,23 @@ class HyperLinear(nn.Module):
             bias = self.linear_bias(h).reshape([self.out_features])
             output = output+bias
         return output
+
+def _candidates_by_slicing(x, dim, kernel=3):
+    """ONNX-friendly equivalent of ``Tensor.unfold``-based patch extraction (stride 1).
+
+    Returns ``[B, *spatial_out, kernel**dim, C]`` with the same patch ordering as the
+    ``unfold`` path, built from explicit shifted slices so that exporters that cannot
+    resolve ``aten::unfold`` sizes (e.g. torch.onnx) can trace it.
+    """
+    import itertools
+    out_shape = [int(s) - kernel + 1 for s in x.shape[2:]]
+    cands = []
+    for off in itertools.product(range(kernel), repeat=dim):
+        sl = (slice(None), slice(None)) + tuple(slice(o, o + n) for o, n in zip(off, out_shape))
+        cands.append(x[sl])
+    patches = torch.stack(cands, dim=-1)                       # [B, C, *out, P]
+    perm = [0] + list(range(2, 2 + dim)) + [2 + dim, 1]
+    return patches.permute(*perm)
 
 def grid_upsample(grid, mode='bilinear', align_corners=True, scale_factor=2):
     """Upsample a sampling grid by a scale factor.
@@ -207,12 +226,15 @@ class HyperVFASPR(nn.Module):
         super().__init__()
 
         self.dim = len(configs.img_size)
+        nb_hyp_units = int(getattr(configs, 'nb_hyp_units', 96))  # width of the hypernetwork embedding
+        self.nb_hyp_units = nb_hyp_units
         self.encoder = Encoder(
                         dimension=self.dim,
                         in_channels=configs.in_channels,
                         downsamples=configs.downsamples,
                         start_channels=configs.start_channels,
                         max_channels=configs.max_channels,
+                        nb_hyp_units=nb_hyp_units,
         ).type(torch.float32)
 
         self.decoder = Decoder(
@@ -224,14 +246,15 @@ class HyperVFASPR(nn.Module):
                         skip=configs.skip,
                         initialize=configs.initialize,
                         int_steps=configs.int_steps,
+                        nb_hyp_units=nb_hyp_units,
         ).type(torch.float32)
         self.configs = configs
         self.device = device
         self.decoder.R = self.decoder.R.to(device)
         self.return_orginal = return_orginal
         self.return_all_flows = return_all_flows
-        self.SPRDecoder = SPRDecoder(self.dim, configs.start_channels)
-        self.hyper_model = HyperBlocks(nb_hyp_params=2)
+        self.SPRDecoder = SPRDecoder(self.dim, configs.start_channels, nb_hyp_units=nb_hyp_units)
+        self.hyper_model = HyperBlocks(nb_hyp_params=2, nb_hyp_units=nb_hyp_units)
         
     def forward(self, sample, hyper_val):
         """Run forward registration.
@@ -290,12 +313,15 @@ class HyperVFA(nn.Module):
         super().__init__()
 
         self.dim = len(configs.img_size)
+        nb_hyp_units = int(getattr(configs, 'nb_hyp_units', 96))  # width of the hypernetwork embedding
+        self.nb_hyp_units = nb_hyp_units
         self.encoder = Encoder(
                         dimension=self.dim,
                         in_channels=configs.in_channels,
                         downsamples=configs.downsamples,
                         start_channels=configs.start_channels,
                         max_channels=configs.max_channels,
+                        nb_hyp_units=nb_hyp_units,
         ).type(torch.float32)
 
         self.decoder = Decoder(
@@ -307,13 +333,14 @@ class HyperVFA(nn.Module):
                         skip=configs.skip,
                         initialize=configs.initialize,
                         int_steps=configs.int_steps,
+                        nb_hyp_units=nb_hyp_units,
         ).type(torch.float32)
         self.configs = configs
         self.device = device
         self.decoder.R = self.decoder.R.to(device)
         self.return_orginal = return_orginal
         self.return_all_flows = return_all_flows
-        self.hyper_model = HyperBlocks()
+        self.hyper_model = HyperBlocks(nb_hyp_units=nb_hyp_units)
         
     def forward(self, sample, hyper_val):
         """Run forward registration.
@@ -362,7 +389,7 @@ class SPRDecoder(nn.Module):
     Returns:
         Tensor of spatial weights in [0, 1].
     """
-    def __init__(self, dimension, start_channels):
+    def __init__(self, dimension, start_channels, nb_hyp_units=96):
         super().__init__()
         self.dim = dimension
         DoubleConv = globals()[f'DoubleConv{self.dim}d']
@@ -370,8 +397,9 @@ class SPRDecoder(nn.Module):
                 in_channels= start_channels * 4,
                 mid_channels=start_channels * 2,
                 out_channels=start_channels,
+                nb_hyp_units=nb_hyp_units,
             )
-        self.lambda_out = HyperConv(start_channels, 1, kernel_size=3, padding=1)
+        self.lambda_out = HyperConv(start_channels, 1, ndims=self.dim, kernel_size=3, padding=1, nb_hyp_units=nb_hyp_units)
         self.wts_act = nn.Sigmoid()
         self.eps = 1e-6
     def forward(self, M_feat, F_feat, hyper_feat):
@@ -392,10 +420,11 @@ class Encoder(nn.Module):
     Returns:
         List of multiscale feature maps ordered from fine to coarse.
     """
-    def __init__(self, dimension, in_channels, downsamples, start_channels, max_channels):
+    def __init__(self, dimension, in_channels, downsamples, start_channels, max_channels, nb_hyp_units=96):
         super().__init__()
         self.dim = dimension
         self.downsamples = downsamples
+        self.nb_hyp_units = nb_hyp_units
         self.encoder_conv = nn.ModuleList()
         self.pooling =  nn.ModuleList()
         self.decoder_conv = nn.ModuleList()
@@ -408,23 +437,26 @@ class Encoder(nn.Module):
         Upsample = globals()[f'Upsample{self.dim}d']
 
         self.in_norm = Norm(in_channels, affine=True)
-        self.in_conv = HyperConv(in_channels, start_channels, kernel_size=3, ndims=self.dim, padding=1)
+        self.in_conv = HyperConv(in_channels, start_channels, kernel_size=3, ndims=self.dim, padding=1, nb_hyp_units=nb_hyp_units)
         for i in range(self.downsamples):
             num_channels = start_channels * 2 ** i
             self.encoder_conv.append(DoubleConv(
                 in_channels=min(max_channels, num_channels),
                 mid_channels=min(max_channels, num_channels*2),
-                out_channels=min(max_channels, num_channels*2)
+                out_channels=min(max_channels, num_channels*2),
+                nb_hyp_units=nb_hyp_units,
             ))
             self.pooling.append(Pooling(2, stride=2))
             self.upsampling.append(Upsample(
                 in_channels=min(max_channels, num_channels*4),
                 out_channels=min(max_channels, num_channels*2),
+                nb_hyp_units=nb_hyp_units,
             ))
             self.decoder_conv.append(DoubleConv(
                 in_channels=min(max_channels, num_channels*2) * 2,
                 mid_channels=min(max_channels, num_channels*2),
                 out_channels=min(max_channels, num_channels*2),
+                nb_hyp_units=nb_hyp_units,
             ))
 
         # bottleneck
@@ -433,6 +465,7 @@ class Encoder(nn.Module):
             in_channels=min(max_channels, num_channels),
             mid_channels=min(max_channels, num_channels*2),
             out_channels=min(max_channels, num_channels*2),
+            nb_hyp_units=nb_hyp_units,
         )
 
     def forward(self, x, hyper_feat):
@@ -464,7 +497,7 @@ class Decoder(nn.Module):
         List of composed grids at each scale.
     """
     def __init__(self, dimension, downsamples, matching_channels, start_channels, max_channels,
-                 skip, initialize, int_steps):
+                 skip, initialize, int_steps, nb_hyp_units=96):
         super().__init__()
         self.dim = dimension
         self.downsamples = downsamples
@@ -486,6 +519,7 @@ class Decoder(nn.Module):
                             ndims=self.dim,
                             kernel_size=3,
                             padding=1,
+                            nb_hyp_units=nb_hyp_units,
             ))
 
         # precompute radial vector field r and R
@@ -530,7 +564,7 @@ class Decoder(nn.Module):
 
                 # feature matching and location retrieval
                 local_disp = self.attention(Q, K, self.R, self.temperature)
-                permute_order = [0, -1] + list(range(1, 1 + self.dim))
+                permute_order = [0, self.dim + 1] + list(range(1, 1 + self.dim))  # non-negative axes (ONNX)
                 local_disp = local_disp.squeeze(-2).permute(*permute_order)
                 identity_grid = identity_grid_like(local_disp, normalize=False)
                 local_grid = local_disp * self.beta / 2**self.int_steps + identity_grid
@@ -547,6 +581,8 @@ class Decoder(nn.Module):
 
     def get_candidate_from_tensor(self, x, dim, kernel=3, stride=1):
         """Extract local patches into a token tensor."""
+        if stride == 1 and (torch.onnx.is_in_onnx_export() or getattr(self, 'export_friendly', False)):
+            return _candidates_by_slicing(x, dim, kernel)
         if dim == 3:
             '''from tensor with [Batch x Feature x Height x Weight x Depth],
                     extract patches [Batch x Feature x HxWxD x Patch],
@@ -566,11 +602,11 @@ class Decoder(nn.Module):
 
 class DoubleConv3d(nn.Module):
     """Two-layer 3D hyper-conv block with instance norm and LeakyReLU."""
-    def __init__(self, in_channels, mid_channels, out_channels):
+    def __init__(self, in_channels, mid_channels, out_channels, nb_hyp_units=96):
         super().__init__()
-        self.conv1 = HyperConv(in_channels, mid_channels, kernel_size=3, padding=1)
+        self.conv1 = HyperConv(in_channels, mid_channels, kernel_size=3, padding=1, nb_hyp_units=nb_hyp_units)
         self.norm1 = nn.InstanceNorm3d(mid_channels, affine=True)
-        self.conv2 = HyperConv(mid_channels, out_channels, kernel_size=3, padding=1)
+        self.conv2 = HyperConv(mid_channels, out_channels, kernel_size=3, padding=1, nb_hyp_units=nb_hyp_units)
         self.norm2 = nn.InstanceNorm3d(out_channels, affine=True)
 
     def forward(self, x, hyper_feat):
@@ -580,11 +616,11 @@ class DoubleConv3d(nn.Module):
 
 class DoubleConv2d(nn.Module):
     """Two-layer 2D hyper-conv block with instance norm and LeakyReLU."""
-    def __init__(self, in_channels, mid_channels, out_channels):
+    def __init__(self, in_channels, mid_channels, out_channels, nb_hyp_units=96):
         super().__init__()
-        self.conv1 = HyperConv(in_channels, mid_channels, ndims=2, kernel_size=3, padding=1)
+        self.conv1 = HyperConv(in_channels, mid_channels, ndims=2, kernel_size=3, padding=1, nb_hyp_units=nb_hyp_units)
         self.norm1 = nn.InstanceNorm2d(mid_channels, affine=True)
-        self.conv2 = HyperConv(mid_channels, out_channels, ndims=2, kernel_size=3, padding=1)
+        self.conv2 = HyperConv(mid_channels, out_channels, ndims=2, kernel_size=3, padding=1, nb_hyp_units=nb_hyp_units)
         self.norm2 = nn.InstanceNorm2d(out_channels, affine=True)
 
     def forward(self, x, hyper_feat):
@@ -619,9 +655,9 @@ class Attention(nn.Module):
 
 class Upsample3d(nn.Module):
     """3D upsampling block with hyper-conv and skip concatenation."""
-    def __init__(self, in_channels, out_channels):
+    def __init__(self, in_channels, out_channels, nb_hyp_units=96):
         super().__init__()
-        self.conv = HyperConv(in_channels, out_channels, kernel_size=3, padding=1)
+        self.conv = HyperConv(in_channels, out_channels, kernel_size=3, padding=1, nb_hyp_units=nb_hyp_units)
         self.norm = nn.InstanceNorm3d(out_channels, affine=True)
 
     def forward(self, x, feature_map, hyper_feat):
@@ -638,9 +674,9 @@ class Upsample3d(nn.Module):
 
 class Upsample2d(nn.Module):
     """2D upsampling block with hyper-conv and skip concatenation."""
-    def __init__(self, in_channels, out_channels):
+    def __init__(self, in_channels, out_channels, nb_hyp_units=96):
         super().__init__()
-        self.conv = HyperConv(in_channels, out_channels, ndims=2, kernel_size=3, padding=1)
+        self.conv = HyperConv(in_channels, out_channels, ndims=2, kernel_size=3, padding=1, nb_hyp_units=nb_hyp_units)
         self.norm = nn.InstanceNorm2d(out_channels, affine=True)
 
     def forward(self, x, feature_map, hyper_feat):

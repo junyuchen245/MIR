@@ -62,7 +62,8 @@ Why MIR
       :link-type: doc
 
       Learn where the deformation should be smooth and where it may be sharp, with Beta priors,
-      hypernetwork-conditioned strength, or weighted metrics.
+      hypernetwork-conditioned strength, or weighted metrics. Try it live in the
+      `browser playground <https://junyuchen.me/playground/>`__.
 
    .. grid-item-card:: :octicon:`tools;1.2em` Training toolbox
       :link: user_guide/losses_metrics
@@ -211,6 +212,7 @@ and under :doc:`about/publications`) and link to the
    user_guide/losses_metrics
    user_guide/training
    user_guide/pretrained_weights
+   user_guide/browser_deployment
 
 .. toctree::
    :caption: Models

@@ -5,6 +5,23 @@ import torch.nn as nn
 import torch.nn.functional as nnf
 import MIR.models.registration_utils as utils
 
+def _candidates_by_slicing(x, dim, kernel=3):
+    """ONNX-friendly equivalent of ``Tensor.unfold``-based patch extraction (stride 1).
+
+    Returns ``[B, *spatial_out, kernel**dim, C]`` with the same patch ordering as the
+    ``unfold`` path, built from explicit shifted slices so that exporters that cannot
+    resolve ``aten::unfold`` sizes (e.g. torch.onnx) can trace it.
+    """
+    import itertools
+    out_shape = [int(s) - kernel + 1 for s in x.shape[2:]]
+    cands = []
+    for off in itertools.product(range(kernel), repeat=dim):
+        sl = (slice(None), slice(None)) + tuple(slice(o, o + n) for o, n in zip(off, out_shape))
+        cands.append(x[sl])
+    patches = torch.stack(cands, dim=-1)                       # [B, C, *out, P]
+    perm = [0] + list(range(2, 2 + dim)) + [2 + dim, 1]
+    return patches.permute(*perm)
+
 def grid_upsample(grid, mode='bilinear', align_corners=True, scale_factor=2):
     """Upsample a sampling grid by a scale factor.
 
@@ -350,7 +367,7 @@ class SPRDecoder(nn.Module):
                 mid_channels=start_channels * 2,
                 out_channels=start_channels,
             )
-        self.lambda_out = nn.Conv3d(start_channels, 1, kernel_size=3, padding=1)
+        self.lambda_out = getattr(nn, f'Conv{self.dim}d')(start_channels, 1, kernel_size=3, padding=1)
         self.wts_act = nn.Sigmoid()
         self.eps = 1e-6
     def forward(self, M_feat, F_feat):
@@ -512,7 +529,7 @@ class Decoder(nn.Module):
 
                 # feature matching and location retrieval
                 local_disp = self.attention(Q, K, self.R, self.temperature)
-                permute_order = [0, -1] + list(range(1, 1 + self.dim))
+                permute_order = [0, self.dim + 1] + list(range(1, 1 + self.dim))  # non-negative axes (ONNX)
                 local_disp = local_disp.squeeze(-2).permute(*permute_order)
                 identity_grid = identity_grid_like(local_disp, normalize=False)
                 local_grid = local_disp * self.beta / 2**self.int_steps + identity_grid
@@ -539,6 +556,8 @@ class Decoder(nn.Module):
         Returns:
             Tensor of shape ``[B, *spatial, P, C]`` with patch tokens.
         """
+        if stride == 1 and (torch.onnx.is_in_onnx_export() or getattr(self, 'export_friendly', False)):
+            return _candidates_by_slicing(x, dim, kernel)
         if dim == 3:
             '''from tensor with [Batch x Feature x Height x Weight x Depth],
                     extract patches [Batch x Feature x HxWxD x Patch],

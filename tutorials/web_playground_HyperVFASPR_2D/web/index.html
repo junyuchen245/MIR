@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Registration Playground (MIR)</title>
+<!--
+  Standalone version of https://junyuchen.me/playground/ for the MIR tutorial
+  tutorials/web_playground_HyperVFASPR_2D. By default it loads the demo slices and the trained ONNX
+  models from junyuchen.me (served with CORS enabled). To use your own models, set data-assets on
+  #playground to a folder that contains samples/ (from make_demo_assets.py) and models/ (from
+  export_web_models.py), then serve this folder, e.g.  python3 -m http.server 8000
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+<link rel="stylesheet" href="playground.css">
+</head>
+<body>
+<div id="main" role="main" class="playground">
+  <header class="playground__header">
+    <h1 class="page__title">Registration Playground</h1>
+    <p class="playground__lead">
+      Deformable image registration running <strong>entirely in your browser</strong>.
+      <strong>Spatially varying regularization</strong> is a method I developed for learning-based registration
+      (<a href="https://www.sciencedirect.com/science/article/pii/S1361841525004335">Chen et&nbsp;al., <em>Medical Image Analysis</em>, 2025</a>)
+      and have since built into my open-source <a href="https://github.com/junyuchen245/MIR">MIR toolkit</a>; this page exists to let you
+      try it directly. The network is a hypernetwork-conditioned <a href="https://junyuchen.me/MIR/models/vfa.html">VFA</a> model with that
+      regularization, trained in 2D with MIR and exported to ONNX. Pick two brain MRI slices, drag the sliders, and watch the deformation
+      and the learned regularization map respond.
+    </p>
+  </header>
+
+  <div id="playground" class="playground__app" data-assets="https://junyuchen.me/assets/playground">
+    <div class="pg-status" id="pg-status" role="status" aria-live="polite">
+      <div class="pg-status__bar"><div class="pg-status__fill" id="pg-progress"></div></div>
+      <span id="pg-status-text">Loading&hellip;</span>
+    </div>
+
+    <div class="pg-controls">
+      <fieldset class="pg-group">
+        <legend>Model</legend>
+        <div class="pg-seg" role="radiogroup" aria-label="Regularization model">
+          <button type="button" class="is-active" data-model="spr">Spatially varying <small>HyperVFA-SPR</small></button>
+          <button type="button" data-model="plain">Spatially invariant <small>HyperVFA</small></button>
+        </div>
+        <p class="pg-hint" id="pg-model-hint">Predicts a per-pixel regularization weight &lambda;(x) together with the deformation.</p>
+      </fieldset>
+
+      <fieldset class="pg-group">
+        <legend>Hyperparameters <span class="pg-hint">(the same network, re-conditioned on the fly)</span></legend>
+        <label class="pg-slider" id="pg-alpha-row">
+          <span class="pg-slider__name">Prior strength <em>&kappa;</em> <span class="pg-slider__val" id="pg-alpha-val"></span></span>
+          <input type="range" id="pg-alpha" min="0" max="1" step="0.01" value="0.2">
+          <span class="pg-slider__ends"><span>weak prior: &lambda; drops easily</span><span>strong prior: &lambda; &rarr; 1</span></span>
+        </label>
+        <label class="pg-slider">
+          <span class="pg-slider__name">Regularization weight <em>w</em> <span class="pg-slider__val" id="pg-reg-val"></span></span>
+          <input type="range" id="pg-reg" min="0" max="1" step="0.01" value="0.6">
+          <span class="pg-slider__ends"><span>0.0005 (flexible)</span><span>0.2 (smooth)</span></span>
+        </label>
+      </fieldset>
+
+      <fieldset class="pg-group">
+        <legend>Image pair <span class="pg-hint">(IXI test subjects, axial slices)</span></legend>
+        <div class="pg-pick"><span class="pg-pick__label">Moving</span><div class="pg-thumbs" id="pg-thumbs-mov"></div></div>
+        <div class="pg-pick"><span class="pg-pick__label">Fixed</span><div class="pg-thumbs" id="pg-thumbs-fix"></div></div>
+        <button type="button" class="btn btn--outline pg-swap" id="pg-swap"><i class="fas fa-exchange-alt" aria-hidden="true"></i> Swap</button>
+      </fieldset>
+
+      <fieldset class="pg-group">
+        <legend>Display</legend>
+        <div class="pg-seg pg-seg--sm" id="pg-view" role="radiogroup" aria-label="Result view">
+          <button type="button" class="is-active" data-view="warped">Image</button>
+          <button type="button" data-view="checker">Checkerboard</button>
+          <button type="button" data-view="diff">Difference</button>
+          <button type="button" data-view="overlay">Overlay</button>
+        </div>
+        <label class="pg-check"><input type="checkbox" id="pg-grid" checked> Deformation grid</label>
+        <label class="pg-check"><input type="checkbox" id="pg-before"> Show <em>before</em> registration</label>
+      </fieldset>
+    </div>
+
+    <div class="pg-canvases" id="pg-canvases">
+      <figure class="pg-fig"><canvas id="cv-mov" width="160" height="192"></canvas><figcaption>Moving</figcaption></figure>
+      <figure class="pg-fig"><canvas id="cv-fix" width="160" height="192"></canvas><figcaption>Fixed</figcaption></figure>
+      <figure class="pg-fig pg-fig--result"><canvas id="cv-res" width="160" height="192"></canvas><figcaption id="cap-res">Moving, warped to fixed</figcaption></figure>
+      <figure class="pg-fig" id="fig-lam"><canvas id="cv-lam" width="160" height="192"></canvas><figcaption>Regularization weight &lambda;(x) <span class="pg-cbar pg-cbar--viridis"><span>0</span><span>1</span></span></figcaption></figure>
+      <figure class="pg-fig"><canvas id="cv-jac" width="160" height="192"></canvas><figcaption>Jacobian determinant |J| <span class="pg-cbar pg-cbar--div"><span>0.5</span><span>1</span><span>2</span></span></figcaption></figure>
+    </div>
+
+    <dl class="pg-stats" id="pg-stats">
+      <div><dt>Dice (24 structures)</dt><dd id="st-dice">&ndash;</dd></div>
+      <div><dt>Folded pixels (|J| &le; 0)</dt><dd id="st-fold">&ndash;</dd></div>
+      <div id="st-lam-wrap"><dt>Mean &lambda;</dt><dd id="st-lam">&ndash;</dd></div>
+      <div><dt>Inference</dt><dd id="st-time">&ndash;</dd></div>
+    </dl>
+  </div>
+
+  <section class="playground__about">
+    <h2 class="section-title">What you are looking at</h2>
+    <div class="two-col">
+      <div>
+        <p>
+          A registration network takes a <em>moving</em> and a <em>fixed</em> image and predicts a dense displacement field that
+          warps the moving image onto the fixed one. Training balances image similarity against a smoothness
+          (regularization) penalty on the displacement field. In most deep-learning registration models that penalty is
+          <em>spatially invariant</em>: one weight for the whole image.
+        </p>
+        <p>
+          The <strong>spatially varying</strong> model, the formulation I introduced in
+          <a href="https://www.sciencedirect.com/science/article/pii/S1361841525004335">Chen et&nbsp;al. (2025)</a>, instead learns a
+          per-pixel weight &lambda;(x) &isin; (0, 1] end to end.
+          The penalty becomes <em>w</em>&middot;&lambda;(x)&middot;|&nabla;u(x)|&sup2;, and a Beta prior with parameter
+          &alpha; = 1 + &kappa;<em>w</em> keeps &lambda; from collapsing to zero. Per pixel, the optimum is
+          &lambda;* = &kappa; / |&nabla;u|&sup2; (clipped to 1): where the deformation must be sharp and local, &lambda; drops
+          and the penalty relaxes; where tissue moves coherently, &lambda; stays near 1. The <strong>prior strength</strong>
+          slider sets &kappa;, the <strong>regularization weight</strong> slider sets <em>w</em>. Because both models are
+          <em>hypernetwork-conditioned</em>, a single network covers the whole range of hyperparameters, so every slider move
+          is one forward pass rather than a retrained model.
+        </p>
+        <p>
+          The Jacobian determinant map shows local expansion (red) and compression (blue) of the deformation; pixels with
+          |J| &le; 0 are foldings, where the transformation is no longer invertible. Dice is computed over the 24 structures
+          present in the slice labels.
+        </p>
+      </div>
+      <div>
+        <h3 class="subsection-title">Built with MIR</h3>
+        <p>Everything here comes from my toolkit: the model, the losses, the training loop, and the export. The full recipe is a
+          <a href="https://junyuchen.me/MIR/user_guide/browser_deployment.html">documented MIR tutorial</a>, so you can train and deploy your own.</p>
+<pre class="pg-code"><code>from MIR.models import HyperVFASPR, SpatialTransformer
+from MIR.deformation_regularizer import logBeta, LocalGrad2d
+import MIR.models.configs_VFA as cfgs
+
+cfg = cfgs.get_VFA_default_config()
+cfg.img_size, cfg.nb_hyp_units, cfg.initialize = (192, 160), 16, 1.0
+model = HyperVFASPR(cfg, device='cuda')          # 3.8M parameters
+warp  = SpatialTransformer((192, 160))
+
+hyper = torch.rand(1, 2)                          # (kappa, w) codes in [0, 1]
+flow, lam = model((moving, fixed), hyper)
+loss = mse(warp(moving, flow), fixed) \
+     + w * LocalGrad2d('l2')(flow, lam) \
+     + logBeta()(lam, alpha=1 + kappa * w)
+
+torch.onnx.export(model, ..., opset_version=16)   # then onnxruntime-web</code></pre>
+        <ul class="plain-list plain-list--tight">
+          <li><a href="https://github.com/junyuchen245/MIR"><i class="fab fa-github" aria-hidden="true"></i> MIR on GitHub</a> &middot; <a href="https://junyuchen.me/MIR/">documentation</a></li>
+          <li>Paper: <a href="https://www.sciencedirect.com/science/article/pii/S1361841525004335">Unsupervised learning of spatially varying regularization for diffeomorphic image registration</a>, Medical Image Analysis, 2025</li>
+          <li>Hypernetwork conditioning follows <a href="https://arxiv.org/abs/2101.01035">HyperMorph</a> (Hoopes et al., 2021)</li>
+        </ul>
+        <p class="muted pg-fineprint">
+          Images: <a href="https://brain-development.org/ixi-dataset/">IXI dataset</a> (CC BY-SA 3.0), T1-weighted, preprocessed and
+          skull-stripped, test split only. The models are small (3.8M parameters) 2D networks trained for this demo with a mean-squared-error
+          similarity; they are not the 3D models used in the papers. Inference uses <a href="https://onnxruntime.ai/docs/tutorials/web/">ONNX Runtime Web</a>
+          (WebAssembly) and nothing leaves your device.
+        </p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.2/dist/ort.min.js"></script>
+<script src="playground.js"></script>
+</body>
+</html>

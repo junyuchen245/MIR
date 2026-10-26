@@ -22,6 +22,9 @@ pipelines together behind one interface: a `(moving, fixed)` pair in, a dense di
   may be sharp, with a per-voxel regularization map and a Beta prior.
 - **Hypernetwork conditioning** (HyperMorph, HyperTransMorph, HyperVFA) to cover a range of
   regularization strengths with one model.
+- **Runs in the browser.** Models export to ONNX; the
+  [registration playground](https://junyuchen.me/playground/) runs a 2D HyperVFA-SPR with ONNX Runtime Web
+  ([tutorial](tutorials/web_playground_HyperVFASPR_2D), [docs](https://junyuchen.me/MIR/user_guide/browser_deployment.html)).
 - **Classical and third-party baselines** behind the same interface: ConvexAdam, deedsBCV, FireANTs,
   SITReg, MultiMorph, intensity normalization.
 - **Training and evaluation batteries**: NCC / SSIM / MIND / mutual information / correlation ratio /

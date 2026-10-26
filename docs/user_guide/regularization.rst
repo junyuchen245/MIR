@@ -66,6 +66,14 @@ per case if needed.
 
 See :doc:`../models/hypertransmorph` and :doc:`../models/hypermorph`.
 
+Try it live
+-----------
+
+The `registration playground <https://junyuchen.me/playground/>`__ runs a 2D ``HyperVFASPR`` in the browser:
+two sliders set the Beta-prior strength and the regularization weight, and the page shows the learned
+:math:`\lambda(x)` map, the deformation and its folding in real time. :doc:`browser_deployment` explains how
+it was built; ``LocalGrad2d`` is the 2D counterpart of ``LocalGrad3d`` used there.
+
 Practical guidance
 ------------------
 

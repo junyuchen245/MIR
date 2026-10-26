@@ -30,7 +30,8 @@ Variants
      - Transformer-augmented VFA encoder.
      - ``flow``
    * - ``HyperVFA``, ``HyperVFASPR``
-     - Hypernetwork-conditioned regularization weight (see :doc:`hypertransmorph`).
+     - Hypernetwork-conditioned regularization weight (see :doc:`hypertransmorph`); ``config.nb_hyp_units``
+       sets the width of the hypernetwork embedding (default 96; 16 in the browser demo). 2D and 3D.
      - as VFA / VFASPR
 
 Usage
@@ -71,6 +72,7 @@ Related tutorials
 - `Brain registration with pretrained VFA <https://github.com/junyuchen245/MIR/tree/main/tutorials/brain_registration>`_
 - `VFA features for segmentation <https://github.com/junyuchen245/MIR/tree/main/tutorials/VFA_image_seg>`_
 - `VFA features for synthesis <https://github.com/junyuchen245/MIR/tree/main/tutorials/VFA_image_synthesis>`_
+- `HyperVFA-SPR in the browser <https://github.com/junyuchen245/MIR/tree/main/tutorials/web_playground_HyperVFASPR_2D>`_ (:doc:`../user_guide/browser_deployment`)
 
 References
 ----------

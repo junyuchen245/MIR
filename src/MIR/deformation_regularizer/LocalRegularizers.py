@@ -96,3 +96,36 @@ class LocalGrad3d(torch.nn.Module):
         if self.loss_mult is not None:
             grad *= self.loss_mult
         return grad
+
+
+class LocalGrad2d(torch.nn.Module):
+    """Local 2D gradient loss (spatially weighted), the 2D counterpart of ``LocalGrad3d``."""
+
+    def __init__(self, penalty='l1', loss_mult=None):
+        super().__init__()
+        self.penalty = penalty
+        self.loss_mult = loss_mult
+
+    def forward(self, y_pred, weight):
+        """Compute weighted 2D gradient regularization.
+
+        Args:
+            y_pred: Predicted displacement/field tensor (B, C, H, W).
+            weight: Spatial weight tensor (B, 1, H, W).
+
+        Returns:
+            Scalar weighted gradient penalty.
+        """
+        dy = torch.abs(y_pred[:, :, 1:, :] - y_pred[:, :, :-1, :])
+        dx = torch.abs(y_pred[:, :, :, 1:] - y_pred[:, :, :, :-1])
+
+        dy = _apply_penalty(dy, self.penalty)
+        dx = _apply_penalty(dx, self.penalty)
+
+        dx_loss = torch.mean(dx * weight[:, :, :, 1:])
+        dy_loss = torch.mean(dy * weight[:, :, 1:, :])
+        grad = (dx_loss + dy_loss) / 2.0
+
+        if self.loss_mult is not None:
+            grad *= self.loss_mult
+        return grad

@@ -46,3 +46,10 @@ pages can be read in any order.
       :link-type: doc
 
       Every published checkpoint, what it was trained on, and how to load it.
+
+   .. grid-item-card:: :octicon:`globe;1.2em` Registration in the browser
+      :link: browser_deployment
+      :link-type: doc
+
+      Export a MIR model to ONNX and run it in a web page: the recipe behind the live spatially varying
+      regularization playground.

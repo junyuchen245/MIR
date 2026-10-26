@@ -34,6 +34,7 @@ Each tutorial folder contains a runnable script and, when applicable, a README w
 - [VFA_image_synthesis](https://github.com/junyuchen245/MIR/tree/main/tutorials/VFA_image_synthesis): VFA-based feature extraction for synthesis tasks.
 - [brain_MRI_preprocessing](https://github.com/junyuchen245/MIR/tree/main/tutorials/brain_MRI_preprocessing): MRI preprocessing utilities (bias correction, normalization, masking).
 - [pretraining_registration_DNNs](https://github.com/junyuchen245/MIR/tree/main/tutorials/pretraining_registration_DNNs): Random-image pretraining pipelines for registration networks.
+- [web_playground_HyperVFASPR_2D](https://github.com/junyuchen245/MIR/tree/main/tutorials/web_playground_HyperVFASPR_2D): 2D HyperVFA-SPR trained on IXI slices, exported to ONNX and run in the browser ([live demo](https://junyuchen.me/playground/)).
 
 |Model/File|Google Drive ID |Dict Key|
 |---|---|---|
