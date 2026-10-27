@@ -10,6 +10,7 @@ import importlib
 import json
 import os
 import sys
+import warnings
 
 import pytest
 
@@ -29,10 +30,15 @@ def test_module_api_unchanged(module_name):
         if e.name and e.name.split(".")[0] != "MIR":
             pytest.skip(f"optional dependency not installed: {e.name}")
         raise
-    problems = []
+    problems, unavailable = [], []
     for name, ref in REFERENCE[module_name].items():
         if not hasattr(module, name):
             problems.append(f"removed: {name}")
+            continue
+        if getattr(module, name) is None and ref["kind"] != "value":
+            # optional component whose import failed in this environment (e.g. SITReg, fireants): MIR binds the
+            # name to None on purpose; the API itself is checked wherever the dependency is installed
+            unavailable.append(name)
             continue
         cur = api_snapshot._describe(name, getattr(module, name), module_name)
         if cur["kind"] != ref["kind"]:
@@ -52,3 +58,5 @@ def test_module_api_unchanged(module_name):
         elif "repr" in ref and cur.get("repr") != ref["repr"]:
             problems.append(f"{name}: value changed")
     assert not problems, "\n".join(problems)
+    if unavailable:
+        warnings.warn(f"{module_name}: optional components unavailable here: {unavailable}", stacklevel=1)
