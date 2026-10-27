@@ -75,6 +75,20 @@ Fixed: checkpoints and devices
 Added
 ^^^^^
 
+- **Mixed precision and multi-GPU support** (:doc:`../user_guide/precision_multigpu`). All models train under float16
+  and bfloat16 autocast and run float16 inference; all losses and regularizers compute in float32; spatial
+  transformers, integrators and Fourier layers keep their geometry in float32; operations without bf16 / fp16 kernels
+  in PyTorch < 2.1 fall back to float32 locally. All models work with ``DistributedDataParallel`` and
+  ``DataParallel``. New :mod:`MIR.utils.precision` (``autocast``, ``grad_scaler``, ``fp32_forward``) and
+  :mod:`MIR.utils.distributed` (``init_distributed``, ``wrap_model``, ``state_dict_for_saving``,
+  ``strip_module_prefix``, ``all_reduce_mean``, ``distributed_sampler``, ...), and the
+  ``tutorials/multi_gpu_mixed_precision`` example. Float32 results are unchanged.
+- Multi-GPU fixes along the way: the VFA decoder's lookup table is now a (non-persistent) buffer, so VFA models built
+  with ``device="cpu"`` and moved with ``.cuda()`` work, and ``DataParallel`` replicas get their own copy; the
+  deformable-Swin window grid and ``GradICONExact3d`` sample points follow the input device; hypernetwork models accept
+  the hyperparameter repeated per sample (needed by ``DataParallel``, which otherwise silently processed only part of
+  the batch); ``MeanStream`` keeps its running template statistics synchronised across DDP ranks.
+- ``from MIR.utils import *`` failed because of three missing commas in ``MIR.utils.__all__``.
 - ``MIR.__version__``.
 - ``fit_warp_to_svf`` / ``fit_warp_to_svf_fast`` accept ``output_type="velocity"`` and ``"displacement"``. The
   older names keep their behaviour (``"disp"``, the default, returns the velocity; ``"svf"`` returns the

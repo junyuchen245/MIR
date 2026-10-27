@@ -189,6 +189,191 @@
     "target": "MIR.utils"
    }
   },
+  "MIR._amp": {
+   "Conv3d": {
+    "init_params": [
+     [
+      "in_channels",
+      "POSITIONAL_OR_KEYWORD",
+      null
+     ],
+     [
+      "out_channels",
+      "POSITIONAL_OR_KEYWORD",
+      null
+     ],
+     [
+      "kernel_size",
+      "POSITIONAL_OR_KEYWORD",
+      null
+     ],
+     [
+      "stride",
+      "POSITIONAL_OR_KEYWORD",
+      "1"
+     ],
+     [
+      "padding",
+      "POSITIONAL_OR_KEYWORD",
+      "0"
+     ],
+     [
+      "dilation",
+      "POSITIONAL_OR_KEYWORD",
+      "1"
+     ],
+     [
+      "groups",
+      "POSITIONAL_OR_KEYWORD",
+      "1"
+     ],
+     [
+      "bias",
+      "POSITIONAL_OR_KEYWORD",
+      "True"
+     ],
+     [
+      "padding_mode",
+      "POSITIONAL_OR_KEYWORD",
+      "'zeros'"
+     ],
+     [
+      "device",
+      "POSITIONAL_OR_KEYWORD",
+      "None"
+     ],
+     [
+      "dtype",
+      "POSITIONAL_OR_KEYWORD",
+      "None"
+     ]
+    ],
+    "kind": "class",
+    "methods": {
+     "forward": [
+      [
+       "self",
+       "POSITIONAL_OR_KEYWORD",
+       null
+      ],
+      [
+       "input",
+       "POSITIONAL_OR_KEYWORD",
+       null
+      ]
+     ]
+    }
+   },
+   "Upsample": {
+    "init_params": [
+     [
+      "size",
+      "POSITIONAL_OR_KEYWORD",
+      "None"
+     ],
+     [
+      "scale_factor",
+      "POSITIONAL_OR_KEYWORD",
+      "None"
+     ],
+     [
+      "mode",
+      "POSITIONAL_OR_KEYWORD",
+      "'nearest'"
+     ],
+     [
+      "align_corners",
+      "POSITIONAL_OR_KEYWORD",
+      "None"
+     ],
+     [
+      "recompute_scale_factor",
+      "POSITIONAL_OR_KEYWORD",
+      "None"
+     ]
+    ],
+    "kind": "class",
+    "methods": {
+     "forward": [
+      [
+       "self",
+       "POSITIONAL_OR_KEYWORD",
+       null
+      ],
+      [
+       "input",
+       "POSITIONAL_OR_KEYWORD",
+       null
+      ]
+     ]
+    }
+   },
+   "fp32_forward": {
+    "kind": "function",
+    "params": [
+     [
+      "fn",
+      "POSITIONAL_OR_KEYWORD",
+      null
+     ]
+    ]
+   },
+   "interpolate": {
+    "kind": "function",
+    "params": [
+     [
+      "x",
+      "POSITIONAL_OR_KEYWORD",
+      null
+     ],
+     [
+      "args",
+      "VAR_POSITIONAL",
+      null
+     ],
+     [
+      "kwargs",
+      "VAR_KEYWORD",
+      null
+     ]
+    ]
+   },
+   "pad": {
+    "kind": "function",
+    "params": [
+     [
+      "x",
+      "POSITIONAL_OR_KEYWORD",
+      null
+     ],
+     [
+      "pad",
+      "POSITIONAL_OR_KEYWORD",
+      null
+     ],
+     [
+      "mode",
+      "POSITIONAL_OR_KEYWORD",
+      "'constant'"
+     ],
+     [
+      "value",
+      "POSITIONAL_OR_KEYWORD",
+      "0.0"
+     ]
+    ]
+   },
+   "shared_hyperparameter": {
+    "kind": "function",
+    "params": [
+     [
+      "h",
+      "POSITIONAL_OR_KEYWORD",
+      null
+     ]
+    ]
+   }
+  },
   "MIR.accuracy_measures": {
    "acc_measures": {
     "kind": "module",
@@ -21212,6 +21397,10 @@
     "kind": "module",
     "target": "MIR.utils.dicom_utils"
    },
+   "distributed": {
+    "kind": "module",
+    "target": "MIR.utils.distributed"
+   },
    "get_cmap": {
     "kind": "function",
     "params": [
@@ -21405,6 +21594,10 @@
       null
      ]
     ]
+   },
+   "precision": {
+    "kind": "module",
+    "target": "MIR.utils.precision"
    },
    "print_dicom_info": {
     "kind": "function",
@@ -21822,6 +22015,152 @@
     ]
    }
   },
+  "MIR.utils.distributed": {
+   "all_reduce_mean": {
+    "kind": "function",
+    "params": [
+     [
+      "value",
+      "POSITIONAL_OR_KEYWORD",
+      null
+     ]
+    ]
+   },
+   "barrier": {
+    "kind": "function",
+    "params": []
+   },
+   "cleanup": {
+    "kind": "function",
+    "params": []
+   },
+   "distributed_sampler": {
+    "kind": "function",
+    "params": [
+     [
+      "dataset",
+      "POSITIONAL_OR_KEYWORD",
+      null
+     ],
+     [
+      "shuffle",
+      "POSITIONAL_OR_KEYWORD",
+      "True"
+     ],
+     [
+      "seed",
+      "POSITIONAL_OR_KEYWORD",
+      "0"
+     ],
+     [
+      "drop_last",
+      "POSITIONAL_OR_KEYWORD",
+      "False"
+     ]
+    ]
+   },
+   "get_rank": {
+    "kind": "function",
+    "params": []
+   },
+   "get_world_size": {
+    "kind": "function",
+    "params": []
+   },
+   "init_distributed": {
+    "kind": "function",
+    "params": [
+     [
+      "backend",
+      "POSITIONAL_OR_KEYWORD",
+      "None"
+     ],
+     [
+      "device_type",
+      "POSITIONAL_OR_KEYWORD",
+      "None"
+     ]
+    ]
+   },
+   "is_distributed": {
+    "kind": "function",
+    "params": []
+   },
+   "is_main_process": {
+    "kind": "function",
+    "params": []
+   },
+   "state_dict_for_saving": {
+    "kind": "function",
+    "params": [
+     [
+      "model",
+      "POSITIONAL_OR_KEYWORD",
+      null
+     ]
+    ]
+   },
+   "strip_module_prefix": {
+    "kind": "function",
+    "params": [
+     [
+      "state_dict",
+      "POSITIONAL_OR_KEYWORD",
+      null
+     ],
+     [
+      "prefix",
+      "POSITIONAL_OR_KEYWORD",
+      "'module.'"
+     ]
+    ]
+   },
+   "unwrap_model": {
+    "kind": "function",
+    "params": [
+     [
+      "model",
+      "POSITIONAL_OR_KEYWORD",
+      null
+     ]
+    ]
+   },
+   "wrap_model": {
+    "kind": "function",
+    "params": [
+     [
+      "model",
+      "POSITIONAL_OR_KEYWORD",
+      null
+     ],
+     [
+      "mode",
+      "POSITIONAL_OR_KEYWORD",
+      "'auto'"
+     ],
+     [
+      "device",
+      "POSITIONAL_OR_KEYWORD",
+      "None"
+     ],
+     [
+      "find_unused_parameters",
+      "POSITIONAL_OR_KEYWORD",
+      "True"
+     ],
+     [
+      "sync_batchnorm",
+      "POSITIONAL_OR_KEYWORD",
+      "False"
+     ],
+     [
+      "ddp_kwargs",
+      "VAR_KEYWORD",
+      null
+     ]
+    ]
+   }
+  },
   "MIR.utils.other_utils": {
    "CenterCropPad3D": {
     "init_params": [
@@ -21979,6 +22318,77 @@
       "order",
       "POSITIONAL_OR_KEYWORD",
       "3"
+     ]
+    ]
+   }
+  },
+  "MIR.utils.precision": {
+   "PRECISIONS": {
+    "kind": "value",
+    "repr": "('fp32', 'fp16', 'bf16')"
+   },
+   "autocast": {
+    "kind": "function",
+    "params": [
+     [
+      "precision",
+      "POSITIONAL_OR_KEYWORD",
+      "'fp32'"
+     ],
+     [
+      "device_type",
+      "POSITIONAL_OR_KEYWORD",
+      "'<cuda|cpu>'"
+     ]
+    ]
+   },
+   "check_precision": {
+    "kind": "function",
+    "params": [
+     [
+      "precision",
+      "POSITIONAL_OR_KEYWORD",
+      null
+     ],
+     [
+      "device_type",
+      "POSITIONAL_OR_KEYWORD",
+      "'<cuda|cpu>'"
+     ]
+    ]
+   },
+   "fp32_forward": {
+    "kind": "function",
+    "params": [
+     [
+      "fn",
+      "POSITIONAL_OR_KEYWORD",
+      null
+     ]
+    ]
+   },
+   "grad_scaler": {
+    "kind": "function",
+    "params": [
+     [
+      "precision",
+      "POSITIONAL_OR_KEYWORD",
+      "'fp32'"
+     ],
+     [
+      "device_type",
+      "POSITIONAL_OR_KEYWORD",
+      "'<cuda|cpu>'"
+     ]
+    ]
+   },
+   "precision_dtype": {
+    "kind": "function",
+    "params": [
+     [
+      "precision",
+      "POSITIONAL_OR_KEYWORD",
+      null
      ]
     ]
    }

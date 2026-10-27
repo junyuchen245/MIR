@@ -9,6 +9,7 @@ import numpy as np
 import ants
 import nibabel as nib
 from scipy.ndimage import zoom
+from MIR import _amp
 
 
 class SpatialTransformer(nn.Module):
@@ -61,7 +62,10 @@ class SpatialTransformer(nn.Module):
 
         """
         # new locations
-        new_locs = self.grid + flow
+        # geometry in float32 (fp16/bf16 inputs are upcast; float32/float64 are untouched), result in src's dtype
+        out_dtype = src.dtype
+        src, flow = _amp._cast_floats(src), _amp._cast_floats(flow)
+        new_locs = _amp._cast_floats(self.grid).to(flow.dtype) + flow
         shape = flow.shape[2:]
 
         # need to normalize grid values to [-1, 1] for resampler
@@ -77,7 +81,7 @@ class SpatialTransformer(nn.Module):
             new_locs = new_locs.permute(0, 2, 3, 4, 1)
             new_locs = new_locs[..., [2, 1, 0]]
 
-        return nnf.grid_sample(src, new_locs, align_corners=True, mode=self.mode)
+        return nnf.grid_sample(src, new_locs, align_corners=True, mode=self.mode).to(out_dtype)
 
 
 class VecInt(nn.Module):
@@ -113,10 +117,11 @@ class VecInt(nn.Module):
             Integrated displacement field with the same shape as ``vec``.
 
         """
-        vec = vec * self.scale
+        out_dtype = vec.dtype
+        vec = _amp._cast_floats(vec) * self.scale  # integrate in float32 for fp16/bf16 inputs
         for _ in range(self.nsteps):
             vec = vec + self.transformer(vec, vec)
-        return vec
+        return vec.to(out_dtype)
 
 
 def make_affine_from_pixdim(pixdim: Sequence[float]) -> np.ndarray:

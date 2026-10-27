@@ -8,6 +8,7 @@ import torch
 import torch.nn.functional as F
 from torch.autograd import Variable
 from math import exp
+from MIR import _amp
 
 
 def gaussian(window_size: int, sigma: float) -> torch.Tensor:
@@ -155,6 +156,7 @@ class SSIM2D(torch.nn.Module):
         self.channel = 1
         self.window = create_window(window_size, self.channel)
 
+    @_amp.fp32_forward
     def forward(self, img1: torch.Tensor, img2: torch.Tensor) -> torch.Tensor:
         """Compute 2D SSIM between two images.
 
@@ -202,6 +204,7 @@ class SSIM3D(torch.nn.Module):
         self.channel = 1
         self.window = create_window_3D(window_size, self.channel)
 
+    @_amp.fp32_forward
     def forward(self, img1: torch.Tensor, img2: torch.Tensor) -> torch.Tensor:
         """Compute the 3D SSIM loss between two volumes.
 

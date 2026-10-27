@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import Optional, Union
 
 import torch
+from MIR import _amp
 
 
 def _apply_penalty(tensor: torch.Tensor, penalty: str) -> torch.Tensor:
@@ -37,6 +38,7 @@ class logBeta(torch.nn.Module):
         self.eps = eps
         self.beta = 1.0
 
+    @_amp.fp32_forward
     def forward(self, weights: torch.Tensor, alpha: Union[float, torch.Tensor]) -> torch.Tensor:
         """Compute Beta prior regularization.
 
@@ -69,6 +71,7 @@ class logGaussian(torch.nn.Module):
         self.eps = eps
         self.gaus_bond = gaus_bond
 
+    @_amp.fp32_forward
     def forward(self, weights: torch.Tensor, inv_sigma2: Union[float, torch.Tensor]) -> torch.Tensor:
         """Compute Gaussian prior regularization.
 
@@ -101,6 +104,7 @@ class LocalGrad3d(torch.nn.Module):
         self.penalty = penalty
         self.loss_mult = loss_mult
 
+    @_amp.fp32_forward
     def forward(self, y_pred: torch.Tensor, weight: torch.Tensor) -> torch.Tensor:
         """Compute weighted 3D gradient regularization.
 
@@ -143,6 +147,7 @@ class LocalGrad2d(torch.nn.Module):
         self.penalty = penalty
         self.loss_mult = loss_mult
 
+    @_amp.fp32_forward
     def forward(self, y_pred: torch.Tensor, weight: torch.Tensor) -> torch.Tensor:
         """Compute weighted 2D gradient regularization.
 

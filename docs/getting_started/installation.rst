@@ -58,7 +58,11 @@ Platform notes
 - **deedsBCV** is integrated through a compiled Linux binary; it is unavailable on Windows
   and macOS. Everything else in MIR is platform independent.
 - The FireANTs wrapper is imported lazily; the rest of ``MIR.models`` works without it.
-- Mixed precision is not used by the tutorials.
+- Mixed precision (float16, bfloat16) and multi-GPU training are supported by every model but are opt-in; the
+  tutorials run in float32 on one GPU. bfloat16 needs a GPU with compute capability 8.0+ (A100, H100, RTX 30xx/40xx)
+  or the CPU. See :doc:`../user_guide/precision_multigpu`.
+- ``torchrun`` belongs to the Python environment it was installed with; if MIR lives in another interpreter, launch
+  distributed jobs with ``python3.8 -m torch.distributed.run --nproc_per_node=N script.py``.
 
 Verifying the installation
 --------------------------

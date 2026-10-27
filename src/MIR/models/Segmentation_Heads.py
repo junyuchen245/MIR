@@ -1,9 +1,9 @@
 """Segmentation heads and decoder blocks for volumetric models."""
 
-import torch.nn.functional as F
 import torch.nn as nn
 import torch
 from typing import List, Sequence
+from MIR import _amp
 
 
 class SCSEBlock3D(nn.Module):
@@ -162,7 +162,7 @@ class AdvancedDecoder3D(nn.Module):
 
         # progressively upsample and fuse with skips
         for block, skip in zip(self.blocks, reversed(x_feats[:-1])):
-            x = F.interpolate(x, size=skip.shape[2:], mode='trilinear', align_corners=False)
+            x = _amp.interpolate(x, size=skip.shape[2:], mode='trilinear', align_corners=False)
             x = torch.cat([x, skip], dim=1)
             x = block(x)
 

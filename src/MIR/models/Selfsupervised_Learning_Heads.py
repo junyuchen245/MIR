@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 import MIR.models.registration_utils as utils
 from typing import Tuple
+from MIR import _amp
 
 
 class SSL_blocks(nn.Module):
@@ -29,7 +30,7 @@ class SSL_blocks(nn.Module):
             nn.Conv3d(dim, out_dim, kernel_size=3, stride=1, padding=1),
             nn.InstanceNorm3d(out_dim),
             nn.LeakyReLU(),
-            nn.Upsample(scale_factor=scale_fac, mode="trilinear", align_corners=False),
+            _amp.Upsample(scale_factor=scale_fac, mode="trilinear", align_corners=False),
             nn.Conv3d(out_dim, out_dim, kernel_size=3, stride=1, padding=1),
             nn.InstanceNorm3d(out_dim),
             nn.LeakyReLU(),
@@ -130,7 +131,7 @@ class SSLHeadNLvl(nn.Module):
             self.decoder_blocks.append(SSL_blocks(channels[i], 16, 2 ** (num_lvls - i)))
             self.flow_heads.append(flow_blocks(16))
         self.flow_block_final = flow_blocks(16)
-        self.up_sample = nn.Upsample(scale_factor=2, mode='trilinear', align_corners=False)
+        self.up_sample = _amp.Upsample(scale_factor=2, mode='trilinear', align_corners=False)
         self.if_upsamp = if_upsamp
         self.spatial_trans = utils.SpatialTransformer(img_size)
         self.encoder_output_type = encoder_output_type
@@ -239,7 +240,7 @@ class SSLHead1Lvl(nn.Module):
         self.flow_heads = nn.ModuleList()
         self.decoder_blocks.append(SSL_blocks(channels[-1], 16, 2))
         self.flow_heads.append(flow_blocks(16, if_KL=False))
-        self.up_sample = nn.Upsample(scale_factor=2, mode='trilinear', align_corners=False)
+        self.up_sample = _amp.Upsample(scale_factor=2, mode='trilinear', align_corners=False)
         self.if_upsamp = if_upsamp
         self.encoder_output_type = encoder_output_type
         self.spatial_trans = utils.SpatialTransformer(img_size)

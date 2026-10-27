@@ -41,6 +41,13 @@ pages can be read in any order.
 
       A complete, annotated training loop with the practices used across the tutorials.
 
+   .. grid-item-card:: :octicon:`zap;1.2em` Mixed precision and multi-GPU
+      :link: precision_multigpu
+      :link-type: doc
+
+      float16 / bfloat16 training and inference, DistributedDataParallel and DataParallel, and checkpoints that
+      load into plain models.
+
    .. grid-item-card:: :octicon:`download;1.2em` Pretrained weights
       :link: pretrained_weights
       :link-type: doc

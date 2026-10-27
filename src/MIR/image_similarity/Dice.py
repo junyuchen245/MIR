@@ -5,6 +5,7 @@ from typing import Callable, Optional
 
 import torch
 import torch.nn as nn
+from MIR import _amp
 
 
 class DiceLoss(nn.Module):
@@ -25,6 +26,7 @@ class DiceLoss(nn.Module):
         self.num_class = num_class
         self.one_hot = one_hot
 
+    @_amp.fp32_forward
     def forward(self, y_pred: torch.Tensor, y_true: torch.Tensor) -> torch.Tensor:
         """Compute Dice loss.
 
@@ -85,6 +87,7 @@ class SparseDiceLoss(nn.Module):
         self.present_only = bool(present_only)
         self.dice_loss = dice_loss if dice_loss is not None else DiceLoss(num_class=num_classes, one_hot=False)
 
+    @_amp.fp32_forward
     def forward(
         self,
         src_lbl_int: torch.Tensor,

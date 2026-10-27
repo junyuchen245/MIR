@@ -47,7 +47,6 @@ Johns Hopkins University
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import MIR.models.Swin_Transformer as swin
 import MIR.models.registration_utils as utils
 from MIR.models.TransMorph import Conv3dReLU, DecoderBlock, RegistrationHead
@@ -62,6 +61,7 @@ from MIR.models.lddmm import (  # noqa: F401 -- several of these are re-exported
     det3x3,
     load_backbone_weights,
 )
+from MIR import _amp
 
 
 # --------------------------------------------------------------------------- #
@@ -284,13 +284,13 @@ class TransMorphLDDMM(nn.Module):
             w0 = self._weights(x, lam)
             if self.int_scale > 1:
                 m0 = (
-                    F.interpolate(m0, scale_factor=self.int_scale, mode='trilinear', align_corners=False)
+                    _amp.interpolate(m0, scale_factor=self.int_scale, mode='trilinear', align_corners=False)
                     * self.int_scale
                 )
                 if w0 is not None:
-                    w0 = F.interpolate(w0, scale_factor=self.int_scale, mode='trilinear', align_corners=False)
+                    w0 = _amp.interpolate(w0, scale_factor=self.int_scale, mode='trilinear', align_corners=False)
                 if lam is not None:
-                    lam = F.interpolate(lam, scale_factor=self.int_scale, mode='trilinear', align_corners=False)
+                    lam = _amp.interpolate(lam, scale_factor=self.int_scale, mode='trilinear', align_corners=False)
             out = self.integrator.shoot(m0, weights=w0, energy_weight=lam if self.spr == 'energy' else None)
             out['momentum'] = m0
         else:

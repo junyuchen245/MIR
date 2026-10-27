@@ -1,6 +1,7 @@
 """Pearson correlation coefficient (PCC) loss."""
 
 import torch
+from MIR import _amp
 
 
 class PCC(torch.nn.Module):
@@ -39,6 +40,7 @@ class PCC(torch.nn.Module):
         )
         return torch.mean(top / bottom)
 
+    @_amp.fp32_forward
     def forward(self, I: torch.Tensor, J: torch.Tensor) -> torch.Tensor:
         """Return ``1 - PCC`` as a loss to minimise.
 

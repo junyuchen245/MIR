@@ -4,6 +4,7 @@ import torch
 import torch.nn.functional as F
 from torch.autograd import Variable
 import numpy as np
+from MIR import _amp
 
 
 class MutualInformation(torch.nn.Module):
@@ -83,6 +84,7 @@ class MutualInformation(torch.nn.Module):
         mi = torch.sum(torch.sum(pab * torch.log(pab / papb + 1e-6), dim=1), dim=1)
         return mi.mean()  # average across batch
 
+    @_amp.fp32_forward
     def forward(self, y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
         """Return negative mutual information as a loss.
 
@@ -256,6 +258,7 @@ class localMutualInformation(torch.nn.Module):
         mi = torch.sum(torch.sum(pab * torch.log(pab / papb + 1e-6), dim=1), dim=1)
         return mi.mean()
 
+    @_amp.fp32_forward
     def forward(self, y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
         """Return negative local mutual information as a loss.
 
@@ -334,6 +337,7 @@ class MattesMutualInformation(torch.nn.Module):
             return self._linear(u)
         raise ValueError("kernel must be 'bspline' or 'linear'.")
 
+    @_amp.fp32_forward
     def forward(self, y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
         """Return negative Mattes mutual information as a loss.
 
@@ -369,6 +373,7 @@ class NormalizedMutualInformation(MattesMutualInformation):
     Constructor arguments are those of :class:`MattesMutualInformation`.
     """
 
+    @_amp.fp32_forward
     def forward(self, y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
         """Return negative normalized mutual information as a loss.
 

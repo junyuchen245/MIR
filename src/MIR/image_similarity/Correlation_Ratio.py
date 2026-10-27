@@ -4,6 +4,7 @@ import torch
 import torch.nn.functional as F
 from torch.autograd import Variable
 import numpy as np
+from MIR import _amp
 
 
 class CorrRatio(torch.nn.Module):
@@ -102,6 +103,7 @@ class CorrRatio(torch.nn.Module):
 
         return eta_square.mean() / 3
 
+    @_amp.fp32_forward
     def forward(self, y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
         """Return negative symmetric correlation ratio as a loss.
 
@@ -227,6 +229,7 @@ class LocalCorrRatio(torch.nn.Module):
 
         return eta_square.mean() / 3
 
+    @_amp.fp32_forward
     def forward(self, y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
         """Return negative symmetric local correlation ratio as a loss.
 

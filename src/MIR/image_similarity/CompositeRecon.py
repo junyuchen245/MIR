@@ -2,6 +2,7 @@
 
 import torch
 import torch.nn as nn
+from MIR import _amp
 
 
 class CompRecon(nn.Module):
@@ -102,6 +103,7 @@ class CompRecon(nn.Module):
         w = mag.pow(self.alpha)
         return torch.mean(w * mag.pow(self.beta))
 
+    @_amp.fp32_forward
     def forward(self, pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
         """Compute composite reconstruction loss.
 

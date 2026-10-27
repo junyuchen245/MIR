@@ -58,8 +58,14 @@ Code style
   (``Optional[int]``, ``List[int]``, ``Tuple[...]``), not ``int | None`` or ``list[int]``.
 - **Type hints** on public functions and methods wherever the type is clear.
 - **Device handling.** Never hard-code ``.cuda()`` or ``'cuda:0'``: create tensors on the input's device
-  (``x.device``) or move cached tensors with ``.to(x.device)`` in ``forward``. All losses and models must run
-  on CPU, which is also how the tests run.
+  (``x.device``) or move cached tensors with ``.to(x.device)`` in ``forward``. Constant tensors a module needs go in
+  ``register_buffer(..., persistent=False)`` (they then follow ``.to()`` / ``.half()`` and are replicated by
+  ``DataParallel`` without entering the ``state_dict``), not plain attributes. All losses and models must run on CPU,
+  which is also how the tests run.
+- **Precision.** Decorate loss and regularizer ``forward`` methods with ``MIR._amp.fp32_forward`` (public as
+  ``MIR.utils.precision.fp32_forward``). Do sampling-coordinate, integration and FFT arithmetic in float32 and return
+  the input dtype. In model ``forward`` paths use ``_amp.interpolate`` / ``_amp.Upsample`` / ``_amp.pad`` /
+  ``_amp.Conv3d`` (depthwise) instead of the torch versions, so bfloat16 keeps working on PyTorch < 2.1.
 
 API stability
 -------------
@@ -117,6 +123,10 @@ changes, then compare after each step:
    * - ``tools/ast_equal.py``
      - A formatting or documentation-only edit changed no code: compares syntax trees, optionally ignoring
        docstrings and type annotations (``--code-only``).
+   * - ``tools/precision_parallel_audit.py``
+     - Every model, loss and regularizer runs under fp16 / bf16 autocast, pure fp16 inference and ``DataParallel``
+       with finite outputs close to float32 (``--ddp`` checks 2-process ``DistributedDataParallel``). Use
+       ``--device`` and ``--cap-gb`` on shared GPUs.
 
 Adding a model
 --------------

@@ -53,8 +53,9 @@ Dice and Jacobian-determinant (digital diffeomorphism) evaluation.
 Utilities and data
 ------------------
 
-Training utilities, augmentation, intensity normalization, synthetic images for pretraining, statistics,
-Learn2Reg I/O, label references and the pretrained-weight registry.
+Training utilities, mixed-precision and multi-GPU helpers (``MIR.utils.precision``, ``MIR.utils.distributed``),
+augmentation, intensity normalization, synthetic images for pretraining, statistics, Learn2Reg I/O, label references
+and the pretrained-weight registry.
 
 .. autosummary::
    :toctree: api

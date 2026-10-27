@@ -2,6 +2,7 @@
 
 import torch
 import torch.nn as nn
+from MIR import _amp
 
 
 class KL_divergence(nn.Module):
@@ -16,6 +17,7 @@ class KL_divergence(nn.Module):
     ):
         super().__init__()
 
+    @_amp.fp32_forward
     def forward(self, P, Q) -> torch.Tensor:
         """Compute KL divergence between two Gaussian fields.
 
@@ -60,6 +62,7 @@ class MultiVariateKL_divergence(nn.Module):
     ):
         super().__init__()
 
+    @_amp.fp32_forward
     def forward(self, P, Q) -> torch.Tensor:
         """Compute multivariate KL divergence between Gaussian fields.
 

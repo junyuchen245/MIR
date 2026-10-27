@@ -5,6 +5,7 @@ from __future__ import annotations
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from MIR import _amp
 
 
 class NormalizedGradientFieldLoss(nn.Module):
@@ -71,6 +72,7 @@ class NormalizedGradientFieldLoss(nn.Module):
         gx = F.conv3d(img, kx, padding=(0, 0, 1), groups=c)
         return gx, gy, gz
 
+    @_amp.fp32_forward
     def forward(self, y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
         """Compute the NGF loss (symmetric in its two arguments).
 

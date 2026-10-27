@@ -6,6 +6,7 @@ import torch
 import torch.nn.functional as F
 import numpy as np
 import torch.nn as nn
+from MIR import _amp
 
 
 class MIND_loss(torch.nn.Module):
@@ -100,6 +101,7 @@ class MIND_loss(torch.nn.Module):
 
         return mind
 
+    @_amp.fp32_forward
     def forward(self, y_pred: torch.Tensor, y_true: torch.Tensor) -> torch.Tensor:
         """Compute MIND-SSC L2 loss between two images.
 

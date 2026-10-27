@@ -211,6 +211,7 @@ and under :doc:`about/publications`) and link to the
    user_guide/regularization
    user_guide/losses_metrics
    user_guide/training
+   user_guide/precision_multigpu
    user_guide/pretrained_weights
    user_guide/browser_deployment
 

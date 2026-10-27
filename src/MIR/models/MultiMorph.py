@@ -22,6 +22,7 @@ import torch.utils.checkpoint as checkpoint
 import numpy as np
 import random
 from typing import List
+from MIR import _amp
 
 
 def make_epoch_batches(n_samples: int, min_bs: int, max_bs: int) -> List[np.ndarray]:
@@ -315,13 +316,13 @@ class ResizeTransform(nn.Module):
         """
         if self.factor < 1:
             # resize first to save memory
-            x = F.interpolate(x, align_corners=True, scale_factor=self.factor, mode=self.mode)
+            x = _amp.interpolate(x, align_corners=True, scale_factor=self.factor, mode=self.mode)
             x = self.factor * x
 
         elif self.factor > 1:
             # multiply first to save memory
             x = self.factor * x
-            x = F.interpolate(x, align_corners=True, scale_factor=self.factor, mode=self.mode)
+            x = _amp.interpolate(x, align_corners=True, scale_factor=self.factor, mode=self.mode)
 
         # don't do anything if resize is 1
         return x
@@ -1046,7 +1047,7 @@ class UpsamplingTrilinear3d(nn.Module):
         """
         n = x.shape[1]
         x = einops.rearrange(x, 'b n c h w d -> (b n) c h w d')
-        x = nn.functional.interpolate(x, scale_factor=self.scale_factor, mode='trilinear')
+        x = _amp.interpolate(x, scale_factor=self.scale_factor, mode='trilinear')
         x = einops.rearrange(x, '(b n) c h w d -> b n c h w d', n=n)
         return x
 

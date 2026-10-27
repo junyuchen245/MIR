@@ -21,6 +21,7 @@ import numpy as np
 from torch.distributions.normal import Normal
 import MIR.models.registration_utils as utils
 from typing import Tuple
+from MIR import _amp
 
 
 class ConvBlock(nn.Module):
@@ -121,7 +122,7 @@ class Unet(nn.Module):
         else:
             self.enc_nf, self.dec_nf = nb_features
 
-        self.upsample = nn.Upsample(scale_factor=2, mode='nearest')
+        self.upsample = _amp.Upsample(scale_factor=2, mode='nearest')
 
         # configure encoder (down-sampling path)
         prev_nf = 2

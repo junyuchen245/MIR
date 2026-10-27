@@ -3,6 +3,7 @@
 import torch.nn as nn
 import torch
 from typing import Optional
+from MIR import _amp
 
 
 class SynthesisHead3D(nn.Module):
@@ -257,7 +258,7 @@ class InvertedResidual3D(nn.Module):
         ]
         # depthwise spatial conv
         layers += [
-            nn.Conv3d(hidden_ch, hidden_ch, 3, stride, padding=1, groups=hidden_ch, bias=False),
+            _amp.Conv3d(hidden_ch, hidden_ch, 3, stride, padding=1, groups=hidden_ch, bias=False),
             norm_layer(hidden_ch, affine=True),
             nn.ReLU(inplace=True),
         ]
@@ -342,7 +343,7 @@ class ConvNeXtBlock3D(nn.Module):
         super().__init__()
         hidden_dim = dim * mlp_ratio
         # depthwise 7×7×7 conv (local spatial mixing)
-        self.dwconv = nn.Conv3d(dim, dim, kernel_size=7, padding=3, groups=dim, bias=True)
+        self.dwconv = _amp.Conv3d(dim, dim, kernel_size=7, padding=3, groups=dim, bias=True)
         # LayerNorm over channels: we need to permute to (B,HWD,C)
         self.norm = nn.LayerNorm(dim, eps=1e-6)
         # two-layer MLP on channels with GELU

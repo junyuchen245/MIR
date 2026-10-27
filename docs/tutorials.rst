@@ -104,6 +104,20 @@ Feature learning
    * - ``VFA_image_seg``, ``VFA_image_synthesis``
      - Segmentation and synthesis heads on pretrained VFA features.
 
+Training at scale
+-----------------
+
+.. list-table::
+   :header-rows: 1
+   :widths: 34 66
+
+   * - Folder
+     - Contents
+   * - ``multi_gpu_mixed_precision``
+     - Self-contained example (synthetic data) of float16 / bfloat16 mixed-precision training on one GPU, several
+       GPUs with DistributedDataParallel (``torchrun``) or DataParallel, or the CPU
+       (:doc:`user_guide/precision_multigpu`).
+
 Deployment
 ----------
 

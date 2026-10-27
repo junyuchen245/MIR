@@ -431,10 +431,14 @@ class WindowAttentionReverse(nn.Module):
 
         if mask is not None:
             nW = mask.shape[0]
-            mov_attn = mov_attn.view(B_ // nW, nW, self.num_heads, N, N) + mask.unsqueeze(1).unsqueeze(0)
+            mov_attn = mov_attn.view(B_ // nW, nW, self.num_heads, N, N) + mask.unsqueeze(1).unsqueeze(0).to(
+                mov_attn.dtype
+            )
             mov_attn = mov_attn.view(-1, self.num_heads, N, N)
             mov_attn = self.softmax(mov_attn)
-            fix_attn = fix_attn.view(B_ // nW, nW, self.num_heads, N, N) + mask.unsqueeze(1).unsqueeze(0)
+            fix_attn = fix_attn.view(B_ // nW, nW, self.num_heads, N, N) + mask.unsqueeze(1).unsqueeze(0).to(
+                fix_attn.dtype
+            )
             fix_attn = fix_attn.view(-1, self.num_heads, N, N)
             fix_attn = self.softmax(fix_attn)
         else:
@@ -559,10 +563,14 @@ class WindowAttention(nn.Module):
 
         if mask is not None:
             nW = mask.shape[0]
-            mov_attn = mov_attn.view(B_ // nW, nW, self.num_heads, N, N) + mask.unsqueeze(1).unsqueeze(0)
+            mov_attn = mov_attn.view(B_ // nW, nW, self.num_heads, N, N) + mask.unsqueeze(1).unsqueeze(0).to(
+                mov_attn.dtype
+            )
             mov_attn = mov_attn.view(-1, self.num_heads, N, N)
             mov_attn = self.softmax(mov_attn)
-            fix_attn = fix_attn.view(B_ // nW, nW, self.num_heads, N, N) + mask.unsqueeze(1).unsqueeze(0)
+            fix_attn = fix_attn.view(B_ // nW, nW, self.num_heads, N, N) + mask.unsqueeze(1).unsqueeze(0).to(
+                fix_attn.dtype
+            )
             fix_attn = fix_attn.view(-1, self.num_heads, N, N)
             fix_attn = self.softmax(fix_attn)
         else:
@@ -778,8 +786,9 @@ class SwinTransformerBlock(nn.Module):
         )
         offset_fix_ = offset_fix_.view(B * C, self.nW, self.wW * self.wH * self.wD, 3)
         offset_fix_ = torch.unsqueeze(offset_fix_, 1)
-        mov_locs = self.grid.repeat(B * C, 1, 1, 1, 1) + offset_mov_
-        fix_locs = self.grid.repeat(B * C, 1, 1, 1, 1) + offset_fix_
+        grid = self.grid.to(device=offset_mov_.device, dtype=offset_mov_.dtype)  # plain attribute: follow the input
+        mov_locs = grid.repeat(B * C, 1, 1, 1, 1) + offset_mov_
+        fix_locs = grid.repeat(B * C, 1, 1, 1, 1) + offset_fix_
         # need to normalize grid values to [-1, 1] for resampler
         shape = [Tp, Hp, Wp]
         for i in range(len(shape)):

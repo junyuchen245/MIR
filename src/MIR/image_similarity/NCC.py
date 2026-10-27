@@ -13,6 +13,7 @@ from math import exp
 import math
 import torch.nn as nn
 from typing import Optional, Sequence, Union
+from MIR import _amp
 
 
 def gaussian(window_size: int, sigma: float) -> torch.Tensor:
@@ -122,6 +123,7 @@ class NCC_gauss(torch.nn.Module):
         # print(_2D_window)
         return window
 
+    @_amp.fp32_forward
     def forward(self, y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
         """Compute Gaussian-windowed NCC loss.
 
@@ -177,6 +179,7 @@ class NCC(torch.nn.Module):
         super().__init__()
         self.win = win
 
+    @_amp.fp32_forward
     def forward(self, y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
         """Compute NCC loss over a local window.
 
@@ -250,6 +253,7 @@ class NCC_mok(torch.nn.Module):
         self.eps = eps
         self.w_temp = win
 
+    @_amp.fp32_forward
     def forward(self, I: torch.Tensor, J: torch.Tensor) -> torch.Tensor:
         """Compute the negative local squared NCC.
 
@@ -322,6 +326,7 @@ class NCC_mok2(torch.nn.Module):
         self.w_temp = win
         self.channel = channel
 
+    @_amp.fp32_forward
     def forward(self, I: torch.Tensor, J: torch.Tensor) -> torch.Tensor:
         """Compute the negative channel-wise local squared NCC.
 
@@ -414,6 +419,7 @@ class NCC_vxm(torch.nn.Module):
             self.padding = (pad_no, pad_no, pad_no)
         self.ndims = ndims
 
+    @_amp.fp32_forward
     def forward(self, y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
         """Compute the negative local squared NCC.
 
@@ -476,6 +482,7 @@ class SingleScaleNCC(nn.Module):
         else:
             self.window_size = window_size
 
+    @_amp.fp32_forward
     def forward(self, pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
         """Compute the LNCC loss.
 
@@ -558,6 +565,7 @@ class NCC_vfa(torch.nn.Module):
         for i in range(self.num_scales):
             self.similarity_metric.append(SingleScaleNCC(window_size - (i * 2)))
 
+    @_amp.fp32_forward
     def forward(self, I: torch.Tensor, J: torch.Tensor) -> torch.Tensor:
         """Compute the multi-scale NCC loss (symmetric in ``I`` and ``J``).
 
@@ -618,6 +626,7 @@ class FastNCC(torch.nn.Module):
         super().__init__()
         self.win = win
 
+    @_amp.fp32_forward
     def forward(self, y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
         """Compute the negative local squared NCC.
 
@@ -739,6 +748,7 @@ class NCC_fp16(nn.Module):
     # ------------------------------------------------------------------
     # forward
     # ------------------------------------------------------------------
+    @_amp.fp32_forward
     def forward(self, y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
         """Compute the negative local NCC.
 

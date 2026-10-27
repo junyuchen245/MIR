@@ -39,17 +39,21 @@ def _center_embed_frequency(x, out_shape):
 
 
 def _low_spatial_to_full_spatial(low_spatial, out_shape):
-    """Convert a low-resolution spatial field to full resolution via Fourier padding."""
-    spectrum = torch.fft.fftshift(torch.fft.fftn(low_spatial, dim=(-3, -2, -1)), dim=(-3, -2, -1))
-    spectrum = _center_embed_frequency(spectrum, out_shape)
-    return torch.real(torch.fft.ifftn(torch.fft.ifftshift(spectrum, dim=(-3, -2, -1)), dim=(-3, -2, -1)))
+    """Convert a low-resolution spatial field to full resolution via Fourier padding (computed in float32)."""
+    with torch.autocast(device_type=low_spatial.device.type, enabled=False):
+        spectrum = torch.fft.fftshift(torch.fft.fftn(low_spatial.float(), dim=(-3, -2, -1)), dim=(-3, -2, -1))
+        spectrum = _center_embed_frequency(spectrum, out_shape)
+        out = torch.real(torch.fft.ifftn(torch.fft.ifftshift(spectrum, dim=(-3, -2, -1)), dim=(-3, -2, -1)))
+    return out.to(low_spatial.dtype)
 
 
 def _full_spatial_to_low_spatial(x, low_shape):
-    """Extract a low-frequency spatial image by center cropping Fourier coefficients."""
-    spectrum = torch.fft.fftshift(torch.fft.fftn(x, dim=(-3, -2, -1)), dim=(-3, -2, -1))
-    spectrum = _center_crop_frequency(spectrum, low_shape)
-    return torch.real(torch.fft.ifftn(torch.fft.ifftshift(spectrum, dim=(-3, -2, -1)), dim=(-3, -2, -1)))
+    """Extract a low-frequency spatial image by center cropping Fourier coefficients (computed in float32)."""
+    with torch.autocast(device_type=x.device.type, enabled=False):
+        spectrum = torch.fft.fftshift(torch.fft.fftn(x.float(), dim=(-3, -2, -1)), dim=(-3, -2, -1))
+        spectrum = _center_crop_frequency(spectrum, low_shape)
+        out = torch.real(torch.fft.ifftn(torch.fft.ifftshift(spectrum, dim=(-3, -2, -1)), dim=(-3, -2, -1)))
+    return out.to(x.dtype)
 
 
 class FourierNetBackbone(nn.Module):

@@ -117,6 +117,12 @@ Validate on labeled pairs with the nearest-neighbour transformer and keep the be
      - load pretrained weights with ``MIR.utils.load_partial_weights`` (:doc:`pretrained_weights`).
    * - Per-case refinement
      - instance optimization: fine-tune a copy of the network for a few dozen steps on one pair at test time.
+   * - Mixed precision
+     - wrap the forward pass and loss in ``MIR.utils.precision.autocast("fp16")`` and step through
+       ``grad_scaler("fp16")``; losses stay in float32 (:doc:`precision_multigpu`).
+   * - Several GPUs
+     - ``MIR.utils.distributed.init_distributed`` / ``wrap_model`` with ``torchrun``, a ``distributed_sampler``, and
+       ``state_dict_for_saving`` for checkpoints (:doc:`precision_multigpu`).
 
 .. tip::
 

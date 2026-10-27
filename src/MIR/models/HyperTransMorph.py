@@ -29,6 +29,7 @@ import numpy as np
 import MIR.models.configs_TransMorph as configs
 import MIR.models.registration_utils as utils
 from typing import List, Optional, Tuple
+from MIR import _amp
 
 
 class CustomConv(nn.Module):
@@ -347,7 +348,7 @@ class WindowAttention(nn.Module):
 
         if mask is not None:
             nW = mask.shape[0]
-            attn = attn.view(B_ // nW, nW, self.num_heads, N, N) + mask.unsqueeze(1).unsqueeze(0)
+            attn = attn.view(B_ // nW, nW, self.num_heads, N, N) + mask.unsqueeze(1).unsqueeze(0).to(attn.dtype)
             attn = attn.view(-1, self.num_heads, N, N)
             attn = self.softmax(attn)
         else:
@@ -1141,7 +1142,7 @@ class DecoderBlock(nn.Module):
             padding=1,
             use_batchnorm=use_batchnorm,
         )
-        self.up = nn.Upsample(scale_factor=2, mode='trilinear', align_corners=False)
+        self.up = _amp.Upsample(scale_factor=2, mode='trilinear', align_corners=False)
 
     def forward(
         self, x: torch.Tensor, skip: Optional[torch.Tensor] = None, hyper: Optional[torch.Tensor] = None
@@ -1278,7 +1279,7 @@ class HyperTransMorphTVF(nn.Module):
         self.spatial_trans = utils.SpatialTransformer(
             (config.img_size[0] * 2, config.img_size[1] * 2, config.img_size[2] * 2)
         )
-        self.upsamp = nn.Upsample(scale_factor=2, mode="trilinear", align_corners=False)
+        self.upsamp = _amp.Upsample(scale_factor=2, mode="trilinear", align_corners=False)
         self.reg_head = RegistrationHead(
             in_channels=config.reg_head_chan,
             out_channels=3,
@@ -1304,7 +1305,7 @@ class HyperTransMorphTVF(nn.Module):
             composed displacement field ``flow``. All fields have shape
             ``(B, 3, *config.img_size)``.
         """
-        hyper = self.hyper_model(hyp_val)
+        hyper = self.hyper_model(_amp.shared_hyperparameter(hyp_val))
         mov, fix = inputs
         x_cat = torch.cat((mov, fix), dim=1)
         x_s1 = self.avg_pool(x_cat)
@@ -1467,7 +1468,7 @@ class HyperTransMorphTVFSPR(nn.Module):
             values in ``[1e-6, 1]``.
 
         """
-        hyper = self.hyper_model(hyper_val)
+        hyper = self.hyper_model(_amp.shared_hyperparameter(hyper_val))
         mov, fix = inputs
         x_cat = torch.cat((mov, fix), dim=1)
         x_s1 = self.avg_pool(x_cat)

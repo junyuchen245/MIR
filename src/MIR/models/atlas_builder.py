@@ -143,9 +143,24 @@ class MeanStream(nn.Module):
 
         # get new mean and count
         new_mean, new_count = self.mean_update(self.mean, self.count, x, self.cap)
+        stored_mean, stored_count = new_mean.detach(), new_count.detach()
+        if (
+            torch.distributed.is_available()
+            and torch.distributed.is_initialized()
+            and torch.distributed.get_world_size() > 1
+        ):
+            # DistributedDataParallel: every rank applies the update of the global batch, so the running mean (the
+            # template statistics) stays identical across ranks. The returned, differentiable value is unchanged.
+            batch_sum = torch.sum(x.detach(), dim=0, keepdim=True)
+            batch_n = torch.tensor([float(x.shape[0])], device=x.device, dtype=batch_sum.dtype)
+            torch.distributed.all_reduce(batch_sum)
+            torch.distributed.all_reduce(batch_n)
+            stored_count = self.count.detach() + batch_n
+            alpha = batch_n / torch.minimum(stored_count, torch.tensor(float(self.cap), device=x.device))
+            stored_mean = self.mean.detach() * (1 - alpha) + (batch_sum / batch_n) * alpha
         # update op
-        self.count = nn.Parameter(new_count, requires_grad=False)
-        self.mean = nn.Parameter(new_mean, requires_grad=False)
+        self.count = nn.Parameter(stored_count, requires_grad=False)
+        self.mean = nn.Parameter(stored_mean, requires_grad=False)
 
         # the first few 1000 should not matter that much towards this cost
         return torch.minimum(torch.tensor(1.0), new_count / self.cap) * (z * new_mean)

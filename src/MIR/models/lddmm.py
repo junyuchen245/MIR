@@ -32,8 +32,8 @@ import math
 import warnings
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import MIR.models.registration_utils as utils
+from MIR import _amp
 
 
 # --------------------------------------------------------------------------- #
@@ -334,8 +334,8 @@ class KernelWeightHead(nn.Module):
         """
         size = field.shape[2:]
         if tuple(mov.shape[2:]) != tuple(size):
-            mov = F.interpolate(mov, size=size, mode='trilinear', align_corners=False)
-            fix = F.interpolate(fix, size=size, mode='trilinear', align_corners=False)
+            mov = _amp.interpolate(mov, size=size, mode='trilinear', align_corners=False)
+            fix = _amp.interpolate(fix, size=size, mode='trilinear', align_corners=False)
         return self.net(torch.cat((mov, fix, field), dim=1))
 
 
@@ -381,8 +381,8 @@ class SPRHead(nn.Module):
         """
         size = field.shape[2:]
         if tuple(mov.shape[2:]) != tuple(size):
-            mov = F.interpolate(mov, size=size, mode='trilinear', align_corners=False)
-            fix = F.interpolate(fix, size=size, mode='trilinear', align_corners=False)
+            mov = _amp.interpolate(mov, size=size, mode='trilinear', align_corners=False)
+            fix = _amp.interpolate(fix, size=size, mode='trilinear', align_corners=False)
         return torch.clamp(torch.sigmoid(self.net(torch.cat((mov, fix, field), dim=1))), self.eps, 1.0)
 
 
@@ -399,7 +399,7 @@ def jacobian_fd(disp):
         Tensor [B, 3, 3, D, H, W] with entry [:, i, j] = d(x_i + disp_i) / d x_j.
 
     """
-    padded = F.pad(disp, (1, 1, 1, 1, 1, 1), mode='replicate')
+    padded = _amp.pad(disp, (1, 1, 1, 1, 1, 1), mode='replicate')
     cols = []
     for j in range(3):
         fwd = [slice(None), slice(None)] + [slice(1, -1)] * 3
@@ -819,13 +819,13 @@ class LDDMMWrapper(nn.Module):
             w0 = self.predict_weights(mov, fix, m0, lam) if self.spatially_varying else None
             if self.int_scale > 1:
                 m0 = (
-                    F.interpolate(m0, scale_factor=self.int_scale, mode='trilinear', align_corners=False)
+                    _amp.interpolate(m0, scale_factor=self.int_scale, mode='trilinear', align_corners=False)
                     * self.int_scale
                 )
                 if w0 is not None:
-                    w0 = F.interpolate(w0, scale_factor=self.int_scale, mode='trilinear', align_corners=False)
+                    w0 = _amp.interpolate(w0, scale_factor=self.int_scale, mode='trilinear', align_corners=False)
                 if lam is not None:
-                    lam = F.interpolate(lam, scale_factor=self.int_scale, mode='trilinear', align_corners=False)
+                    lam = _amp.interpolate(lam, scale_factor=self.int_scale, mode='trilinear', align_corners=False)
             integ = self._get_integrator(m0.shape[2:], m0.device)
             out = integ.shoot(
                 m0, weights=w0, energy_weight=lam if self.spr == 'energy' else None, return_path=self.return_path

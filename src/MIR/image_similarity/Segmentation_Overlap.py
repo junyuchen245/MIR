@@ -5,6 +5,7 @@ from typing import Optional
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
+from MIR import _amp
 
 
 class DiceSegLoss(nn.Module):
@@ -27,6 +28,7 @@ class DiceSegLoss(nn.Module):
         self.ignore_index = ignore_index
         self.eps = eps
 
+    @_amp.fp32_forward
     def forward(self, logits: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
         """Compute the soft Dice loss.
 
@@ -91,6 +93,7 @@ class SegmentationLoss(nn.Module):
         self.w_ce = weight_ce
         self.w_dice = weight_dice
 
+    @_amp.fp32_forward
     def forward(self, logits: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
         """Compute the combined cross-entropy + Dice loss.
 

@@ -5,6 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as nnf
 from torch.distributions.normal import Normal
 from typing import List, Tuple
+from MIR import _amp
 
 
 class HyperConv(nn.Module):
@@ -184,7 +185,7 @@ def grid_upsample(grid: torch.Tensor, mode='bilinear', align_corners=True, scale
     in_dims = in_dims.view(-1, len(in_dims), *[1 for x in range(len(in_dims))])
     out_dims = in_dims * scale_factor
     out = grid / (in_dims - 1) * (out_dims - 1)
-    out = nnf.interpolate(
+    out = _amp.interpolate(
         out,
         scale_factor=scale_factor,
         mode=mode,
@@ -212,6 +213,8 @@ def grid_sampler(
         Warped tensor sampled from `source` at `grid` locations.
 
     """
+    out_dtype = source.dtype
+    source, grid = _amp._cast_floats(source), _amp._cast_floats(grid)  # sample in float32 for fp16/bf16
     if normalize:
         normed_grid = normalize_grid(grid)
     else:
@@ -235,7 +238,7 @@ def grid_sampler(
             padding_mode=padding_mode,
             mode=mode,
         )
-    return warped
+    return warped.to(out_dtype)
 
 
 def normalize_grid(grid: torch.Tensor) -> torch.Tensor:
@@ -383,7 +386,7 @@ class HyperVFASPR(nn.Module):
               (not defined on this class).
 
         """
-        hyper_feat = self.hyper_model(hyper_val)
+        hyper_feat = self.hyper_model(_amp.shared_hyperparameter(hyper_val))
         mov, fix = sample
         F = self.encoder(fix, hyper_feat)
         M = self.encoder(mov, hyper_feat)
@@ -489,7 +492,7 @@ class HyperVFA(nn.Module):
               (not defined on this class).
 
         """
-        hyper_feat = self.hyper_model(hyper_val)
+        hyper_feat = self.hyper_model(_amp.shared_hyperparameter(hyper_val))
         mov, fix = sample
         F = self.encoder(fix, hyper_feat)
         M = self.encoder(mov, hyper_feat)
@@ -748,7 +751,7 @@ class Decoder(nn.Module):
 
         # precompute radial vector field r and R
         r = identity_grid_like(torch.zeros(1, 1, *[3 for _ in range(self.dim)]), normalize=True)
-        self.R = self.to_token(r).squeeze().detach()
+        self.register_buffer('R', self.to_token(r).squeeze().detach(), persistent=False)
 
     def to_token(self, x: torch.Tensor) -> torch.Tensor:
         """Flatten spatial dimensions and move channels to the last axis.
@@ -796,7 +799,7 @@ class Decoder(nn.Module):
                 # K from the moving image feature maps
                 m = grid_sampler(M[i], composed_grids[-1]) if len(composed_grids) != 0 else M[i]
                 pad_size = [1 for _ in range(self.dim * 2)]
-                m = nnf.pad(m, pad=tuple(pad_size), mode='replicate')
+                m = _amp.pad(m, pad=tuple(pad_size), mode='replicate')
                 m = self.project[i](m, hyper_feat)
                 if self.similarity == 'cosine':
                     m = nnf.normalize(m, dim=1)
@@ -971,7 +974,7 @@ class Upsample3d(nn.Module):
         Returns:
             torch.Tensor: Tensor of shape ``[B, out_channels + C_skip, 2H, 2W, 2D]``.
         """
-        x = nnf.interpolate(
+        x = _amp.interpolate(
             x,
             size=None,
             scale_factor=2,
@@ -1008,7 +1011,7 @@ class Upsample2d(nn.Module):
         Returns:
             torch.Tensor: Tensor of shape ``[B, out_channels + C_skip, 2H, 2W]``.
         """
-        x = nnf.interpolate(
+        x = _amp.interpolate(
             x,
             size=None,
             scale_factor=2,

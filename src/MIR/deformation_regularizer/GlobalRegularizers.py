@@ -7,6 +7,7 @@ from typing import Callable, Optional, Sequence, Union
 import torch
 import torch.nn.functional as nnf
 import MIR.utils.registration_utils as reg_utils
+from MIR import _amp
 
 
 def _apply_penalty(tensor: torch.Tensor, penalty: str) -> torch.Tensor:
@@ -53,6 +54,7 @@ class Grad2D(torch.nn.Module):
         self.penalty = penalty
         self.loss_mult = loss_mult
 
+    @_amp.fp32_forward
     def forward(self, y_pred: torch.Tensor, y_true) -> torch.Tensor:
         """Compute 2D gradient regularization loss.
 
@@ -87,6 +89,7 @@ class Grad3d(torch.nn.Module):
         self.penalty = penalty
         self.loss_mult = loss_mult
 
+    @_amp.fp32_forward
     def forward(self, y_pred: torch.Tensor, y_true=None) -> torch.Tensor:
         """Compute 3D gradient regularization loss.
 
@@ -116,6 +119,7 @@ class Grad3DiTV(torch.nn.Module):
     def __init__(self):
         super().__init__()
 
+    @_amp.fp32_forward
     def forward(self, y_pred: torch.Tensor, y_true) -> torch.Tensor:
         """Compute isotropic total-variation loss in 3D.
 
@@ -244,6 +248,7 @@ class DisplacementRegularizer(torch.nn.Module):
             dTdxx.pow(2) + dTdyy.pow(2) + dTdzz.pow(2) + 2 * dTdxy.pow(2) + 2 * dTdxz.pow(2) + 2 * dTdyz.pow(2)
         )
 
+    @_amp.fp32_forward
     def forward(self, disp: torch.Tensor, _) -> torch.Tensor:
         """Compute the configured regularization energy.
 
@@ -305,6 +310,7 @@ class GradICON3d(torch.nn.Module):
         """Compute a finite-difference gradient loss for one displacement."""
         return _gradient_loss_3d(disp, penalty)
 
+    @_amp.fp32_forward
     def forward(self, flow_fwd: torch.Tensor, flow_inv: torch.Tensor) -> torch.Tensor:
         """Compute the GradICON penalty for forward and inverse flows.
 
@@ -419,6 +425,7 @@ class GradICONExact3d(torch.nn.Module):
 
         return torch.stack(grads, dim=-1)
 
+    @_amp.fp32_forward
     def forward(self, flow_fwd: torch.Tensor, flow_inv: torch.Tensor) -> torch.Tensor:
         """Compute the exact GradICON penalty for sampled voxel locations.
 
@@ -431,8 +438,8 @@ class GradICONExact3d(torch.nn.Module):
         """
         B = flow_fwd.size(0)
 
-        idx = torch.randperm(self.grid_full.size(0), device=self.device)[: self.Nsub]
-        pts0 = self.grid_full[idx].unsqueeze(0).repeat(B, 1, 1)
+        idx = torch.randperm(self.grid_full.size(0), device=flow_fwd.device)[: self.Nsub]
+        pts0 = self.grid_full.to(flow_fwd.device)[idx].unsqueeze(0).repeat(B, 1, 1)
 
         comp_disp = self._compose_disp(flow_fwd, flow_inv)
 

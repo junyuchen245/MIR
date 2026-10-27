@@ -26,6 +26,7 @@ import MIR.models.Deformable_Swin_Transformer_v2 as dswin_v2
 import numpy as np
 import torch.nn.functional as F
 from typing import Optional, Tuple
+from MIR import _amp
 
 
 class Conv3dReLU(nn.Sequential):
@@ -100,7 +101,7 @@ class DecoderBlock(nn.Module):
             padding=1,
             use_batchnorm=use_batchnorm,
         )
-        self.up = nn.Upsample(scale_factor=2, mode='trilinear', align_corners=False)
+        self.up = _amp.Upsample(scale_factor=2, mode='trilinear', align_corners=False)
 
     def forward(self, x: torch.Tensor, skip: Optional[torch.Tensor] = None) -> torch.Tensor:
         """Forward pass.
@@ -453,7 +454,7 @@ class TransMorphTVF(nn.Module):
         self.spatial_trans = utils.SpatialTransformer(
             (config.img_size[0] * 2, config.img_size[1] * 2, config.img_size[2] * 2)
         )
-        self.upsamp = nn.Upsample(scale_factor=2, mode="trilinear", align_corners=False)
+        self.upsamp = _amp.Upsample(scale_factor=2, mode="trilinear", align_corners=False)
 
         self.reg_head = RegistrationHead(
             in_channels=config.reg_head_chan,
@@ -1038,7 +1039,7 @@ class TransMorphTVFAutoPETAtlas(nn.Module):
             out_channels=3,
             kernel_size=3,
         )
-        self.upsamp = nn.Upsample(scale_factor=2, mode="trilinear", align_corners=False)
+        self.upsamp = _amp.Upsample(scale_factor=2, mode="trilinear", align_corners=False)
         self.integrate = utils.VecInt((config.img_size[0] * 2, config.img_size[1] * 2, config.img_size[2] * 2), 7)
 
     def forward(self, inputs: Tuple[torch.Tensor, torch.Tensor]) -> Tuple[torch.Tensor, ...]:
@@ -1088,7 +1089,7 @@ class TransMorphTVFAutoPETAtlas(nn.Module):
             def_x = self.spatial_trans_half(mov, flow_new)
             flow_previous = flow_new
         flow = flow_new
-        pos_flow = F.interpolate(flow, scale_factor=2, mode='trilinear', align_corners=False) * 2
+        pos_flow = _amp.interpolate(flow, scale_factor=2, mode='trilinear', align_corners=False) * 2
         neg_flow = -pos_flow
         pos_flow = self.integrate(pos_flow)
         neg_flow = self.integrate(neg_flow)
