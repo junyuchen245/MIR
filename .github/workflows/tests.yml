@@ -8,6 +8,7 @@ on:
       - "tests/**"
       - "tools/**"
       - "pyproject.toml"
+      - ".github/workflows/tests.yml"
       - "requirements.txt"
   pull_request:
     branches: [main]
@@ -16,6 +17,7 @@ on:
       - "tests/**"
       - "tools/**"
       - "pyproject.toml"
+      - ".github/workflows/tests.yml"
       - "requirements.txt"
   workflow_dispatch:
 
