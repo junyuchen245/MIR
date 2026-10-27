@@ -30,8 +30,31 @@ def _default_perm(ndim: int) -> Tuple[int, ...]:
     return tuple(reversed(range(ndim)))
 
 
-def write_l2r(path: str | Path, data: np.ndarray, spacing: Iterable[float] | None = None,
-              perm: Iterable[int] | None = None, compresslevel: int = 3) -> None:
+def write_l2r(
+    path: str | Path,
+    data: np.ndarray,
+    spacing: Iterable[float] | None = None,
+    perm: Iterable[int] | None = None,
+    compresslevel: int = 3,
+) -> None:
+    """Write an array to an L2R image file.
+
+    The header (little-endian) holds the magic ``b"L2RIMG"``, version, ndim, dtype code, shape, float32 spacing and
+    the permutation; the payload is the transposed array (``np.transpose(data, perm)``, C order) compressed with
+    zlib. Parent directories are created as needed.
+
+    Args:
+        path: Output file path.
+        data: Array with dtype uint8, int16, int32, float32 or float64.
+        spacing: Voxel spacing per axis (defaults to all ones).
+        perm: Axis permutation applied before compression (defaults to reversed axes).
+        compresslevel: zlib compression level.
+
+    Raises:
+        ValueError: If the dtype is unsupported, ``perm`` is not a permutation of the axes, or ``spacing`` has the
+            wrong length.
+
+    """
     data = np.asarray(data)
     dtype = data.dtype
     if dtype not in _DTYPE_TO_CODE:
@@ -77,6 +100,19 @@ def write_l2r(path: str | Path, data: np.ndarray, spacing: Iterable[float] | Non
 
 
 def read_l2r(path: str | Path) -> Tuple[np.ndarray, Tuple[float, ...]]:
+    """Read an L2R image file written by :func:`write_l2r`.
+
+    Args:
+        path: Input file path.
+
+    Returns:
+        Tuple ``(data, spacing)``: the array in its original axis order and dtype (a read-only view of the
+        decompressed buffer) and the per-axis spacing as Python floats (stored as float32).
+
+    Raises:
+        ValueError: If the magic, version or dtype code is invalid.
+
+    """
     path = Path(path)
     with open(path, "rb") as f:
         magic, version, ndim, dtype_code, perm_len = struct.unpack("<6sBBBB", f.read(10))

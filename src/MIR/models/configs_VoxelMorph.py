@@ -2,6 +2,7 @@
 
 import ml_collections
 
+
 def get_VXM_1_config():
     """Return VoxelMorph-1 config.
 
@@ -15,6 +16,7 @@ def get_VXM_1_config():
     config.unet_feat_mult = 1
     config.use_probs = False
     return config
+
 
 def get_VXM_default_config():
     """Return default VoxelMorph-2 config.
@@ -30,6 +32,7 @@ def get_VXM_default_config():
     config.use_probs = False
     return config
 
+
 def get_VXM_BJ_config():
     """Return VoxelMorph-BJ config.
 
@@ -38,7 +41,7 @@ def get_VXM_BJ_config():
     """
     config = ml_collections.ConfigDict()
     config.img_size = (160, 192, 224)
-    config.nb_unet_features = ((16,32,64,96,128), (128, 128, 96, 64, 32, 32))
+    config.nb_unet_features = ((16, 32, 64, 96, 128), (128, 128, 96, 64, 32, 32))
     config.nb_unet_levels = None
     config.unet_feat_mult = 1
     config.use_probs = False

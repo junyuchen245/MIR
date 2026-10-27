@@ -12,6 +12,16 @@ class NormalizedGradientFieldLoss(nn.Module):
 
     This loss is robust to intensity differences by comparing normalized image gradients.
     Inputs are assumed to be normalized to [0, 1].
+
+    Both images are optionally box-smoothed, then central-difference gradients are computed per channel. The voxel-wise
+    score is ``((g_t . g_p)^2 + eps) / ((|g_t|^2 + eta^2) (|g_p|^2 + eta^2) + eps)`` and the loss is
+    ``1 - mean(score)`` over all batch, channel and spatial elements. Works for 2D (``[B, C, H, W]``) and 3D
+    (``[B, C, H, W, D]``) inputs.
+
+    Args:
+        eps: Small constant for numerical stability.
+        eta: Edge parameter; gradients with magnitude well below ``eta`` are treated as noise.
+        smooth_window: Kernel size of the average-pooling pre-smoothing; values ``<= 1`` disable smoothing.
     """
 
     def __init__(self, eps: float = 1e-6, eta: float = 0.01, smooth_window: int = 3):
@@ -62,6 +72,18 @@ class NormalizedGradientFieldLoss(nn.Module):
         return gx, gy, gz
 
     def forward(self, y_true: torch.Tensor, y_pred: torch.Tensor) -> torch.Tensor:
+        """Compute the NGF loss (symmetric in its two arguments).
+
+        Args:
+            y_true: Fixed image ``[B, C, H, W]`` or ``[B, C, H, W, D]``.
+            y_pred: Moving (warped) image with the same shape.
+
+        Returns:
+            Scalar loss ``1 - mean(NGF)`` to minimise.
+
+        Raises:
+            ValueError: If the inputs differ in dimensionality or are not 4D/5D.
+        """
         if y_true.dim() != y_pred.dim():
             raise ValueError("y_true and y_pred must have the same number of dimensions.")
         if y_true.dim() not in {4, 5}:
@@ -85,5 +107,5 @@ class NormalizedGradientFieldLoss(nn.Module):
             norm_t = gx_t.pow(2) + gy_t.pow(2) + gz_t.pow(2)
             norm_p = gx_p.pow(2) + gy_p.pow(2) + gz_p.pow(2)
 
-        ngf = (dot.pow(2) + self.eps) / ((norm_t + self.eta ** 2) * (norm_p + self.eta ** 2) + self.eps)
+        ngf = (dot.pow(2) + self.eps) / ((norm_t + self.eta**2) * (norm_p + self.eta**2) + self.eps)
         return 1.0 - ngf.mean()

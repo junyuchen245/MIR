@@ -1,14 +1,45 @@
+"""Synthetic training pairs from Perlin-noise shapes and random smooth deformations (CUDA required)."""
+
+from typing import Optional, Sequence, Tuple
+
 import torch
 import torch.nn.functional as F
-from MIR.random_image_generation.perlin_numpy import generate_fractal_noise_3d_torch, generate_perlin_noise_3d_torch
+from MIR.random_image_generation.perlin_numpy import generate_fractal_noise_3d_torch, generate_perlin_noise_3d_torch  # noqa: F401 -- re-exported
 import numpy as np
 import random
 import MIR.models.registration_utils as utils
 
-def gen_defs(img_size, down_factor_def=4, freq = 1,lacunarity = 2, res = (5, 6, 7), rescale=False, magnitude=None):
-    '''
-    Generate random deformation fields
-    '''
+
+def gen_defs(
+    img_size: Sequence[int],
+    down_factor_def: int = 4,
+    freq: int = 1,
+    lacunarity: int = 2,
+    res: Sequence[int] = (5, 6, 7),
+    rescale: bool = False,
+    magnitude: Optional[float] = None,
+) -> torch.Tensor:
+    """Generate a random diffeomorphic deformation field from fractal Perlin noise.
+
+    Each of the three velocity components is fractal Perlin noise (1 or 2 octaves, chosen at random) generated at
+    ``img_size // down_factor_def``, trilinearly upsampled by ``down_factor_def`` and scaled; the velocity is
+    integrated with :class:`~MIR.models.registration_utils.VecInt` (5 steps) on the GPU. Runs under
+    ``torch.no_grad()`` and uses ``np.random``.
+
+    Args:
+        img_size: Image size ``(H, W, D)``; each entry should be divisible by ``down_factor_def``.
+        down_factor_def: Downsampling factor of the noise grid.
+        freq: Base frequency of the noise (sets the size of the random gradient grids).
+        lacunarity: Frequency multiplier between octaves.
+        res: Number of noise periods per axis.
+        rescale: If True, multiply the velocity by ``magnitude`` (or by ``down_factor_def`` if ``magnitude`` is
+            None); otherwise the scale factor is 1.
+        magnitude: Velocity scale used when ``rescale`` is True.
+
+    Returns:
+        Displacement field ``[1, 3, H, W, D]`` on the CUDA device.
+
+    """
     with torch.no_grad():
         if rescale and magnitude is not None:
             recale_factor = magnitude
@@ -19,29 +50,48 @@ def gen_defs(img_size, down_factor_def=4, freq = 1,lacunarity = 2, res = (5, 6, 
         H, W, D = img_size
         out_size = (H // down_factor_def, W // down_factor_def, D // down_factor_def)
         rand_defs = []
-        for i_ in range(3):
+        for _i in range(3):
             r1s = []
             r2s = []
             frequency = freq
             octaves = np.random.randint(1, 3, size=1)[0]
-            for i in range(octaves):
+            for _i in range(octaves):
                 r1 = np.random.rand(frequency * res[0] + 1, frequency * res[1] + 1, frequency * res[2] + 1)
                 r2 = np.random.rand(frequency * res[0] + 1, frequency * res[1] + 1, frequency * res[2] + 1)
                 r1s.append(r1)
                 r2s.append(r2)
                 frequency *= lacunarity
             randdef = generate_fractal_noise_3d_torch(out_size, res, octaves, rand1=r1s, rand2=r2s)
-            randdef = F.interpolate(randdef[None, None], scale_factor=down_factor_def, mode='trilinear',
-                                    align_corners=False)
-            randdef = randdef*recale_factor
+            randdef = F.interpolate(
+                randdef[None, None], scale_factor=down_factor_def, mode='trilinear', align_corners=False
+            )
+            randdef = randdef * recale_factor
             rand_defs.append(randdef)
         rand_def = torch.cat(rand_defs, dim=1)
         rand_def = utils.VecInt(img_size, nsteps=5).cuda()(rand_def.cuda())
         return rand_def
 
-def gen_shapes(img_size, down_factor=16, freq = 1, res = (5, 6, 7), num_label=16, mean_min=None, mean_max=None, std_min=None, std_max=None, add_noise=False):
-    '''
-    Generate random shapes using perlin noise
+
+def gen_shapes(
+    img_size: Sequence[int],
+    down_factor: int = 16,
+    freq: int = 1,
+    res: Sequence[int] = (5, 6, 7),
+    num_label: int = 16,
+    mean_min: Optional[Sequence[float]] = None,
+    mean_max: Optional[Sequence[float]] = None,
+    std_min: Optional[Sequence[float]] = None,
+    std_max: Optional[Sequence[float]] = None,
+    add_noise: bool = False,
+) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    """Generate a pair of deformed images with label maps from random Perlin-noise shapes.
+
+    ``num_label`` Perlin-noise volumes are generated and the label map is their voxel-wise argmax. Each label gets
+    a random mean intensity drawn uniformly from ``[mean_min, mean_max]`` (and optionally uniform noise scaled by a
+    std drawn from ``[std_min, std_max]``). The same image is warped by two independent random deformations
+    (:func:`gen_defs`, each multiplied by a random amplitude from ``{4, 6, 8, 14, 16, 18}``) and min-max normalized
+    to [0, 1]. Requires CUDA; runs under ``torch.no_grad()``.
+
     Args:
         img_size (tuple): Size of the images to be generated.
         down_factor (int): Downsampling factor for the generated Perlin noise.
@@ -53,18 +103,18 @@ def gen_shapes(img_size, down_factor=16, freq = 1, res = (5, 6, 7), num_label=16
         std_min (list): Minimum standard deviation values for each label.
         std_max (list): Maximum standard deviation values for each label.
         add_noise (bool): Whether to add noise to the generated images.
+
     Returns:
-        img_1 (torch.Tensor): First generated image.
-        img_2 (torch.Tensor): Second generated image.
-        lbl_1 (torch.Tensor): Label map for the first image.
-        lbl_2 (torch.Tensor): Label map for the second image.
-    '''
+        Tuple ``(img_1, img_2, lbl_1, lbl_2)`` of CUDA tensors ``[1, 1, H, W, D]``: the two images in [0, 1] and their
+        label maps (float, values ``0..num_label-1``).
+
+    """
     with torch.no_grad():
         H, W, D = img_size
         out_size = (H // down_factor, W // down_factor, D // down_factor)
         octaves = 1
         lbls = []
-        for i_ in range(num_label):
+        for _i in range(num_label):
             r1s = []
             r2s = []
             frequency = freq
@@ -74,7 +124,7 @@ def gen_shapes(img_size, down_factor=16, freq = 1, res = (5, 6, 7), num_label=16
             r2s.append(r2)
             noise = generate_fractal_noise_3d_torch(out_size, res, octaves, rand1=r1s, rand2=r2s)
             noise = F.interpolate(noise[None, None], scale_factor=down_factor, mode='trilinear', align_corners=False)
-            noise = (noise - noise.min()) / (noise.max() - noise.min())#*rnd[0]
+            noise = (noise - noise.min()) / (noise.max() - noise.min())  # *rnd[0]
             lbls.append(noise)
 
         '''
@@ -103,14 +153,14 @@ def gen_shapes(img_size, down_factor=16, freq = 1, res = (5, 6, 7), num_label=16
             std = torch.from_numpy(s0 - s1).cuda() * torch.rand(num_label).cuda() + torch.from_numpy(s1).cuda()
             noise = torch.rand(lbl.shape).cuda()
         for i in range(num_label):
-            mean_img = torch.where(lbl.float()==i, mean[i], mean_img)
+            mean_img = torch.where(lbl.float() == i, mean[i], mean_img)
             if add_noise:
-                std_img = torch.where(lbl.float()==i, std[i], std_img)
+                std_img = torch.where(lbl.float() == i, std[i], std_img)
         if add_noise:
-            img = noise*std_img+mean_img
+            img = noise * std_img + mean_img
         else:
             img = mean_img
-        
+
         '''
         Apply random deformation to the generated shapes -> a pair of moving and fixed image
         '''
@@ -127,11 +177,26 @@ def gen_shapes(img_size, down_factor=16, freq = 1, res = (5, 6, 7), num_label=16
         img_2 = (img_2 - img_2.min()) / (img_2.max() - img_2.min())
     return img_1, img_2, lbl_1, lbl_2
 
-def gen_shapes_multimodal(img_size, down_factor=16, freq=1, res=(5, 6, 7), num_label=16, mean_min=None, mean_max=None, std_min=None, std_max=None, add_noise=False, return_all_combinations=False, probability=-1):
-    """
-    Generate a pair of 3‑D images + label maps.
-    Each image gets its own random intensity per label so they
-    resemble two imaging modalities of the same anatomy.
+
+def gen_shapes_multimodal(
+    img_size: Sequence[int],
+    down_factor: int = 16,
+    freq: int = 1,
+    res: Sequence[int] = (5, 6, 7),
+    num_label: int = 16,
+    mean_min: Optional[Sequence[float]] = None,
+    mean_max: Optional[Sequence[float]] = None,
+    std_min: Optional[Sequence[float]] = None,
+    std_max: Optional[Sequence[float]] = None,
+    add_noise: bool = False,
+    return_all_combinations: bool = False,
+    probability: float = -1,
+) -> Tuple[torch.Tensor, ...]:
+    """Generate a pair of 3-D images + label maps that resemble two modalities of the same anatomy.
+
+    Shapes and deformations are generated as in :func:`gen_shapes`, but each image gets its own random intensity
+    per label (unless the pair is made mono-modal, see ``probability``). Requires CUDA.
+
     Args:
         img_size (tuple): Size of the images to be generated.
         down_factor (int): Downsampling factor for the generated Perlin noise.
@@ -144,12 +209,15 @@ def gen_shapes_multimodal(img_size, down_factor=16, freq=1, res=(5, 6, 7), num_l
         std_max (list): Maximum standard deviation values for each label.
         add_noise (bool): Whether to add noise to the generated images.
         return_all_combinations (bool): Whether to return all combinations of images.
-        probability (float): Probability of generating a second image.
+        probability (float): Probability that both images share the same intensity map (a mono-modal pair);
+            values <= 0 always give two different intensity maps.
+
     Returns:
-        img_1 (torch.Tensor): First generated image.
-        img_2 (torch.Tensor): Second generated image.
-        lbl_1 (torch.Tensor): Label map for the first image.
-        lbl_2 (torch.Tensor): Label map for the second image.
+        ``(img_1, img_2, lbl_1, lbl_2)``: CUDA tensors ``[1, 1, H, W, D]``; images are min-max normalized to [0, 1],
+        labels are float maps with values ``0..num_label-1``. With ``return_all_combinations`` a 6-tuple
+        ``(img_1_m1, img_1_m2, img_2_m1, img_2_m2, lbl_1, lbl_2)`` is returned, where ``img_k_mj`` is intensity map
+        ``j`` warped by deformation ``k``.
+
     """
     with torch.no_grad():
         # --------------------------------------------------
@@ -161,18 +229,10 @@ def gen_shapes_multimodal(img_size, down_factor=16, freq=1, res=(5, 6, 7), num_l
         lbls = []
         for _ in range(num_label):
             r1s, r2s = [], []
-            r1s.append(np.random.rand(freq * res[0] + 1,
-                                      freq * res[1] + 1,
-                                      freq * res[2] + 1))
-            r2s.append(np.random.rand(freq * res[0] + 1,
-                                      freq * res[1] + 1,
-                                      freq * res[2] + 1))
-            noise = generate_fractal_noise_3d_torch(out_size, res, octaves,
-                                                    rand1=r1s, rand2=r2s)
-            noise = F.interpolate(noise[None, None],
-                                   scale_factor=down_factor,
-                                   mode='trilinear',
-                                   align_corners=False)
+            r1s.append(np.random.rand(freq * res[0] + 1, freq * res[1] + 1, freq * res[2] + 1))
+            r2s.append(np.random.rand(freq * res[0] + 1, freq * res[1] + 1, freq * res[2] + 1))
+            noise = generate_fractal_noise_3d_torch(out_size, res, octaves, rand1=r1s, rand2=r2s)
+            noise = F.interpolate(noise[None, None], scale_factor=down_factor, mode='trilinear', align_corners=False)
             noise = (noise - noise.min()) / (noise.max() - noise.min())
             lbls.append(noise)
 
@@ -186,19 +246,16 @@ def gen_shapes_multimodal(img_size, down_factor=16, freq=1, res=(5, 6, 7), num_l
             """Return an intensity volume where each label has its own mean (and std)."""
             # set default bounds if none provided
             _mean_min = [0] + [25] * (num_label - 1) if mean_min is None else mean_min
-            _mean_max = [225] * num_label            if mean_max is None else mean_max
-            _std_min  = [0] + [5]  * (num_label - 1) if std_min  is None else std_min
-            _std_max  = [25] * num_label             if std_max  is None else std_max
+            _mean_max = [225] * num_label if mean_max is None else mean_max
+            _std_min = [0] + [5] * (num_label - 1) if std_min is None else std_min
+            _std_max = [25] * num_label if std_max is None else std_max
 
-            m0, m1, s0, s1 = map(np.asarray, (_mean_min, _mean_max,
-                                              _std_min, _std_max))
+            m0, m1, s0, s1 = map(np.asarray, (_mean_min, _mean_max, _std_min, _std_max))
             # draw random mean/std per label
-            mean = torch.from_numpy(m0 - m1).cuda() * torch.rand(num_label).cuda() + \
-                   torch.from_numpy(m1).cuda()
+            mean = torch.from_numpy(m0 - m1).cuda() * torch.rand(num_label).cuda() + torch.from_numpy(m1).cuda()
 
             if add_noise:
-                std = torch.from_numpy(s0 - s1).cuda() * torch.rand(num_label).cuda() + \
-                      torch.from_numpy(s1).cuda()
+                std = torch.from_numpy(s0 - s1).cuda() * torch.rand(num_label).cuda() + torch.from_numpy(s1).cuda()
                 noise_vol = torch.rand(lbl.shape).cuda()
 
             # build the volume
@@ -232,7 +289,7 @@ def gen_shapes_multimodal(img_size, down_factor=16, freq=1, res=(5, 6, 7), num_l
         rand_def_2 = rand_def_2 * amps[0]
 
         st_nearest = utils.SpatialTransformer(img_size, 'nearest').cuda()
-        st_linear  = utils.SpatialTransformer(img_size, 'bilinear').cuda()
+        st_linear = utils.SpatialTransformer(img_size, 'bilinear').cuda()
 
         lbl_1 = st_nearest(lbl.float().cuda(), rand_def_1.float().cuda())
         img_1 = st_linear(img_base_1.cuda(), rand_def_1.float().cuda())
@@ -242,21 +299,35 @@ def gen_shapes_multimodal(img_size, down_factor=16, freq=1, res=(5, 6, 7), num_l
         # rescale to [0, 1] just as before
         img_1 = (img_1 - img_1.min()) / (img_1.max() - img_1.min())
         img_2 = (img_2 - img_2.min()) / (img_2.max() - img_2.min())
-        
+
     if return_all_combinations:
         img_1_m1 = img_1
         img_2_m2 = img_2
-        
+
         img_1_m2 = st_linear(img_base_2.cuda(), rand_def_1.float().cuda())
         img_2_m1 = st_linear(img_base_1.cuda(), rand_def_2.float().cuda())
-        
+
         img_1_m2 = (img_1_m2 - img_1_m2.min()) / (img_1_m2.max() - img_1_m2.min())
         img_2_m1 = (img_2_m1 - img_2_m1.min()) / (img_2_m1.max() - img_2_m1.min())
         return img_1_m1, img_1_m2, img_2_m1, img_2_m2, lbl_1, lbl_2
-        
+
     return img_1, img_2, lbl_1, lbl_2
 
-def dice_Shape_VOI(y_pred, y_true, num_label=16):
+
+def dice_Shape_VOI(y_pred: torch.Tensor, y_true: torch.Tensor, num_label: int = 16) -> float:
+    """Mean Dice over labels ``0..num_label-1`` (background included) for the first batch element and channel.
+
+    Labels absent from both maps contribute a Dice of 0.
+
+    Args:
+        y_pred: Predicted label map ``[B, 1, H, W, D]``.
+        y_true: Ground-truth label map ``[B, 1, H, W, D]``.
+        num_label: Number of labels.
+
+    Returns:
+        Mean Dice score (NumPy float).
+
+    """
     VOI_lbls = np.arange(num_label)
     pred = y_pred.detach().cpu().numpy()[0, 0, ...]
     true = y_true.detach().cpu().numpy()[0, 0, ...]
@@ -268,7 +339,7 @@ def dice_Shape_VOI(y_pred, y_true, num_label=16):
         intersection = pred_i * true_i
         intersection = np.sum(intersection)
         union = np.sum(pred_i) + np.sum(true_i)
-        dsc = (2.*intersection) / (union + 1e-5)
-        DSCs[idx] =dsc
+        dsc = (2.0 * intersection) / (union + 1e-5)
+        DSCs[idx] = dsc
         idx += 1
     return np.mean(DSCs)

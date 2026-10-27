@@ -29,7 +29,8 @@ the package):
 
 The core dependencies (``numpy``, ``scipy``, ``nibabel``, ``SimpleITK``, ``einops``,
 ``timm``, ``ml_collections``, ``antspyx``, ``pymedio``, ``matplotlib``, ``seaborn``,
-``statsmodels``, ``natsort``, ``pytest``) are installed automatically.
+``statsmodels``, ``natsort``) are installed automatically. Test and developer tools are an
+optional extra (see below).
 
 Optional dependencies
 ---------------------
@@ -40,14 +41,16 @@ Optional dependencies
 
    * - Package
      - Needed for
-   * - ``gdown``
+   * - ``gdown`` (``pip install -e .[download]``)
      - Automatic download of pretrained weights and dataset JSON files in the tutorials.
    * - ``pydicom`` (``pip install -e .[dicom]``)
      - DICOM utilities (``mir-dicom-info`` command line tool, ``MIR.utils.dicom_utils``).
    * - ``tensorboard``
      - Training curves written by the tutorial training scripts.
-   * - ``black`` (``pip install -e .[dev]``)
-     - Code formatting for contributors.
+   * - ``pytest``, ``ruff``, ``pre-commit`` (``pip install -e .[dev]``)
+     - Running the test suite, linting and formatting (see :doc:`../development/contributing`).
+   * - Sphinx and theme (``pip install -e .[docs]``)
+     - Building this documentation locally.
 
 Platform notes
 --------------
@@ -62,8 +65,9 @@ Verifying the installation
 
 .. code-block:: bash
 
-   python3.8 -c "import MIR, torch; print(MIR.__file__, torch.cuda.is_available())"
-   python3.8 -m pytest tests -q      # unit tests (CPU, a few minutes)
+   python3.8 -c "import MIR, torch; print(MIR.__version__, MIR.__file__, torch.cuda.is_available())"
+   python3.8 -m pip install -e .[dev]
+   python3.8 -m pytest tests -q      # unit tests (CPU, about a minute)
 
 Pretrained weights
 ------------------
@@ -93,7 +97,7 @@ Building the documentation
 
 .. code-block:: bash
 
-   python3.8 -m pip install -r docs/requirements.txt
-   sphinx-build -b html docs docs/_build/html
+   python3.8 -m pip install -e .[docs]          # or: pip install -r docs/requirements.txt
+   python3.8 -m sphinx -b html docs docs/_build/html
 
 The published documentation is rebuilt automatically from the ``main`` branch.

@@ -11,10 +11,12 @@ from MIR.models import configs_VFA as configs_VFA
 import MIR.models.convexAdam.configs_ConvexAdam_MIND as configs_ConvexAdam
 from MIR.models import AffineReg3D
 
+
 def test_affine_reg_init_cpu():
     img_size = (16, 16, 16)
     model = AffineReg3D(img_size)
     assert model is not None
+
 
 def test_vfa_init_cpu():
     config = configs_VFA.get_VFA_default_config()

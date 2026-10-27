@@ -146,6 +146,13 @@ dataset and model (see the [tutorial catalogue](https://junyuchen.me/MIR/tutoria
 6. **deedsBCV** -- [[Repo](https://github.com/mattiaspaul/deedsBCV)] (Linux only)
 7. **LessNet** and **Fourier-Net / Fourier-Net+** -- *Jia, Xi, et al.* [[LessNet](https://github.com/xi-jia/LessNet)] | [[Fourier-Net](https://github.com/xi-jia/Fourier-Net)]
 
+## Contributing
+
+Issues and pull requests are welcome. See the
+[contributing guide](https://junyuchen.me/MIR/development/contributing.html) for the development setup,
+code style and the compatibility checks every change must pass, and the
+[changelog](https://junyuchen.me/MIR/about/changelog.html) for recent changes.
+
 ## Citing
 
 Please cite the paper of the model you use (listed above and on each model page) and link to this

@@ -1,5 +1,4 @@
-'''
-LessNet
+"""LessNet registration network wrapped for MIR.
 
 Original code retrieved from:
 https://github.com/xi-jia/LessNet
@@ -8,15 +7,27 @@ Modified for MIR by:
 Junyu Chen
 jchen245@jhmi.edu
 Johns Hopkins University
-'''
+"""
 
 import torch
 import torch.nn as nn
 import MIR.models.registration_utils as utils
+from typing import Tuple
 
 
 class LessNetUNet(nn.Module):
     """LessNet 3-D U-Net backbone from the original implementation.
+
+    The decoder starts from 1/8-resolution average/max/min pooled copies of both
+    images and re-injects pooled inputs at 1/4 and 1/2 resolution, so spatial
+    sizes must be divisible by 8. The output head ends with ``Softsign``, so
+    displacements lie in ``(-1, 1)``.
+
+    Args:
+        image_channels: Number of channels per input image.
+        n_classes: Number of output displacement channels.
+        start_channel: Upstream LessNet start channel hyperparameter.
+        return_features: If True, also return the final decoder feature map.
 
     Inputs:
         x: Moving image tensor of shape [B, C, D, H, W].
@@ -25,6 +36,7 @@ class LessNetUNet(nn.Module):
     Returns:
         Channel-first displacement field [B, 3, D, H, W] in the normalized
         grid-sampling coordinates predicted by the upstream LessNet code.
+
     """
 
     def __init__(self, image_channels=1, n_classes=3, start_channel=8, return_features=False):
@@ -35,6 +47,7 @@ class LessNetUNet(nn.Module):
             n_classes: Number of output displacement channels.
             start_channel: Upstream LessNet start channel hyperparameter.
             return_features: If True, also return the final decoder feature map.
+
         """
         super().__init__()
         self.image_channels = image_channels
@@ -47,17 +60,19 @@ class LessNetUNet(nn.Module):
 
         self.eninput = self.encoder(self.in_channel, self.start_channel * 4, bias=bias_opt)
 
-        self.dc1 = self.encoder(self.start_channel * 4, self.start_channel * 4, kernel_size=3,
-                                stride=1, bias=bias_opt)
+        self.dc1 = self.encoder(self.start_channel * 4, self.start_channel * 4, kernel_size=3, stride=1, bias=bias_opt)
         self.dc2 = self.encoder(self.start_channel * 4, self.start_channel * 4, kernel_size=3, stride=1, bias=bias_opt)
-        self.dc3 = self.encoder(self.start_channel * 3 + 6 * image_channels, self.start_channel * 3, kernel_size=3,
-                                stride=1, bias=bias_opt)
+        self.dc3 = self.encoder(
+            self.start_channel * 3 + 6 * image_channels, self.start_channel * 3, kernel_size=3, stride=1, bias=bias_opt
+        )
         self.dc4 = self.encoder(self.start_channel * 3, self.start_channel * 3, kernel_size=3, stride=1, bias=bias_opt)
-        self.dc5 = self.encoder(self.start_channel * 2 + 6 * image_channels, self.start_channel * 2, kernel_size=3,
-                                stride=1, bias=bias_opt)
+        self.dc5 = self.encoder(
+            self.start_channel * 2 + 6 * image_channels, self.start_channel * 2, kernel_size=3, stride=1, bias=bias_opt
+        )
         self.dc6 = self.encoder(self.start_channel * 2, self.start_channel * 2, kernel_size=3, stride=1, bias=bias_opt)
-        self.dc7 = self.encoder(self.start_channel * 1 + 2 * image_channels, self.start_channel * 1, kernel_size=3,
-                                stride=1, bias=bias_opt)
+        self.dc7 = self.encoder(
+            self.start_channel * 1 + 2 * image_channels, self.start_channel * 1, kernel_size=3, stride=1, bias=bias_opt
+        )
         self.dc8 = self.encoder(self.start_channel * 1, self.start_channel * 1, kernel_size=3, stride=1, bias=bias_opt)
         self.dc9 = self.outputs(self.start_channel * 1, self.n_classes, kernel_size=3, stride=1, padding=1, bias=False)
 
@@ -73,38 +88,89 @@ class LessNetUNet(nn.Module):
         self.avgp_1_8 = nn.AvgPool3d(8, stride=8)
 
     def encoder(self, in_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False, batchnorm=False):
-        """Create an upstream LessNet encoder block."""
+        """Create an upstream LessNet encoder block.
+
+        Args:
+            in_channels: Number of input channels.
+            out_channels: Number of output channels.
+            kernel_size: Convolution kernel size.
+            stride: Convolution stride.
+            padding: Convolution padding.
+            bias: Whether the convolution has a bias.
+            batchnorm: Insert ``BatchNorm3d`` before the activation.
+
+        Returns:
+            nn.Sequential: ``Conv3d`` (+ ``BatchNorm3d``) + ``LeakyReLU``.
+        """
         if batchnorm:
             layer = nn.Sequential(
                 nn.Conv3d(in_channels, out_channels, kernel_size, stride=stride, padding=padding, bias=bias),
                 nn.BatchNorm3d(out_channels),
-                nn.LeakyReLU())
+                nn.LeakyReLU(),
+            )
         else:
             layer = nn.Sequential(
                 nn.Conv3d(in_channels, out_channels, kernel_size, stride=stride, padding=padding, bias=bias),
-                nn.LeakyReLU())
+                nn.LeakyReLU(),
+            )
         return layer
 
     def decoder(self, in_channels, out_channels, kernel_size=2, stride=2, padding=0, output_padding=0, bias=True):
-        """Create an upstream LessNet decoder block."""
+        """Create an upstream LessNet decoder block.
+
+        Args:
+            in_channels: Number of input channels.
+            out_channels: Number of output channels.
+            kernel_size: Transposed-convolution kernel size.
+            stride: Transposed-convolution stride (2 doubles the resolution).
+            padding: Transposed-convolution padding.
+            output_padding: Transposed-convolution output padding.
+            bias: Whether the convolution has a bias.
+
+        Returns:
+            nn.Sequential: ``ConvTranspose3d`` + ``LeakyReLU``.
+        """
         layer = nn.Sequential(
-            nn.ConvTranspose3d(in_channels, out_channels, kernel_size, stride=stride,
-                               padding=padding, output_padding=output_padding, bias=bias),
-            nn.LeakyReLU())
+            nn.ConvTranspose3d(
+                in_channels,
+                out_channels,
+                kernel_size,
+                stride=stride,
+                padding=padding,
+                output_padding=output_padding,
+                bias=bias,
+            ),
+            nn.LeakyReLU(),
+        )
         return layer
 
-    def outputs(self, in_channels, out_channels, kernel_size=3, stride=1, padding=0,
-                bias=False, batchnorm=False):
-        """Create the upstream LessNet output head."""
+    def outputs(self, in_channels, out_channels, kernel_size=3, stride=1, padding=0, bias=False, batchnorm=False):
+        """Create the upstream LessNet output head.
+
+        Args:
+            in_channels: Number of input channels.
+            out_channels: Number of output channels.
+            kernel_size: Convolution kernel size.
+            stride: Convolution stride.
+            padding: Convolution padding.
+            bias: Whether the convolution has a bias.
+            batchnorm: Use ``Conv3d`` + ``BatchNorm2d`` + ``Tanh`` instead of
+                ``Conv3d`` + ``Softsign``.
+
+        Returns:
+            nn.Sequential: The output head.
+        """
         if batchnorm:
             layer = nn.Sequential(
                 nn.Conv3d(in_channels, out_channels, kernel_size, stride=stride, padding=padding, bias=bias),
                 nn.BatchNorm2d(out_channels),
-                nn.Tanh())
+                nn.Tanh(),
+            )
         else:
             layer = nn.Sequential(
                 nn.Conv3d(in_channels, out_channels, kernel_size, stride=stride, padding=padding, bias=bias),
-                nn.Softsign())
+                nn.Softsign(),
+            )
         return layer
 
     def _pooled_inputs(self, x, y, pool_scale):
@@ -120,8 +186,18 @@ class LessNetUNet(nn.Module):
             -max_pool(-y),
         )
 
-    def forward(self, x, y):
-        """Run the original LessNet forward pass."""
+    def forward(self, x: torch.Tensor, y: torch.Tensor):
+        """Run the original LessNet forward pass.
+
+        Args:
+            x: Moving image tensor of shape ``[B, C, D, H, W]``.
+            y: Fixed image tensor of shape ``[B, C, D, H, W]``.
+
+        Returns:
+            Normalized displacement field ``[B, n_classes, D, H, W]``; if
+            ``return_features`` is True, the tuple ``(flow, features)`` where
+            ``features`` is the final decoder map ``[B, start_channel, D, H, W]``.
+        """
         x_in = torch.cat(self._pooled_inputs(x, y, 8), 1)
         d0 = self.eninput(x_in)
 
@@ -160,6 +236,7 @@ class _LessNetBase(nn.Module):
         super().__init__()
         if configs is None:
             from MIR.models.configs_LessNet import get_LessNet_default_config
+
             configs = get_LessNet_default_config()
 
         self.configs = configs
@@ -226,12 +303,23 @@ class _LessNetBase(nn.Module):
 class LessNet(_LessNetBase):
     """MIR-callable LessNet registration model.
 
+    The upstream normalized-grid output is converted to voxel units and, if
+    ``SVF`` is enabled, integrated by scaling and squaring.
+
+    Args:
+        configs: Config object with LessNet hyperparameters (defaults to
+            ``get_LessNet_default_config()``).
+        gen_output: If True, also return the warped moving image.
+        SVF: Optional override for stationary velocity field integration.
+        SVF_steps: Optional override for scaling-and-squaring steps.
+
     Inputs:
         input_imgs: Tuple `(mov, fix)` of tensors [B, C, D, H, W].
 
     Returns:
         MIR-convention voxel displacement field [B, 3, D, H, W], or
         `(warped, flow)` when `gen_output` is True.
+
     """
 
     def __init__(self, configs=None, gen_output=False, SVF=None, SVF_steps=None):
@@ -242,6 +330,7 @@ class LessNet(_LessNetBase):
             gen_output: If True, also return the warped moving image.
             SVF: Optional override for stationary velocity field integration.
             SVF_steps: Optional override for scaling-and-squaring steps.
+
         """
         super().__init__(configs=configs, gen_output=gen_output, return_features=False)
         if SVF is not None:
@@ -249,14 +338,16 @@ class LessNet(_LessNetBase):
         if SVF_steps is not None:
             self.SVF_steps = int(SVF_steps)
 
-    def forward(self, input_imgs):
+    def forward(self, input_imgs: Tuple[torch.Tensor, torch.Tensor]):
         """Run LessNet registration.
 
         Args:
-            input_imgs: Tuple `(mov, fix)` tensors.
+            input_imgs: Tuple `(mov, fix)` tensors of shape ``[B, C, D, H, W]``.
 
         Returns:
-            Flow tensor, and optionally warped moving image.
+            Voxel displacement field ``[B, 3, D, H, W]`` (integrated if ``SVF``);
+            if `gen_output` is True, the tuple ``(warped, flow)``.
+
         """
         mov, fix = input_imgs
         flow = self._normalized_to_voxel_flow(self.unet(mov, fix))
@@ -271,10 +362,18 @@ class LessNet(_LessNetBase):
 class LessNetSPR(_LessNetBase):
     """LessNet with spatially varying regularization weights.
 
+    Args:
+        configs: Config object with LessNet hyperparameters (defaults to
+            ``get_LessNet_default_config()``).
+        SVF: Whether to integrate a stationary velocity field.
+        SVF_steps: Optional override for scaling-and-squaring steps.
+        gen_output: If True and `SVF=False`, also return warped moving image.
+
     Forward outputs:
         `(flow, x_weight)` when `SVF=False`, or
         `(pos_flow, neg_flow, x_weight)` when `SVF=True`, mirroring
-        `TransMorphTVFSPR`.
+        `TransMorphTVFSPR`. With `SVF=False` and `gen_output=True` the output is
+        `(warped, flow, x_weight)`.
     """
 
     def __init__(self, configs=None, SVF=True, SVF_steps=None, gen_output=False):
@@ -285,6 +384,7 @@ class LessNetSPR(_LessNetBase):
             SVF: Whether to integrate a stationary velocity field.
             SVF_steps: Optional override for scaling-and-squaring steps.
             gen_output: If True and `SVF=False`, also return warped moving image.
+
         """
         super().__init__(configs=configs, gen_output=gen_output, return_features=True)
         self.SVF = bool(SVF)
@@ -303,8 +403,19 @@ class LessNetSPR(_LessNetBase):
         self.wts_act = nn.Sigmoid()
         self.eps = 1e-6
 
-    def forward(self, input_imgs):
-        """Run LessNetSPR registration."""
+    def forward(self, input_imgs: Tuple[torch.Tensor, torch.Tensor]):
+        """Run LessNetSPR registration.
+
+        Args:
+            input_imgs: Tuple `(mov, fix)` tensors of shape ``[B, C, D, H, W]``.
+
+        Returns:
+            ``(pos_flow, neg_flow, x_weight)`` if ``SVF`` (forward and inverse
+            displacement fields in voxel units, clamped to ``[-100, 100]``);
+            otherwise ``(warped, flow, x_weight)`` when ``gen_output`` is True,
+            else ``(flow, x_weight)``. ``x_weight`` has shape ``[B, 1, D, H, W]``
+            with values in ``[1e-6, 1]``.
+        """
         mov, fix = input_imgs
         flow, features = self.unet(mov, fix)
         flow = self._normalized_to_voxel_flow(flow)

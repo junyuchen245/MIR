@@ -1,8 +1,14 @@
 import torch
 import pytest
 
-from MIR.models.TransMorphLDDMM import (FourierKernel, LDDMMIntegrator, TransMorphLDDMM,
-                                        jacobian_fd, det3x3, load_backbone_weights)
+from MIR.models.TransMorphLDDMM import (
+    FourierKernel,
+    LDDMMIntegrator,
+    TransMorphLDDMM,
+    jacobian_fd,
+    det3x3,
+    load_backbone_weights,
+)
 from MIR.models.registration_utils import SpatialTransformer
 import MIR.models.configs_TransMorph as configs_TransMorph
 
@@ -15,8 +21,10 @@ def _smooth_momentum(kernel, v0_max, seed=0):
     return m0 / kernel(m0).abs().max() * v0_max
 
 
-@pytest.mark.parametrize('kernel_kwargs', [dict(kernel='helmholtz', alpha=2.0, gamma=1.0, power=2),
-                                           dict(kernel='gaussian', sigma=[1.5, 3.0])])
+@pytest.mark.parametrize(
+    'kernel_kwargs',
+    [dict(kernel='helmholtz', alpha=2.0, gamma=1.0, power=2), dict(kernel='gaussian', sigma=[1.5, 3.0])],
+)
 def test_kernel_is_symmetric_positive_with_unit_dc_gain(kernel_kwargs):
     kernel = FourierKernel(**kernel_kwargs)
     ir = kernel.impulse_response(SIZE)
@@ -93,9 +101,14 @@ def _tiny_config():
     return config
 
 
-@pytest.mark.parametrize('kwargs', [dict(param='shooting', time_steps=3),
-                                    dict(param='shooting', time_steps=2, int_scale=2),
-                                    dict(param='tvf', time_steps=3)])
+@pytest.mark.parametrize(
+    'kwargs',
+    [
+        dict(param='shooting', time_steps=3),
+        dict(param='shooting', time_steps=2, int_scale=2),
+        dict(param='tvf', time_steps=3),
+    ],
+)
 def test_model_forward_backward(kwargs):
     torch.manual_seed(0)
     model = TransMorphLDDMM(_tiny_config(), **kwargs)
@@ -110,7 +123,7 @@ def test_model_forward_backward(kwargs):
     (out['flow'].abs().mean() + out['energy']).backward()
     head = model.reg_head if kwargs['param'] == 'shooting' else model.reg_heads[0]
     assert head[0].weight.grad is not None
-    assert model(( mov, fix)).shape == out['flow'].shape
+    assert model((mov, fix)).shape == out['flow'].shape
 
 
 def test_tvf_rejects_int_scale():
@@ -142,9 +155,14 @@ def _tiny_vxm():
     return VxmDense(config)
 
 
-@pytest.mark.parametrize('kwargs', [dict(param='shooting', time_steps=3),
-                                    dict(param='shooting', time_steps=2, int_scale=2),
-                                    dict(param='tvf', time_steps=3)])
+@pytest.mark.parametrize(
+    'kwargs',
+    [
+        dict(param='shooting', time_steps=3),
+        dict(param='shooting', time_steps=2, int_scale=2),
+        dict(param='tvf', time_steps=3),
+    ],
+)
 def test_wrapper_voxelmorph(kwargs):
     torch.manual_seed(0)
     model = LDDMMWrapper(_tiny_vxm(), **kwargs)
@@ -227,7 +245,7 @@ def test_spatially_varying_kernel_is_symmetric_psd_and_reduces_to_gaussian():
     onehot = torch.zeros_like(w)
     onehot[:, 1] = 1
     assert torch.allclose(kernel(p, onehot), FourierKernel('gaussian', sigma=2.0)(p), atol=1e-5)
-    assert kernel.omt(onehot * 0 + torch.tensor([0., 0., 1.]).view(1, 3, 1, 1, 1)) == 0
+    assert kernel.omt(onehot * 0 + torch.tensor([0.0, 0.0, 1.0]).view(1, 3, 1, 1, 1)) == 0
     assert 0 < kernel.omt(torch.full_like(w, 1 / 3)) <= 1
     assert kernel.effective_sigma(onehot).mean() == 2.0
 
@@ -302,17 +320,17 @@ def test_weights_from_spr_endpoints_and_interpolation():
     kernel = SpatiallyVaryingKernel([1.0, 2.0, 4.0], weight_smooth_sigma=0.0)
     ones = torch.ones(1, 1, *SIZE)
     w = kernel.weights_from_spr(ones)
-    assert torch.allclose(w[:, -1], torch.ones(1, *SIZE), atol=1e-4)      # lam = 1 -> smoothest
+    assert torch.allclose(w[:, -1], torch.ones(1, *SIZE), atol=1e-4)  # lam = 1 -> smoothest
     w = kernel.weights_from_spr(ones * 0)
-    assert torch.allclose(w[:, 0], torch.ones(1, *SIZE), atol=1e-4)       # lam = 0 -> sharpest
+    assert torch.allclose(w[:, 0], torch.ones(1, *SIZE), atol=1e-4)  # lam = 0 -> sharpest
     w = kernel.weights_from_spr(ones * 0.5)
-    assert torch.allclose(w[:, 1], torch.ones(1, *SIZE), atol=1e-4)       # halfway -> middle sigma
+    assert torch.allclose(w[:, 1], torch.ones(1, *SIZE), atol=1e-4)  # halfway -> middle sigma
     w = kernel.weights_from_spr(ones * 0.25)
     assert torch.allclose(w[:, 0], ones[:, 0] * 0.5, atol=1e-4) and torch.allclose(w[:, 1], ones[:, 0] * 0.5, atol=1e-4)
     assert torch.allclose(w.sum(dim=1), torch.ones(1, *SIZE), atol=1e-5)
     two = SpatiallyVaryingKernel([1.0, 4.0], weight_smooth_sigma=0.0)
     w = two.weights_from_spr(ones * 0.3)
-    assert torch.allclose(w[:, 0], ones[:, 0] * 0.7, atol=1e-4)           # [1 - lam, lam]
+    assert torch.allclose(w[:, 0], ones[:, 0] * 0.7, atol=1e-4)  # [1 - lam, lam]
 
 
 def test_spr_head_range_and_init():
@@ -322,7 +340,9 @@ def test_spr_head_range_and_init():
     assert abs(lam.mean().item() - torch.sigmoid(torch.tensor(2.0)).item()) < 1e-4
 
 
-@pytest.mark.parametrize('spr,param', [('kernel', 'shooting'), ('kernel', 'tvf'), ('energy', 'shooting'), ('energy', 'tvf')])
+@pytest.mark.parametrize(
+    'spr,param', [('kernel', 'shooting'), ('kernel', 'tvf'), ('energy', 'shooting'), ('energy', 'tvf')]
+)
 def test_wrapper_spr_with_head(spr, param):
     torch.manual_seed(0)
     kw = dict(sigmas=[1, 2, 4]) if spr == 'kernel' else {}

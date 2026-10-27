@@ -20,36 +20,112 @@ import os
 import sys
 from collections import OrderedDict
 from pathlib import Path
+from typing import Any, Dict, List, Optional, Sequence, TextIO, Tuple, Union
 
 
 # Header fields shown in the per-series summary, grouped by section.
-SUMMARY_FIELDS = OrderedDict([
-    ('Patient', ['PatientName', 'PatientID', 'PatientBirthDate', 'PatientSex',
-                 'PatientAge', 'PatientWeight', 'PatientSize']),
-    ('Study', ['StudyInstanceUID', 'StudyDate', 'StudyTime', 'StudyDescription',
-               'AccessionNumber', 'InstitutionName']),
-    ('Series', ['SeriesInstanceUID', 'SeriesNumber', 'SeriesDescription', 'Modality',
-                'SOPClassUID', 'SeriesDate', 'SeriesTime', 'BodyPartExamined',
-                'Manufacturer', 'ManufacturerModelName', 'FrameOfReferenceUID']),
-    ('Geometry', ['Rows', 'Columns', 'NumberOfFrames', 'PixelSpacing', 'SliceThickness',
-                  'SpacingBetweenSlices', 'ImageOrientationPatient', 'PatientPosition',
-                  'BitsStored', 'PixelRepresentation', 'PhotometricInterpretation',
-                  'RescaleSlope', 'RescaleIntercept', 'RescaleType']),
-    ('CT', ['KVP', 'XRayTubeCurrent', 'Exposure', 'ConvolutionKernel',
-            'ReconstructionDiameter', 'CTDIvol']),
-    ('MR', ['MagneticFieldStrength', 'SequenceName', 'ScanningSequence', 'RepetitionTime',
-            'EchoTime', 'InversionTime', 'FlipAngle', 'ReceiveCoilName']),
-    ('PET', ['Units', 'DecayCorrection', 'CorrectedImage', 'AttenuationCorrectionMethod',
-             'ReconstructionMethod', 'AcquisitionTime', 'FrameReferenceTime',
-             'ActualFrameDuration', 'DecayFactor', 'DoseCalibrationFactor']),
-])
+SUMMARY_FIELDS = OrderedDict(
+    [
+        (
+            'Patient',
+            [
+                'PatientName',
+                'PatientID',
+                'PatientBirthDate',
+                'PatientSex',
+                'PatientAge',
+                'PatientWeight',
+                'PatientSize',
+            ],
+        ),
+        (
+            'Study',
+            ['StudyInstanceUID', 'StudyDate', 'StudyTime', 'StudyDescription', 'AccessionNumber', 'InstitutionName'],
+        ),
+        (
+            'Series',
+            [
+                'SeriesInstanceUID',
+                'SeriesNumber',
+                'SeriesDescription',
+                'Modality',
+                'SOPClassUID',
+                'SeriesDate',
+                'SeriesTime',
+                'BodyPartExamined',
+                'Manufacturer',
+                'ManufacturerModelName',
+                'FrameOfReferenceUID',
+            ],
+        ),
+        (
+            'Geometry',
+            [
+                'Rows',
+                'Columns',
+                'NumberOfFrames',
+                'PixelSpacing',
+                'SliceThickness',
+                'SpacingBetweenSlices',
+                'ImageOrientationPatient',
+                'PatientPosition',
+                'BitsStored',
+                'PixelRepresentation',
+                'PhotometricInterpretation',
+                'RescaleSlope',
+                'RescaleIntercept',
+                'RescaleType',
+            ],
+        ),
+        ('CT', ['KVP', 'XRayTubeCurrent', 'Exposure', 'ConvolutionKernel', 'ReconstructionDiameter', 'CTDIvol']),
+        (
+            'MR',
+            [
+                'MagneticFieldStrength',
+                'SequenceName',
+                'ScanningSequence',
+                'RepetitionTime',
+                'EchoTime',
+                'InversionTime',
+                'FlipAngle',
+                'ReceiveCoilName',
+            ],
+        ),
+        (
+            'PET',
+            [
+                'Units',
+                'DecayCorrection',
+                'CorrectedImage',
+                'AttenuationCorrectionMethod',
+                'ReconstructionMethod',
+                'AcquisitionTime',
+                'FrameReferenceTime',
+                'ActualFrameDuration',
+                'DecayFactor',
+                'DoseCalibrationFactor',
+            ],
+        ),
+    ]
+)
 
 # Attributes treated as protected health information when ``hide_phi`` is set.
 PHI_FIELDS = {
-    'PatientName', 'PatientID', 'PatientBirthDate', 'OtherPatientIDs', 'OtherPatientNames',
-    'PatientAddress', 'PatientTelephoneNumbers', 'AccessionNumber', 'InstitutionName',
-    'InstitutionAddress', 'ReferringPhysicianName', 'PerformingPhysicianName',
-    'OperatorsName', 'StationName', 'StudyID',
+    'PatientName',
+    'PatientID',
+    'PatientBirthDate',
+    'OtherPatientIDs',
+    'OtherPatientNames',
+    'PatientAddress',
+    'PatientTelephoneNumbers',
+    'AccessionNumber',
+    'InstitutionName',
+    'InstitutionAddress',
+    'ReferringPhysicianName',
+    'PerformingPhysicianName',
+    'OperatorsName',
+    'StationName',
+    'StudyID',
 }
 PHI_MASK = '<hidden>'
 
@@ -74,7 +150,7 @@ def _format_value(value, max_len=120):
         except TypeError:
             value = str(value)
     s = str(value).replace('\n', ' ').replace('\r', ' ')
-    return s if len(s) <= max_len else s[:max_len - 3] + '...'
+    return s if len(s) <= max_len else s[: max_len - 3] + '...'
 
 
 def _parse_tag(tag):
@@ -101,18 +177,24 @@ def _get_element_value(ds, tag):
     return f'({key >> 16:04X},{key & 0xFFFF:04X})', None
 
 
-def scan_dicom_dir(dicom_dir, recursive=True):
+def scan_dicom_dir(dicom_dir: Union[str, os.PathLike], recursive: bool = True) -> Dict[str, List[Tuple[Path, Any]]]:
     """Read the headers of all DICOM files in a directory and group them by series.
 
-    Non-DICOM files are skipped silently. Pixel data is not loaded.
+    Non-DICOM files (unreadable, or without SOPClassUID and SeriesInstanceUID) and hidden files (names starting
+    with ``'.'``) are skipped silently. Pixel data is not loaded.
 
     Args:
         dicom_dir: Directory containing DICOM files (or a single DICOM file).
         recursive: Whether to descend into subdirectories.
 
     Returns:
-        OrderedDict mapping SeriesInstanceUID to a list of ``(path, dataset)``
-        tuples, sorted by InstanceNumber / slice position within each series.
+        OrderedDict mapping SeriesInstanceUID (``'UNKNOWN'`` if absent) to a list of ``(path, dataset)``
+        tuples, sorted by InstanceNumber, then ImagePositionPatient z, within each series.
+
+    Raises:
+        FileNotFoundError: If ``dicom_dir`` does not exist.
+        ImportError: If pydicom is not installed.
+
     """
     pydicom = _require_pydicom()
     dicom_dir = Path(dicom_dir)
@@ -148,16 +230,21 @@ def scan_dicom_dir(dicom_dir, recursive=True):
     return series
 
 
-def summarize_series(datasets, hide_phi=False):
+def summarize_series(datasets: Sequence[Tuple[Any, Any]], hide_phi: bool = False) -> Dict[str, Dict[str, str]]:
     """Collect the summary header fields for one series.
 
     Args:
         datasets: List of ``(path, dataset)`` tuples from :func:`scan_dicom_dir`.
         hide_phi: Mask patient-identifying fields.
 
+    Fields are read from the first dataset; PET radiopharmaceutical fields come from its
+    RadiopharmaceuticalInformationSequence. A ``'Derived'`` section (file count, first image position, slice z range,
+    median slice gap, example file) is computed from all datasets.
+
     Returns:
         OrderedDict mapping section name to an OrderedDict of field -> string value.
         Sections whose fields are all absent are omitted.
+
     """
     ds = datasets[0][1]
     summary = OrderedDict()
@@ -174,8 +261,13 @@ def summarize_series(datasets, hide_phi=False):
     if rp_seq:
         rp = rp_seq[0]
         entries = summary.setdefault('PET', OrderedDict())
-        for k in ['Radiopharmaceutical', 'RadionuclideTotalDose', 'RadionuclideHalfLife',
-                  'RadiopharmaceuticalStartTime', 'RadiopharmaceuticalStartDateTime']:
+        for k in [
+            'Radiopharmaceutical',
+            'RadionuclideTotalDose',
+            'RadionuclideHalfLife',
+            'RadiopharmaceuticalStartTime',
+            'RadiopharmaceuticalStartDateTime',
+        ]:
             if k in rp:
                 entries[k] = _format_value(rp.data_element(k).value)
         code_seq = getattr(rp, 'RadionuclideCodeSequence', None)
@@ -198,7 +290,7 @@ def summarize_series(datasets, hide_phi=False):
     return summary
 
 
-def full_header_lines(ds, hide_phi=False):
+def full_header_lines(ds: Any, hide_phi: bool = False) -> List[str]:
     """Return the full header of a dataset as a list of text lines.
 
     Args:
@@ -206,7 +298,9 @@ def full_header_lines(ds, hide_phi=False):
         hide_phi: Mask patient-identifying fields.
 
     Returns:
-        List of strings, one per element (nested sequences are indented).
+        List of strings, one per element (nested sequences are indented). File meta information, if present,
+        is listed first.
+
     """
     lines = []
 
@@ -230,7 +324,14 @@ def full_header_lines(ds, hide_phi=False):
     return lines
 
 
-def print_dicom_info(dicom_dir, full=False, tags=None, recursive=True, hide_phi=False, file=None):
+def print_dicom_info(
+    dicom_dir: Union[str, os.PathLike],
+    full: bool = False,
+    tags: Optional[Sequence[str]] = None,
+    recursive: bool = True,
+    hide_phi: bool = False,
+    file: Optional[TextIO] = None,
+) -> Dict[str, List[Tuple[Path, Any]]]:
     """Print the DICOM header information for every series in a directory.
 
     Args:
@@ -244,6 +345,7 @@ def print_dicom_info(dicom_dir, full=False, tags=None, recursive=True, hide_phi=
 
     Returns:
         The series dictionary from :func:`scan_dicom_dir`.
+
     """
     out = file or sys.stdout
     series = scan_dicom_dir(dicom_dir, recursive=recursive)
@@ -254,10 +356,9 @@ def print_dicom_info(dicom_dir, full=False, tags=None, recursive=True, hide_phi=
     n_files = sum(len(v) for v in series.values())
     print(f'Found {n_files} DICOM file(s) in {len(series)} series under {dicom_dir}', file=out)
 
-    for idx, (uid, datasets) in enumerate(series.items(), 1):
+    for idx, (_uid, datasets) in enumerate(series.items(), 1):
         ds = datasets[0][1]
-        title = f'Series {idx}/{len(series)}: {getattr(ds, "Modality", "?")} - ' \
-                f'{getattr(ds, "SeriesDescription", "")}'
+        title = f'Series {idx}/{len(series)}: {getattr(ds, "Modality", "?")} - {getattr(ds, "SeriesDescription", "")}'
         print('\n' + '=' * 80, file=out)
         print(title, file=out)
         print('=' * 80, file=out)
@@ -282,14 +383,25 @@ def print_dicom_info(dicom_dir, full=False, tags=None, recursive=True, hide_phi=
     return series
 
 
-def main(argv=None):
-    parser = argparse.ArgumentParser(
-        description='Print DICOM header information for each series in a directory.')
+def main(argv: Optional[Sequence[str]] = None) -> None:
+    """Command-line entry point; parses arguments and calls :func:`print_dicom_info`.
+
+    Args:
+        argv: Argument list (defaults to ``sys.argv[1:]``). Supports ``dicom_dir``, ``--full``, ``--tags``,
+            ``--no-recursive``, ``--hide-phi`` and ``-o/--output`` (write to a text file instead of stdout).
+
+    """
+    parser = argparse.ArgumentParser(description='Print DICOM header information for each series in a directory.')
     parser.add_argument('dicom_dir', help='Directory containing DICOM files (or a single DICOM file).')
-    parser.add_argument('--full', action='store_true',
-                        help='Also dump the full header of the first file in each series.')
-    parser.add_argument('--tags', nargs='+', default=None,
-                        help="Extra tags to print, as keywords or hex (e.g. PatientWeight 0x00281053 '0028,1053').")
+    parser.add_argument(
+        '--full', action='store_true', help='Also dump the full header of the first file in each series.'
+    )
+    parser.add_argument(
+        '--tags',
+        nargs='+',
+        default=None,
+        help="Extra tags to print, as keywords or hex (e.g. PatientWeight 0x00281053 '0028,1053').",
+    )
     parser.add_argument('--no-recursive', action='store_true', help='Do not descend into subdirectories.')
     parser.add_argument('--hide-phi', action='store_true', help='Mask patient-identifying fields.')
     parser.add_argument('-o', '--output', default=None, help='Write output to this text file instead of stdout.')
@@ -298,11 +410,18 @@ def main(argv=None):
     if args.output:
         os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
         with open(args.output, 'w') as f:
-            print_dicom_info(args.dicom_dir, full=args.full, tags=args.tags,
-                             recursive=not args.no_recursive, hide_phi=args.hide_phi, file=f)
+            print_dicom_info(
+                args.dicom_dir,
+                full=args.full,
+                tags=args.tags,
+                recursive=not args.no_recursive,
+                hide_phi=args.hide_phi,
+                file=f,
+            )
     else:
-        print_dicom_info(args.dicom_dir, full=args.full, tags=args.tags,
-                         recursive=not args.no_recursive, hide_phi=args.hide_phi)
+        print_dicom_info(
+            args.dicom_dir, full=args.full, tags=args.tags, recursive=not args.no_recursive, hide_phi=args.hide_phi
+        )
 
 
 if __name__ == '__main__':

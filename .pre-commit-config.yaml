@@ -1,0 +1,19 @@
+# Install once with `pip install -e .[dev] && pre-commit install`; the hooks then run on every commit.
+# Configuration (rules, vendored-code exclusions) lives in pyproject.toml.
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.9
+    hooks:
+      - id: ruff
+        files: ^(src/MIR|tests|tools)/
+      - id: ruff-format
+        files: ^(src/MIR|tests|tools)/
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: check-yaml
+      - id: check-toml
+      - id: end-of-file-fixer
+        files: ^(src/MIR|tests|tools)/
+      - id: trailing-whitespace
+        files: ^(src/MIR|tests|tools)/

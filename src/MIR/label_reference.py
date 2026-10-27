@@ -228,7 +228,7 @@ totalseg_v2_118labels = {
     114: 'Right rib 11',
     115: 'Right rib 12',
     116: 'Sternum',
-    117: 'Costal cartilages'
+    117: 'Costal cartilages',
 }
 
 wholebody_atlas_124labels = {
@@ -495,18 +495,12 @@ wholebody_atlas_132labels = {
 
 merged_regions_coarse_from_totalsegv2 = {
     "Background": [0],
-
     # Brain and head
     "Brain": [90],
     "Skull": [91],
-
     # Thoracic organs
     "Lungs": [10, 11, 12, 13, 14],
-    "Heart_Mediastinum_Vessels": [
-        51, 52, 53, 54, 55, 56, 57, 58,
-        59, 60, 61, 62, 63, 64
-    ],
-
+    "Heart_Mediastinum_Vessels": [51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64],
     # Abdominal solid organs
     "Liver": [5],
     "Spleen": [1],
@@ -514,48 +508,61 @@ merged_regions_coarse_from_totalsegv2 = {
     "Adrenals": [8, 9],
     "Pancreas": [7],
     "Gallbladder": [4],
-
     # Gastrointestinal tract
     "Stomach": [6],
     "Small_bowel": [18, 19],
     "Colon": [20],
-
     # Pelvic organs
     "Urinary_bladder": [21],
     "Prostate_region": [22],
-
     # Axial skeleton
     "Cervical_spine": [44, 45, 46, 47, 48, 49, 50],
     "Thoracic_spine": [32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43],
     "Lumbar_spine": [27, 28, 29, 30, 31],
     "Sacrum_S1": [25, 26],
-
     # Ribs and chest wall bones
     "Ribs_and_Sternum": [
-        92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103,
-        104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115,
-        116  # sternum
+        92,
+        93,
+        94,
+        95,
+        96,
+        97,
+        98,
+        99,
+        100,
+        101,
+        102,
+        103,
+        104,
+        105,
+        106,
+        107,
+        108,
+        109,
+        110,
+        111,
+        112,
+        113,
+        114,
+        115,
+        116,  # sternum
     ],
     "Clavicles_and_Scapulae": [71, 72, 73, 74],
-
     # Appendicular skeleton
     "Humeri": [69, 70],
     "Femora": [75, 76],
     "Hip_bones": [77, 78],
-
     # Major muscle groups (optional, can be one big region)
     "Gluteal_muscles": [80, 81, 82, 83, 84, 85],
     "Paraspinal_muscles": [86, 87],
     "Iliopsoas_muscles": [88, 89],
-
     # Spinal cord (rarely relevant for bone metastases, but keep separate)
     "Spinal_cord": [79],
-
     # Costal_cartilage (rarely needed, can be merged with ribs if you like)
     "Costal_cartilages": [117],
-
     # Thyroid, trachea, esophagus (optional separate soft tissue region)
-    "Neck_and_esophagus_soft_tissue": [15, 16, 17]
+    "Neck_and_esophagus_soft_tissue": [15, 16, 17],
 }
 
 totalseg_merged_40labels = {
@@ -633,190 +640,246 @@ totalseg_merged_29labels = {
     28: "Urinary bladder",
 }
 
+
 def remap_totalsegmentator_lbls(lbl, total_seg_version='v1', label_scheme='40lbls'):
     groups29_from_40 = [
-        [1],                #  1  Spleen
-        [2, 3],             #  2  Kidneys (R+L)
-        [4],                #  3  Gallbladder
-        [5],                #  4  Liver
-        [6],                #  5  Stomach
-        [7],                #  6  Aorta
-        [8],                #  7  Inferior vena cava
-        [9],                #  8  Portal & splenic veins
-        [10],               #  9  Pancreas
-        [11],               # 10  Adrenal right
-        [12],               # 11  Adrenal left
-        [13, 14],           # 12  Lungs (left+right)
-        [15],               # 13  Vertebrae
-        [16],               # 14  Esophagus
-        [17],               # 15  Trachea
-        [18],               # 16  Heart myocardium
-        [19],               # 17  Left atrium
-        [20],               # 18  Left ventricle
-        [21],               # 19  Right atrium
-        [22],               # 20  Right ventricle
-        [23],               # 21  Pulmonary artery
-        [24, 25, 26],       # 22  Intestine (small bowel + duodenum + colon)
-        [27],               # 23  Ribs
-        [28, 29, 30, 31, 32], # 24 Upper/lower limb bones (L/R) + sacrum
-        [33, 34],           # 25  Gluteal muscles (L+R)
-        [35, 36],           # 26  Autochthonous muscles (L+R)
-        [37, 38],           # 27  Iliopsoas muscles (L+R)
-        [39],               # 28  Urinary bladder
+        [1],  #  1  Spleen
+        [2, 3],  #  2  Kidneys (R+L)
+        [4],  #  3  Gallbladder
+        [5],  #  4  Liver
+        [6],  #  5  Stomach
+        [7],  #  6  Aorta
+        [8],  #  7  Inferior vena cava
+        [9],  #  8  Portal & splenic veins
+        [10],  #  9  Pancreas
+        [11],  # 10  Adrenal right
+        [12],  # 11  Adrenal left
+        [13, 14],  # 12  Lungs (left+right)
+        [15],  # 13  Vertebrae
+        [16],  # 14  Esophagus
+        [17],  # 15  Trachea
+        [18],  # 16  Heart myocardium
+        [19],  # 17  Left atrium
+        [20],  # 18  Left ventricle
+        [21],  # 19  Right atrium
+        [22],  # 20  Right ventricle
+        [23],  # 21  Pulmonary artery
+        [24, 25, 26],  # 22  Intestine (small bowel + duodenum + colon)
+        [27],  # 23  Ribs
+        [28, 29, 30, 31, 32],  # 24 Upper/lower limb bones (L/R) + sacrum
+        [33, 34],  # 25  Gluteal muscles (L+R)
+        [35, 36],  # 26  Autochthonous muscles (L+R)
+        [37, 38],  # 27  Iliopsoas muscles (L+R)
+        [39],  # 28  Urinary bladder
     ]
-    
+
     grouping_table_v1_40 = [
-        [1],                          # 1  Spleen
-        [2],                          # 2  Kidney right
-        [3],                          # 3  Kidney left
-        [4],                          # 4  Gallbladder
-        [5],                          # 5  Liver
-        [6],                          # 6  Stomach
-        [7],                          # 7  Aorta
-        [8],                          # 8  Inferior vena cava
-        [9],                          # 9  Portal & splenic veins
-        [10],                         # 10 Pancreas
-        [11],                         # 11 Adrenal right
-        [12],                         # 12 Adrenal left
-        [13, 14],                     # 13 Left lung (upper+lower)
-        [15, 16, 17],                 # 14 Right lung (upper+middle+lower)
-        list(range(18, 42)),          # 15 Vertebrae C1..L5 (18..41)
-        [42],                         # 16 Esophagus
-        [43],                         # 17 Trachea
-        [44],                         # 18 Heart myocardium
-        [45],                         # 19 Left atrium
-        [46],                         # 20 Left ventricle
-        [47],                         # 21 Right atrium
-        [48],                         # 22 Right ventricle
-        [49],                         # 23 Pulmonary artery
-        [55],                         # 24 Small bowel
-        [56],                         # 25 Duodenum
-        [57],                         # 26 Colon
-        list(range(58, 82)),          # 27 Ribs L1..L12 and R1..R12 (58..81)
-        [82, 84, 86],                 # 28 Upper limb bones (left) humerus+scapula+clavicle
-        [83, 85, 87],                 # 29 Upper limb bones (right)
-        [88, 90],                     # 30 Lower limb bones (left) femur+hip bone
-        [89, 91],                     # 31 Lower limb bones (right)
-        [92],                         # 32 Sacrum
-        [94, 96, 98],                 # 33 Gluteal muscles (left)
-        [95, 97, 99],                 # 34 Gluteal muscles (right)
-        [100],                        # 35 Autochthonous (left)
-        [101],                        # 36 Autochthonous (right)
-        [102],                        # 37 Iliopsoas (left)
-        [103],                        # 38 Iliopsoas (right)
-        [104],                        # 39 Urinary bladder
+        [1],  # 1  Spleen
+        [2],  # 2  Kidney right
+        [3],  # 3  Kidney left
+        [4],  # 4  Gallbladder
+        [5],  # 5  Liver
+        [6],  # 6  Stomach
+        [7],  # 7  Aorta
+        [8],  # 8  Inferior vena cava
+        [9],  # 9  Portal & splenic veins
+        [10],  # 10 Pancreas
+        [11],  # 11 Adrenal right
+        [12],  # 12 Adrenal left
+        [13, 14],  # 13 Left lung (upper+lower)
+        [15, 16, 17],  # 14 Right lung (upper+middle+lower)
+        list(range(18, 42)),  # 15 Vertebrae C1..L5 (18..41)
+        [42],  # 16 Esophagus
+        [43],  # 17 Trachea
+        [44],  # 18 Heart myocardium
+        [45],  # 19 Left atrium
+        [46],  # 20 Left ventricle
+        [47],  # 21 Right atrium
+        [48],  # 22 Right ventricle
+        [49],  # 23 Pulmonary artery
+        [55],  # 24 Small bowel
+        [56],  # 25 Duodenum
+        [57],  # 26 Colon
+        list(range(58, 82)),  # 27 Ribs L1..L12 and R1..R12 (58..81)
+        [82, 84, 86],  # 28 Upper limb bones (left) humerus+scapula+clavicle
+        [83, 85, 87],  # 29 Upper limb bones (right)
+        [88, 90],  # 30 Lower limb bones (left) femur+hip bone
+        [89, 91],  # 31 Lower limb bones (right)
+        [92],  # 32 Sacrum
+        [94, 96, 98],  # 33 Gluteal muscles (left)
+        [95, 97, 99],  # 34 Gluteal muscles (right)
+        [100],  # 35 Autochthonous (left)
+        [101],  # 36 Autochthonous (right)
+        [102],  # 37 Iliopsoas (left)
+        [103],  # 38 Iliopsoas (right)
+        [104],  # 39 Urinary bladder
     ]
-    
+
     grouping_table_v2_40 = [
-        [1],                           # 1 spleen
-        [2],                           # 2 kidney_right
-        [3],                           # 3 kidney_left
-        [4],                           # 4 gallbladder
-        [5],                           # 5 liver
-        [6],                           # 6 stomach
-        [52],                          # 7 aorta
-        [63],                          # 8 inferior_vena_cava
-        [64],                          # 9 portal_vein_and_splenic_vein
-        [7],                           # 10 pancreas
-        [8],                           # 11 adrenal_gland_right
-        [9],                           # 12 adrenal_gland_left
-        [10, 11],                      # 13 lung upper+lower lobe left
-        [12, 13, 14],                  # 14 lung upper/middle/lower right
-        [27, 28, 29, 30, 31, 32, 33,   # 15 vertebrae L5 to C1
-         34, 35, 36, 37, 38, 39, 40,
-         41, 42, 43, 44, 45, 46, 47,
-         48, 49, 50, 26, 25],          # Include S1 and sacrum (old grouping had sacrum separately, but L+T+C+S grouped)
-        [15],                          # 16 esophagus
-        [16],                          # 17 trachea
-        [51],                          # 18 heart (old version separated myocardium/atrium/ventricle but grouped into one label)
-        [61],                          # 19 heart_atrium_left (moved to same group as myocardium in old grouping)
-        [46],                          # 20 heart_ventricle_left -> (merged)
-        [47],                          # 21 heart_atrium_right -> (merged)
-        [48],                          # 22 heart_ventricle_right -> (merged)
-        [53],                          # 23 pulmonary vein (old had pulmonary artery, but analogous major pulmonary vessel group)
-        [18],                          # 24 small_bowel
-        [19],                          # 25 duodenum
-        [20],                          # 26 colon
-        [92, 93, 94, 95, 96, 97, 98,   # 27 left ribs 1-12
-         99, 100, 101, 102, 103,
-         104, 105, 106, 107, 108,      # right ribs 1-12
-         109, 110, 111, 112, 113,
-         114, 115],
-        [69, 71, 73],                  # 28 humerus_left, scapula_left, clavicula_left
-        [70, 72, 74],                  # 29 humerus_right, scapula_right, clavicula_right
-        [75, 77],                      # 30 femur_left, hip_left
-        [76, 78],                      # 31 femur_right, hip_right
-        [25],                          # 32 sacrum (old had sacrum alone too, but here also part of vertebrae group above if desired)
-        [80, 82, 84],                  # 33 gluteus_maximus_left, gluteus_medius_left, gluteus_minimus_left
-        [81, 83, 85],                  # 34 gluteus_maximus_right, gluteus_medius_right, gluteus_minimus_right
-        [86],                          # 35 autochthon_left
-        [87],                          # 36 autochthon_right
-        [88],                          # 37 iliopsoas_left
-        [89],                          # 38 iliopsoas_right
-        [21]                           # 39 urinary_bladder
+        [1],  # 1 spleen
+        [2],  # 2 kidney_right
+        [3],  # 3 kidney_left
+        [4],  # 4 gallbladder
+        [5],  # 5 liver
+        [6],  # 6 stomach
+        [52],  # 7 aorta
+        [63],  # 8 inferior_vena_cava
+        [64],  # 9 portal_vein_and_splenic_vein
+        [7],  # 10 pancreas
+        [8],  # 11 adrenal_gland_right
+        [9],  # 12 adrenal_gland_left
+        [10, 11],  # 13 lung upper+lower lobe left
+        [12, 13, 14],  # 14 lung upper/middle/lower right
+        [
+            27,
+            28,
+            29,
+            30,
+            31,
+            32,
+            33,  # 15 vertebrae L5 to C1
+            34,
+            35,
+            36,
+            37,
+            38,
+            39,
+            40,
+            41,
+            42,
+            43,
+            44,
+            45,
+            46,
+            47,
+            48,
+            49,
+            50,
+            26,
+            25,
+        ],  # Include S1 and sacrum (old grouping had sacrum separately, but L+T+C+S grouped)
+        [15],  # 16 esophagus
+        [16],  # 17 trachea
+        [51],  # 18 heart (old version separated myocardium/atrium/ventricle but grouped into one label)
+        [61],  # 19 heart_atrium_left (moved to same group as myocardium in old grouping)
+        [46],  # 20 heart_ventricle_left -> (merged)
+        [47],  # 21 heart_atrium_right -> (merged)
+        [48],  # 22 heart_ventricle_right -> (merged)
+        [53],  # 23 pulmonary vein (old had pulmonary artery, but analogous major pulmonary vessel group)
+        [18],  # 24 small_bowel
+        [19],  # 25 duodenum
+        [20],  # 26 colon
+        [
+            92,
+            93,
+            94,
+            95,
+            96,
+            97,
+            98,  # 27 left ribs 1-12
+            99,
+            100,
+            101,
+            102,
+            103,
+            104,
+            105,
+            106,
+            107,
+            108,  # right ribs 1-12
+            109,
+            110,
+            111,
+            112,
+            113,
+            114,
+            115,
+        ],
+        [69, 71, 73],  # 28 humerus_left, scapula_left, clavicula_left
+        [70, 72, 74],  # 29 humerus_right, scapula_right, clavicula_right
+        [75, 77],  # 30 femur_left, hip_left
+        [76, 78],  # 31 femur_right, hip_right
+        [25],  # 32 sacrum (old had sacrum alone too, but here also part of vertebrae group above if desired)
+        [80, 82, 84],  # 33 gluteus_maximus_left, gluteus_medius_left, gluteus_minimus_left
+        [81, 83, 85],  # 34 gluteus_maximus_right, gluteus_medius_right, gluteus_minimus_right
+        [86],  # 35 autochthon_left
+        [87],  # 36 autochthon_right
+        [88],  # 37 iliopsoas_left
+        [89],  # 38 iliopsoas_right
+        [21],  # 39 urinary_bladder
     ]
-    
+
     grouping_table_biological_meaningful_fromv2_118 = [
-        #[0],                                            # 0 "Background": 0
-         
+        # [0],                                            # 0 "Background": 0
         # Brain and head
-        #[90, 91],                                           # 1 "Brain": 
-        #[91],                                           # 2 "Skull": 
-
+        # [90, 91],                                           # 1 "Brain":
+        # [91],                                           # 2 "Skull":
         # Thoracic organs
-        [10, 11, 12, 13, 14],                           # 3 "Lungs": 1
-        [51, 52, 53, 54, 55, 56, 57, 58,
-        59, 60, 61, 62, 63, 64],                        # 4 "Heart_Mediastinum_Vessels": 2 
-
+        [10, 11, 12, 13, 14],  # 3 "Lungs": 1
+        [51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64],  # 4 "Heart_Mediastinum_Vessels": 2
         # Abdominal solid organs
-        #[5],                                            # 5 "Liver": 
-        #[1],                                            # 6 "Spleen": 
-        #[2, 3, 23, 24],                                 # 7 "Kidneys_and_Cysts": 
-        #[8, 9],                                         # 8 "Adrenals": 
-        [7],                                            # 9 "Pancreas": 3
-        [4],                                            # 10 "Gallbladder": 4 
-
+        # [5],                                            # 5 "Liver":
+        # [1],                                            # 6 "Spleen":
+        # [2, 3, 23, 24],                                 # 7 "Kidneys_and_Cysts":
+        # [8, 9],                                         # 8 "Adrenals":
+        [7],  # 9 "Pancreas": 3
+        [4],  # 10 "Gallbladder": 4
         # Gastrointestinal tract
-        [6],                                           # 11 "Stomach": 5
-        #[18, 19],                                      # 12 "Small_bowel": 
-        #[20],                                          # 13 "Colon": 
-
+        [6],  # 11 "Stomach": 5
+        # [18, 19],                                      # 12 "Small_bowel":
+        # [20],                                          # 13 "Colon":
         # Pelvic organs
-        #[21, 22],                                          # 14 "Urinary_bladder": 
-        #[22],                                          # 15 "Prostate_region": 
-
+        # [21, 22],                                          # 14 "Urinary_bladder":
+        # [22],                                          # 15 "Prostate_region":
         # Axial skeleton
-        [44, 45, 46, 47, 48, 49, 50],                     # 16 "Cervical_spine": 6 
-        [32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43], # 17 "Thoracic_spine": 7
-        [27, 28, 29, 30, 31],                             # 18 "Lumbar_spine":   8
-        [25, 26],                                         # 19 "Sacrum_S1":      9
-
+        [44, 45, 46, 47, 48, 49, 50],  # 16 "Cervical_spine": 6
+        [32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43],  # 17 "Thoracic_spine": 7
+        [27, 28, 29, 30, 31],  # 18 "Lumbar_spine":   8
+        [25, 26],  # 19 "Sacrum_S1":      9
         # Ribs and chest wall bones
-        [92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 105, 
-         106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116], # 20 "Ribs_and_Sternum": 10 
-        [71, 72, 73, 74],                                        # 21 "Clavicles_and_Scapulae": 11
-
+        [
+            92,
+            93,
+            94,
+            95,
+            96,
+            97,
+            98,
+            99,
+            100,
+            101,
+            102,
+            103,
+            105,
+            106,
+            107,
+            108,
+            109,
+            110,
+            111,
+            112,
+            113,
+            114,
+            115,
+            116,
+        ],  # 20 "Ribs_and_Sternum": 10
+        [71, 72, 73, 74],  # 21 "Clavicles_and_Scapulae": 11
         # Appendicular skeleton
-        [69, 70, 75, 76, 77, 78],                                       # 22 "Humeri": 12
-        #[75, 76],                                       # 23 "Femora":
-        #[77, 78],                                       # 24 "Hip_bones":
-
+        [69, 70, 75, 76, 77, 78],  # 22 "Humeri": 12
+        # [75, 76],                                       # 23 "Femora":
+        # [77, 78],                                       # 24 "Hip_bones":
         # Major muscle groups (optional, can be one big region)
-        #[80, 81, 82, 83, 84, 85],                       # 25 "Gluteal_muscles":
-        #[86, 87],                                       # 26 "Paraspinal_muscles":
-        #[88, 89],                                       # 27 "Iliopsoas_muscles":
-
+        # [80, 81, 82, 83, 84, 85],                       # 25 "Gluteal_muscles":
+        # [86, 87],                                       # 26 "Paraspinal_muscles":
+        # [88, 89],                                       # 27 "Iliopsoas_muscles":
         # Spinal cord (rarely relevant for bone metastases, but keep separate)
-        [79],                                          # 28 "Spinal_cord": 13
-
+        [79],  # 28 "Spinal_cord": 13
         # Costal_cartilage (rarely needed, can be merged with ribs if you like)
-        [117],                                         # 29 "Costal_cartilages": 14
-
+        [117],  # 29 "Costal_cartilages": 14
         # Thyroid, trachea, esophagus (optional separate soft tissue region)
-        [15, 16, 17]                                   # 30 "Neck_and_esophagus_soft_tissue": 15
+        [15, 16, 17],  # 30 "Neck_and_esophagus_soft_tissue": 15
     ]
-    
-    
+
     if total_seg_version == 'v1':
         grouping_table = grouping_table_v1_40
     elif total_seg_version == 'v2':

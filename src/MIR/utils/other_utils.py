@@ -3,6 +3,7 @@
 import pickle
 import re
 from pathlib import Path
+from typing import Any, Dict, Optional, Sequence, Tuple, Union
 import torch
 from torch import nn
 import torch.nn.functional as F
@@ -10,10 +11,12 @@ import zipfile
 import os
 from scipy.ndimage import zoom
 import numpy as np
+
 HERE = Path(__file__).resolve().parent
 text_path = HERE / "FreeSurfer_label_info.txt"
 
-def pkload(fname):
+
+def pkload(fname: Union[str, os.PathLike]) -> Any:
     """Load a pickled object from disk.
 
     Args:
@@ -21,43 +24,108 @@ def pkload(fname):
 
     Returns:
         Loaded object.
+
     """
     with open(fname, 'rb') as f:
         return pickle.load(f)
 
-def savepkl(data, path):
+
+def savepkl(data: Any, path: Union[str, os.PathLike]) -> None:
     """Save an object to a pickle file.
 
     Args:
         data: Object to serialize.
         path: Output pickle file path.
+
     """
     with open(path, 'wb') as f:
         pickle.dump(data, f)
-        
-def write2csv(line, name):
-    with open(name+'.csv', 'a') as file:
+
+
+def write2csv(line: str, name: str) -> None:
+    """Append a line to a CSV file.
+
+    Args:
+        line: Text to write (a newline is appended).
+        name: File name without extension; ``'.csv'`` is appended.
+
+    """
+    with open(name + '.csv', 'a') as file:
         file.write(line)
         file.write('\n')
-        
-def process_label():
-    #process labeling information for FreeSurfer
-    seg_table = [0, 2, 3, 4, 5, 7, 8, 10, 11, 12, 13, 14, 15, 16, 17, 18, 24, 26,
-                          28, 30, 31, 41, 42, 43, 44, 46, 47, 49, 50, 51, 52, 53, 54, 58, 60, 62,
-                          63, 72, 77, 80, 85, 251, 252, 253, 254, 255]
 
 
-    file1 = open(text_path, 'r')
+def process_label() -> Dict[int, str]:
+    """Build the lookup from contiguous label index to FreeSurfer structure name.
+
+    The 46 FreeSurfer label IDs used by MIR are mapped, in order, to indices 0..45 and their names are read from
+    ``FreeSurfer_label_info.txt`` next to this module.
+
+    Returns:
+        Dict mapping contiguous label index to structure name.
+
+    """
+    # process labeling information for FreeSurfer
+    seg_table = [
+        0,
+        2,
+        3,
+        4,
+        5,
+        7,
+        8,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        24,
+        26,
+        28,
+        30,
+        31,
+        41,
+        42,
+        43,
+        44,
+        46,
+        47,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        58,
+        60,
+        62,
+        63,
+        72,
+        77,
+        80,
+        85,
+        251,
+        252,
+        253,
+        254,
+        255,
+    ]
+
+    file1 = open(text_path)
     Lines = file1.readlines()
     dict = {}
     seg_i = 0
     seg_look_up = []
     for seg_label in seg_table:
         for line in Lines:
-            line = re.sub(' +', ' ',line).split(' ')
+            line = re.sub(' +', ' ', line).split(' ')
             try:
                 int(line[0])
-            except:
+            except (ValueError, IndexError):
                 continue
             if int(line[0]) == seg_label:
                 seg_look_up.append([seg_i, int(line[0]), line[1]])
@@ -65,45 +133,182 @@ def process_label():
         seg_i += 1
     return dict
 
-def SLANT_label_reassign(label_map):
+
+def SLANT_label_reassign(label_map: np.ndarray) -> np.ndarray:
     """Reassign SLANT label IDs to contiguous indices.
+
+    Each SLANT label value in the internal lookup table is replaced by its position in the table; values not in the
+    table are left unchanged.
 
     Args:
         label_map: Label map array.
 
     Returns:
-        Reassigned label map.
+        Reassigned label map (a copy with the dtype of ``label_map``).
+
     """
-    #process labeling information for SLANT
-    label_lookup = [0.,  4., 11., 23., 30., 31., 32., 35., 36., 37., 38., 39., 40., 41.,
-            44.,  45.,  47.,  48.,  49.,  50.,  51.,  52.,  55.,  56.,  57.,  58.,  59., 60.,
-            61.,  62.,  71.,  72.,  73.,  75.,  76., 100., 101., 102., 103., 104., 105., 106.,
-            107., 108., 109., 112., 113., 114., 115., 116., 117., 118., 119., 120., 121., 122.,
-            123., 124., 125., 128., 129., 132., 133., 134., 135., 136., 137., 138., 139., 140.,
-            141., 142., 143., 144., 145., 146., 147., 148., 149., 150., 151., 152., 153., 154.,
-            155., 156., 157., 160., 161., 162., 163., 164., 165., 166., 167., 168., 169., 170.,
-            171., 172., 173., 174., 175., 176., 177., 178., 179., 180., 181., 182., 183., 184.,
-            185., 186., 187., 190., 191., 192., 193., 194., 195., 196., 197., 198., 199., 200.,
-            201., 202., 203., 204., 205., 206., 207.,]
+    # process labeling information for SLANT
+    label_lookup = [
+        0.0,
+        4.0,
+        11.0,
+        23.0,
+        30.0,
+        31.0,
+        32.0,
+        35.0,
+        36.0,
+        37.0,
+        38.0,
+        39.0,
+        40.0,
+        41.0,
+        44.0,
+        45.0,
+        47.0,
+        48.0,
+        49.0,
+        50.0,
+        51.0,
+        52.0,
+        55.0,
+        56.0,
+        57.0,
+        58.0,
+        59.0,
+        60.0,
+        61.0,
+        62.0,
+        71.0,
+        72.0,
+        73.0,
+        75.0,
+        76.0,
+        100.0,
+        101.0,
+        102.0,
+        103.0,
+        104.0,
+        105.0,
+        106.0,
+        107.0,
+        108.0,
+        109.0,
+        112.0,
+        113.0,
+        114.0,
+        115.0,
+        116.0,
+        117.0,
+        118.0,
+        119.0,
+        120.0,
+        121.0,
+        122.0,
+        123.0,
+        124.0,
+        125.0,
+        128.0,
+        129.0,
+        132.0,
+        133.0,
+        134.0,
+        135.0,
+        136.0,
+        137.0,
+        138.0,
+        139.0,
+        140.0,
+        141.0,
+        142.0,
+        143.0,
+        144.0,
+        145.0,
+        146.0,
+        147.0,
+        148.0,
+        149.0,
+        150.0,
+        151.0,
+        152.0,
+        153.0,
+        154.0,
+        155.0,
+        156.0,
+        157.0,
+        160.0,
+        161.0,
+        162.0,
+        163.0,
+        164.0,
+        165.0,
+        166.0,
+        167.0,
+        168.0,
+        169.0,
+        170.0,
+        171.0,
+        172.0,
+        173.0,
+        174.0,
+        175.0,
+        176.0,
+        177.0,
+        178.0,
+        179.0,
+        180.0,
+        181.0,
+        182.0,
+        183.0,
+        184.0,
+        185.0,
+        186.0,
+        187.0,
+        190.0,
+        191.0,
+        192.0,
+        193.0,
+        194.0,
+        195.0,
+        196.0,
+        197.0,
+        198.0,
+        199.0,
+        200.0,
+        201.0,
+        202.0,
+        203.0,
+        204.0,
+        205.0,
+        206.0,
+        207.0,
+    ]
     label = label_map.copy()
     ref = label_map.copy()
     for i in range(len(label_lookup)):
         label[ref == label_lookup[i]] = i
     return label
 
+
 class CenterCropPad3D(nn.Module):
+    """Crop or pad a 3-D medical image tensor so the spatial size becomes exactly ``target_size = (X, Y, Z)``.
+
+    Input shape ``(B, C, H, W, D)``, output shape ``(B, C, X, Y, Z)``. Cropping and padding are done symmetrically
+    around the centre (an odd excess is cropped from / padded on the end side).
+
+    Args:
+        target_size: Target spatial size ``(X, Y, Z)``.
+        padding_mode: Padding mode passed to ``torch.nn.functional.pad``.
+        padding_value: Default fill value for constant padding (overridden by the ``padding_value`` argument of
+            :meth:`forward`).
+
+    Raises:
+        ValueError: If ``target_size`` does not have three entries.
     """
-    Crop or pad a 3‑D medical image tensor so the spatial size becomes
-    exactly `target_size = (X, Y, Z)`.
 
-    Input  shape:  (B, C, H, W, D)
-    Output shape:  (B, C, X, Y, Z)
-
-    Cropping and padding are done symmetrically around the centre.
-    """
-
-    def __init__(self,
-        target_size,
+    def __init__(
+        self,
+        target_size: Sequence[int],
         padding_mode: str = "constant",
         padding_value: float = 0.0,
     ):
@@ -111,27 +316,44 @@ class CenterCropPad3D(nn.Module):
         if len(target_size) != 3:
             raise ValueError("`target_size` must be a 3‑tuple (X, Y, Z).")
         self.tgt = target_size
+        self.padding_value = padding_value
         self.pad_mode = padding_mode
 
     @staticmethod
-    def _get_slices(in_len: int, out_len: int):
+    def _get_slices(in_len: int, out_len: int) -> Tuple[int, int, int, int]:
+        """Return crop indices and padding for one dimension.
+
+        Returns:
+            Tuple ``(start, end, pad_left, pad_right)`` such that cropping/padding is symmetric.
         """
-        Return (start, end) indices and required padding (left, right)
-        for one dimension so that cropping/padding is symmetric.
-        """
-        if in_len >= out_len:                          # need crop
+        if in_len >= out_len:  # need crop
             excess = in_len - out_len
             start = excess // 2
-            end   = start + out_len
+            end = start + out_len
             pad_l = pad_r = 0
-        else:                                          # need pad
+        else:  # need pad
             deficit = out_len - in_len
             pad_l = deficit // 2
             pad_r = deficit - pad_l
             start, end = 0, in_len
         return start, end, pad_l, pad_r
 
-    def forward(self, x: torch.Tensor, padding_value=0) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, padding_value: Optional[float] = None) -> torch.Tensor:
+        """Center-crop and/or pad ``x`` to the target size.
+
+        Args:
+            x: Input tensor ``(B, C, H, W, D)``.
+            padding_value: Fill value for constant padding; ``None`` uses the constructor's ``padding_value``.
+
+        Returns:
+            Tensor ``(B, C, X, Y, Z)``.
+
+        Raises:
+            ValueError: If ``x`` is not 5-D.
+
+        """
+        if padding_value is None:
+            padding_value = self.padding_value
         if x.ndim != 5:
             raise ValueError("Input must have shape (B,C,H,W,D)")
 
@@ -163,13 +385,17 @@ class CenterCropPad3D(nn.Module):
             x = F.pad(x, pad_tuple, mode=self.pad_mode, value=padding_value)
 
         return x
-    
-def create_zip(zip_filename, source_dir):
-    """Creates a zip file from a directory.
+
+
+def create_zip(zip_filename: Union[str, os.PathLike], source_dir: Union[str, os.PathLike]) -> None:
+    """Create a deflate-compressed zip file from a directory.
+
+    Files are stored recursively with paths relative to ``source_dir``.
 
     Args:
-        zip_filename: The name of the zip file to create.
+        zip_filename: The name of the zip file to create (overwritten if it exists).
         source_dir: The directory to zip.
+
     """
     with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
         for root, _, files in os.walk(source_dir):
@@ -178,16 +404,31 @@ def create_zip(zip_filename, source_dir):
                 # Calculate the relative path to store in the zip file
                 relative_path = os.path.relpath(file_path, source_dir)
                 zipf.write(file_path, relative_path)
-                
 
-def load_partial_weights(model, checkpoint_path, weights_key='state_dict', strict=False):
-    """
-    Load weights from a checkpoint into a model, skipping unmatched layers.
+
+def load_partial_weights(
+    model: nn.Module,
+    checkpoint_path: Union[str, os.PathLike],
+    weights_key: str = 'state_dict',
+    strict: bool = False,
+) -> None:
+    """Load weights from a checkpoint into a model, skipping unmatched layers.
+
+    The checkpoint is loaded on the CPU, a ``'module.'`` (DataParallel) prefix is stripped from its keys and only
+    entries whose key exists in the model with the same shape are loaded. The number of loaded entries is printed.
 
     Args:
         model (torch.nn.Module): Your model with updated architecture.
         checkpoint_path (str): Path to the .pth or .pt file.
-        strict (bool): If True, behaves like standard strict loading. If False, loads what it can.
+        weights_key (str): Key of the state dict inside the checkpoint dict; if absent, the checkpoint dict itself
+            is used as the state dict.
+        strict (bool): If True, raise when a model key is missing from the checkpoint (shape mismatches are still
+            skipped). If False, loads what it can.
+
+    Raises:
+        ValueError: If the checkpoint is not a dict.
+        KeyError: If ``strict`` is True and a model key is missing from the checkpoint.
+
     """
     checkpoint = torch.load(checkpoint_path, map_location='cpu')
 
@@ -218,17 +459,20 @@ def load_partial_weights(model, checkpoint_path, weights_key='state_dict', stric
     model.load_state_dict(loadable_state_dict, strict=False)
 
     print(f"Loaded {len(loadable_state_dict)} / {len(model_state_dict)} layers from checkpoint.")
-    
-def zoom_img(img, pixel_dims, order=3):    
-    """Resize a 3D image to match target pixel dimensions.
+
+
+def zoom_img(img: np.ndarray, pixel_dims: Tuple[Sequence[float], Sequence[float]], order: int = 3) -> np.ndarray:
+    """Resample a 3D image from its voxel spacing to a target spacing with ``scipy.ndimage.zoom``.
 
     Args:
         img: Input 3D image array.
-        pixel_dims: Target spacing.
-        order: Interpolation order.
+        pixel_dims: Pair ``(img_pixdim, target_pixdim)`` of per-axis voxel spacings; the zoom factor is
+            ``img_pixdim / target_pixdim``.
+        order: Spline interpolation order.
 
     Returns:
         Resampled image array.
+
     """
     img_pixdim, tar_pix = pixel_dims
     ratio = np.array(img_pixdim) / np.array(tar_pix)

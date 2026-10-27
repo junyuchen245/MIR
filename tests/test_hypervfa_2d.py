@@ -1,6 +1,7 @@
 """Tests for the 2D code paths used by the browser playground tutorial:
 HyperVFA / HyperVFASPR in 2D, the ``nb_hyp_units`` option, ``LocalGrad2d``, and the
 ONNX-friendly patch extraction in the VFA decoders."""
+
 import pytest
 import torch
 
@@ -36,7 +37,13 @@ def test_hypervfa_2d_and_3d_forward():
     m2 = HyperVFA(_cfg((32, 32)), device="cpu").eval()
     assert m2((torch.rand(1, 1, 32, 32), torch.rand(1, 1, 32, 32)), torch.tensor([[0.5]])).shape == (1, 2, 32, 32)
     m3 = HyperVFA(_cfg((16, 16, 16)), device="cpu").eval()
-    assert m3((torch.rand(1, 1, 16, 16, 16), torch.rand(1, 1, 16, 16, 16)), torch.tensor([[0.5]])).shape == (1, 3, 16, 16, 16)
+    assert m3((torch.rand(1, 1, 16, 16, 16), torch.rand(1, 1, 16, 16, 16)), torch.tensor([[0.5]])).shape == (
+        1,
+        3,
+        16,
+        16,
+        16,
+    )
 
 
 def test_nb_hyp_units_sets_embedding_width():
@@ -69,7 +76,12 @@ def test_localgrad2d_matches_manual_and_3d_convention():
     l1 = LocalGrad2d(penalty="l1")(flow, ones)
     manual_l1 = (torch.mean(dx.sqrt()) + torch.mean(dy.sqrt())) / 2.0
     assert torch.allclose(l1, manual_l1)
-    assert LocalGrad3d(penalty="l2")(flow.unsqueeze(-1).repeat(1, 1, 1, 1, 2), ones.unsqueeze(-1).repeat(1, 1, 1, 1, 2)).item() > 0
+    assert (
+        LocalGrad3d(penalty="l2")(
+            flow.unsqueeze(-1).repeat(1, 1, 1, 1, 2), ones.unsqueeze(-1).repeat(1, 1, 1, 1, 2)
+        ).item()
+        > 0
+    )
 
 
 def test_logbeta_prior_pulls_weights_up():
@@ -111,8 +123,15 @@ def test_onnx_export_hypervfaspr_2d(tmp_path):
 
     mov, fix, h = torch.rand(1, 1, 32, 32), torch.rand(1, 1, 32, 32), torch.tensor([[0.5, 0.5]])
     path = str(tmp_path / "hypervfaspr_2d.onnx")
-    torch.onnx.export(Wrap(model), (mov, fix, h), path, input_names=["moving", "fixed", "hyper"],
-                      output_names=["flow", "weights"], opset_version=16, do_constant_folding=True)
+    torch.onnx.export(
+        Wrap(model),
+        (mov, fix, h),
+        path,
+        input_names=["moving", "fixed", "hyper"],
+        output_names=["flow", "weights"],
+        opset_version=16,
+        do_constant_folding=True,
+    )
     onnx.checker.check_model(path)
     ort = pytest.importorskip("onnxruntime")
     sess = ort.InferenceSession(path, providers=["CPUExecutionProvider"])

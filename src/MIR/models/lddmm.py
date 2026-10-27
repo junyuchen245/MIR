@@ -1,5 +1,4 @@
-'''
-Model-agnostic LDDMM (time-varying velocity field) components for MIR.
+"""Model-agnostic LDDMM (time-varying velocity field) components for MIR.
 
 * :class:`FourierKernel`   - the smoothing operator K = L^{-1} defining the velocity space V.
 * :class:`LDDMMIntegrator` - integrates v_t to a diffeomorphism (forward and inverse map) either by
@@ -13,21 +12,21 @@ Conventions follow the rest of MIR: a displacement field ``u`` warps the moving 
 ``mov(x + u(x))`` (``SpatialTransformer``), ``psi = id + u`` is the LDDMM flow phi_1 and
 ``id + w`` its inverse.
 
-References
-----------
-Beg, Miller, Trouve, Younes. Computing large deformation metric mappings via geodesic
-    flows of diffeomorphisms. IJCV 2005.
-Vialard, Risser, Rueckert, Cotter. Diffeomorphic 3D image registration via geodesic
-    shooting using an efficient adjoint calculation. IJCV 2012.
-Zhang & Fletcher. Fast diffeomorphic image registration via Fourier-approximated Lie
-    algebras (FLASH). IJCV 2019.
+References:
+    - Beg, Miller, Trouve, Younes. Computing large deformation metric mappings via geodesic
+      flows of diffeomorphisms. IJCV 2005.
+    - Vialard, Risser, Rueckert, Cotter. Diffeomorphic 3D image registration via geodesic
+      shooting using an efficient adjoint calculation. IJCV 2012.
+    - Zhang & Fletcher. Fast diffeomorphic image registration via Fourier-approximated Lie
+      algebras (FLASH). IJCV 2019.
 Yang, Kwitt, Styner, Niethammer. Quicksilver: Fast predictive image registration.
     NeuroImage 2017.
 
 Junyu Chen
 jchen245@jhmi.edu
 Johns Hopkins University
-'''
+
+"""
 
 import math
 import warnings
@@ -64,6 +63,7 @@ class FourierKernel(nn.Module):
 
     Forward outputs:
         v = K p with the same shape (float32).
+
     """
 
     def __init__(self, kernel='helmholtz', alpha=2.0, gamma=1.0, power=2, sigma=2.0, weights=None):
@@ -85,8 +85,14 @@ class FourierKernel(nn.Module):
 
     def scaled(self, scale):
         """Return a copy whose length scales are expressed on a grid ``scale`` times finer."""
-        return FourierKernel(kernel=self.kernel, alpha=self.alpha * scale * scale, gamma=self.gamma,
-                             power=self.power, sigma=[s * scale for s in self.sigmas], weights=self.weights)
+        return FourierKernel(
+            kernel=self.kernel,
+            alpha=self.alpha * scale * scale,
+            gamma=self.gamma,
+            power=self.power,
+            sigma=[s * scale for s in self.sigmas],
+            weights=self.weights,
+        )
 
     def _build(self, shape, device):
         """Build the Fourier multiplier K_hat on the rfft grid of ``shape``."""
@@ -107,11 +113,21 @@ class FourierKernel(nn.Module):
         else:
             k_hat = torch.zeros_like(om2)
             for s, w in zip(self.sigmas, self.weights):
-                k_hat = k_hat + w * torch.exp(-0.5 * (s ** 2) * om2)
+                k_hat = k_hat + w * torch.exp(-0.5 * (s**2) * om2)
         self.k_hat = k_hat
         self._cache_shape = (tuple(shape), str(device))
 
-    def forward(self, p):
+    def forward(self, p: torch.Tensor) -> torch.Tensor:
+        """Apply the smoothing operator, ``v = K p``, by FFT (periodic boundaries).
+
+        The Fourier multiplier is cached and rebuilt only when the spatial shape or device changes.
+
+        Args:
+            p: Field [B, C, *spatial] (e.g. a momentum).
+
+        Returns:
+            torch.Tensor: Smoothed field ``K p`` of the same shape (float32).
+        """
         shape = tuple(p.shape[2:])
         if self._cache_shape != (shape, str(p.device)):
             self._build(shape, p.device)
@@ -171,6 +187,7 @@ class SpatiallyVaryingKernel(nn.Module):
 
     Forward outputs:
         v = K_w p (float32).
+
     """
 
     def __init__(self, sigmas=(1.0, 2.0, 4.0, 8.0), weight_smooth_sigma=1.0, omt_power=2.0):
@@ -181,27 +198,42 @@ class SpatiallyVaryingKernel(nn.Module):
         self.weight_smooth_sigma = float(weight_smooth_sigma)
         self.omt_power = float(omt_power)
         self.gaussians = nn.ModuleList([FourierKernel('gaussian', sigma=s) for s in self.sigmas])
-        self.weight_smoother = (FourierKernel('gaussian', sigma=self.weight_smooth_sigma)
-                                if self.weight_smooth_sigma > 0 else None)
+        self.weight_smoother = (
+            FourierKernel('gaussian', sigma=self.weight_smooth_sigma) if self.weight_smooth_sigma > 0 else None
+        )
         self.eps = 1e-6
 
     @property
-    def n_kernels(self):
+    def n_kernels(self) -> int:
+        """Number of Gaussians in the mixture."""
         return len(self.sigmas)
 
     def scaled(self, scale):
         """Return a copy whose length scales are expressed on a grid ``scale`` times finer."""
-        return SpatiallyVaryingKernel([s * scale for s in self.sigmas], self.weight_smooth_sigma * scale,
-                                      self.omt_power)
+        return SpatiallyVaryingKernel(
+            [s * scale for s in self.sigmas], self.weight_smooth_sigma * scale, self.omt_power
+        )
 
-    def forward(self, p, w):
+    def forward(self, p: torch.Tensor, w: torch.Tensor) -> torch.Tensor:
+        """Apply the spatially varying kernel, ``v = K_w p``.
+
+        Args:
+            p: Field [B, C, D, H, W].
+            w: Kernel weights [B, n_kernels, D, H, W] (negative values are clamped to 0).
+
+        Returns:
+            torch.Tensor: ``sum_i sqrt(w_i) * G_{sigma_i} * (sqrt(w_i) p)`` (float32), same shape as ``p``.
+
+        Raises:
+            ValueError: If ``w`` does not have ``n_kernels`` channels.
+        """
         if w.shape[1] != self.n_kernels:
             raise ValueError(f'expected {self.n_kernels} weight channels, got {w.shape[1]}')
         p = p.float()
         sw = w.float().clamp_min(0).sqrt()
         v = None
         for i, g in enumerate(self.gaussians):
-            s_i = sw[:, i:i + 1]
+            s_i = sw[:, i : i + 1]
             v_i = s_i * g(s_i * p)
             v = v_i if v is None else v + v_i
         return v
@@ -226,7 +258,7 @@ class SpatiallyVaryingKernel(nn.Module):
         """
         lam = lam.float().clamp(0.0, 1.0)
         n = self.n_kernels
-        t = lam[:, 0] * (n - 1)                               # position on the sigma axis
+        t = lam[:, 0] * (n - 1)  # position on the sigma axis
         idx = torch.arange(n, device=lam.device, dtype=torch.float32).view(1, n, 1, 1, 1)
         w = (1.0 - (t.unsqueeze(1) - idx).abs()).clamp_min(0.0)  # linear hat functions
         if self.weight_smoother is not None:
@@ -267,13 +299,16 @@ class KernelWeightHead(nn.Module):
         in_channels: Channels of the input (default 2 images + 3 field channels).
         width: Hidden channels.
         init: ``'smoothest'`` or ``'uniform'``.
+
     """
 
     def __init__(self, n_kernels, in_channels=5, width=16, init='smoothest'):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Conv3d(in_channels, width, 3, padding=1), nn.LeakyReLU(0.2, inplace=True),
-            nn.Conv3d(width, width, 3, padding=1), nn.LeakyReLU(0.2, inplace=True),
+            nn.Conv3d(in_channels, width, 3, padding=1),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Conv3d(width, width, 3, padding=1),
+            nn.LeakyReLU(0.2, inplace=True),
             nn.Conv3d(width, n_kernels, 3, padding=1),
         )
         last = self.net[-1]
@@ -286,7 +321,17 @@ class KernelWeightHead(nn.Module):
         with torch.no_grad():
             last.bias.copy_(bias)
 
-    def forward(self, mov, fix, field):
+    def forward(self, mov: torch.Tensor, fix: torch.Tensor, field: torch.Tensor) -> torch.Tensor:
+        """Predict kernel-weight logits.
+
+        Args:
+            mov: Moving image [B, 1, ...]; resized (trilinear) to the field resolution if needed.
+            fix: Fixed image [B, 1, ...]; resized (trilinear) to the field resolution if needed.
+            field: Backbone field (momentum / pre-velocity) [B, 3, D, H, W].
+
+        Returns:
+            torch.Tensor: Logits [B, n_kernels, D, H, W] (see :meth:`SpatiallyVaryingKernel.weights_from_logits`).
+        """
         size = field.shape[2:]
         if tuple(mov.shape[2:]) != tuple(size):
             mov = F.interpolate(mov, size=size, mode='trilinear', align_corners=False)
@@ -306,20 +351,34 @@ class SPRHead(nn.Module):
         in_channels: Channels of ``cat(mov, fix, field)``.
         width: Hidden channels.
         init_bias: Bias of the last layer at initialization.
+        eps: Lower clamp of the output ``lam``.
+
     """
 
     def __init__(self, in_channels=5, width=16, init_bias=2.0, eps=1e-6):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Conv3d(in_channels, width, 3, padding=1), nn.LeakyReLU(0.2, inplace=True),
-            nn.Conv3d(width, width, 3, padding=1), nn.LeakyReLU(0.2, inplace=True),
+            nn.Conv3d(in_channels, width, 3, padding=1),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Conv3d(width, width, 3, padding=1),
+            nn.LeakyReLU(0.2, inplace=True),
             nn.Conv3d(width, 1, 3, padding=1),
         )
         nn.init.zeros_(self.net[-1].weight)
         nn.init.constant_(self.net[-1].bias, float(init_bias))
         self.eps = eps
 
-    def forward(self, mov, fix, field):
+    def forward(self, mov: torch.Tensor, fix: torch.Tensor, field: torch.Tensor) -> torch.Tensor:
+        """Predict the SPR regularization-strength map.
+
+        Args:
+            mov: Moving image [B, 1, ...]; resized (trilinear) to the field resolution if needed.
+            fix: Fixed image [B, 1, ...]; resized (trilinear) to the field resolution if needed.
+            field: Backbone field (momentum / pre-velocity) [B, 3, D, H, W].
+
+        Returns:
+            torch.Tensor: ``lam`` [B, 1, D, H, W] in ``[eps, 1]``.
+        """
         size = field.shape[2:]
         if tuple(mov.shape[2:]) != tuple(size):
             mov = F.interpolate(mov, size=size, mode='trilinear', align_corners=False)
@@ -338,6 +397,7 @@ def jacobian_fd(disp):
 
     Returns:
         Tensor [B, 3, 3, D, H, W] with entry [:, i, j] = d(x_i + disp_i) / d x_j.
+
     """
     padded = F.pad(disp, (1, 1, 1, 1, 1, 1), mode='replicate')
     cols = []
@@ -355,9 +415,11 @@ def jacobian_fd(disp):
 def det3x3(jac):
     """Determinant of a field of 3x3 matrices [B, 3, 3, ...] -> [B, ...]."""
     a = jac
-    return (a[:, 0, 0] * (a[:, 1, 1] * a[:, 2, 2] - a[:, 1, 2] * a[:, 2, 1])
-            - a[:, 0, 1] * (a[:, 1, 0] * a[:, 2, 2] - a[:, 1, 2] * a[:, 2, 0])
-            + a[:, 0, 2] * (a[:, 1, 0] * a[:, 2, 1] - a[:, 1, 1] * a[:, 2, 0]))
+    return (
+        a[:, 0, 0] * (a[:, 1, 1] * a[:, 2, 2] - a[:, 1, 2] * a[:, 2, 1])
+        - a[:, 0, 1] * (a[:, 1, 0] * a[:, 2, 2] - a[:, 1, 2] * a[:, 2, 0])
+        + a[:, 0, 2] * (a[:, 1, 0] * a[:, 2, 1] - a[:, 1, 1] * a[:, 2, 0])
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -379,6 +441,7 @@ class LDDMMIntegrator(nn.Module):
         size: Spatial size (D, H, W) of the fields.
         time_steps: Number of time steps.
         kernel: A :class:`FourierKernel` (K = L^{-1}) or a :class:`SpatiallyVaryingKernel`.
+
     """
 
     def __init__(self, size, time_steps, kernel):
@@ -392,7 +455,8 @@ class LDDMMIntegrator(nn.Module):
         self.transformer = utils.SpatialTransformer(self.size)
 
     @property
-    def spatially_varying(self):
+    def spatially_varying(self) -> bool:
+        """Whether ``self.kernel`` is a :class:`SpatiallyVaryingKernel`."""
         return isinstance(self.kernel, SpatiallyVaryingKernel)
 
     def step(self, u, w, v):
@@ -403,7 +467,7 @@ class LDDMMIntegrator(nn.Module):
         return u, w
 
     def _velocity(self, p, weights, w_inv, t):
-        """v = K p, advecting the kernel weights with the inverse map when the kernel varies in space."""
+        """V = K p, advecting the kernel weights with the inverse map when the kernel varies in space."""
         if weights is None:
             if self.spatially_varying:
                 raise ValueError('SpatiallyVaryingKernel needs kernel weights (pass weights=...)')
@@ -416,9 +480,9 @@ class LDDMMIntegrator(nn.Module):
 
         ``m_t = |D psi^{-1}| (D psi^{-1})^T (m_0 o psi^{-1})``
         """
-        jac = jacobian_fd(w)                               # [B, 3, 3, ...]
-        det = det3x3(jac)                                  # [B, ...]
-        m_pull = self.transformer(m0, w)                   # m_0 o psi^{-1}
+        jac = jacobian_fd(w)  # [B, 3, 3, ...]
+        det = det3x3(jac)  # [B, ...]
+        m_pull = self.transformer(m0, w)  # m_0 o psi^{-1}
         m_t = torch.einsum('bjidhw,bjdhw->bidhw', jac, m_pull)  # (J^T m)_i = sum_j J_ji m_j
         return det.unsqueeze(1) * m_t
 
@@ -436,6 +500,7 @@ class LDDMMIntegrator(nn.Module):
             dict with ``flow`` (u), ``inv_flow`` (w), ``energy`` (<m_0, K m_0>, differentiable),
             ``energies`` (detached per-step kinetic energies, constant along the geodesic),
             and optionally ``velocities``.
+
         """
         m0 = m0.float()
         u = torch.zeros_like(m0)
@@ -475,6 +540,7 @@ class LDDMMIntegrator(nn.Module):
         Returns:
             dict with ``flow``, ``inv_flow``, ``energy`` (sum_t dt <p_t, K p_t>, differentiable),
             ``energies`` (detached per-step values) and optionally ``velocities``.
+
         """
         u = w = None
         energy = 0.0
@@ -514,6 +580,7 @@ def adapter_pair(backbone, mov, fix):
 def adapter_sitreg(backbone, mov, fix):
     """SITReg: ``backbone(mov, fix, ...)`` returns mapping pairs; take the level-0 forward displacement."""
     from MIR.models.SITReg.composable_mapping import DataFormat
+
     pair = backbone(mov, fix, mappings_for_levels=((0, False),))[0]
     return pair.forward_mapping.sample(data_format=DataFormat.voxel_displacements()).generate_values()
 
@@ -599,12 +666,32 @@ class LDDMMWrapper(nn.Module):
         model = LDDMMWrapper(backbone, param='shooting', time_steps=7, sigmas=[1, 2, 4, 8]).cuda()
         out = model((mov, fix), return_dict=True)
         loss = ncc(warp(mov, out['flow']), fix) + 0.01 * out['energy'] + 0.1 * out['omt']
+
     """
 
-    def __init__(self, backbone, param='shooting', time_steps=7, kernel='helmholtz', alpha=2.0, gamma=1.0,
-                 power=2, sigma=2.0, kernel_weights=None, sigmas=None, weight_head=None,
-                 weight_smooth_sigma=1.0, omt_power=2.0, spr=None, spr_source='head', spr_head=None,
-                 int_scale=1, adapter=None, field_scale=None, return_path=False):
+    def __init__(
+        self,
+        backbone,
+        param='shooting',
+        time_steps=7,
+        kernel='helmholtz',
+        alpha=2.0,
+        gamma=1.0,
+        power=2,
+        sigma=2.0,
+        kernel_weights=None,
+        sigmas=None,
+        weight_head=None,
+        weight_smooth_sigma=1.0,
+        omt_power=2.0,
+        spr=None,
+        spr_source='head',
+        spr_head=None,
+        int_scale=1,
+        adapter=None,
+        field_scale=None,
+        return_path=False,
+    ):
         super().__init__()
         if param not in ('shooting', 'tvf'):
             raise ValueError(f"param must be 'shooting' or 'tvf', got {param}")
@@ -617,8 +704,11 @@ class LDDMMWrapper(nn.Module):
         if spr_source not in ('head', 'backbone'):
             raise ValueError("spr_source must be 'head' or 'backbone'")
         if getattr(backbone, 'SVF', False):
-            warnings.warn('The backbone has SVF integration enabled; LDDMMWrapper expects the raw '
-                          '(un-integrated) field. Construct the backbone with SVF=False.')
+            warnings.warn(
+                'The backbone has SVF integration enabled; LDDMMWrapper expects the raw '
+                '(un-integrated) field. Construct the backbone with SVF=False.',
+                stacklevel=2,
+            )
         self.backbone = backbone
         self.param = param
         self.time_steps = int(time_steps)
@@ -632,11 +722,13 @@ class LDDMMWrapper(nn.Module):
         if sigmas is not None:
             self.kernel = SpatiallyVaryingKernel(sigmas, weight_smooth_sigma, omt_power).scaled(self.int_scale)
             # with spr='kernel' the kernel weights come from the SPR map, not from a logits head
-            self.weight_head = (weight_head if weight_head is not None else KernelWeightHead(len(sigmas))) \
-                if spr != 'kernel' else None
+            self.weight_head = (
+                (weight_head if weight_head is not None else KernelWeightHead(len(sigmas))) if spr != 'kernel' else None
+            )
         else:
-            self.kernel = FourierKernel(kernel=kernel, alpha=alpha, gamma=gamma, power=power, sigma=sigma,
-                                        weights=kernel_weights).scaled(self.int_scale)
+            self.kernel = FourierKernel(
+                kernel=kernel, alpha=alpha, gamma=gamma, power=power, sigma=sigma, weights=kernel_weights
+            ).scaled(self.int_scale)
             self.weight_head = None
         if spr is not None and spr_source == 'head':
             self.spr_head = spr_head if spr_head is not None else SPRHead()
@@ -648,7 +740,8 @@ class LDDMMWrapper(nn.Module):
         self.return_path = return_path
 
     @property
-    def spatially_varying(self):
+    def spatially_varying(self) -> bool:
+        """Whether ``self.kernel`` is a :class:`SpatiallyVaryingKernel`."""
         return isinstance(self.kernel, SpatiallyVaryingKernel)
 
     def predict_weights(self, mov, fix, field, lam=None):
@@ -691,8 +784,10 @@ class LDDMMWrapper(nn.Module):
         else:
             field = out
         if not torch.is_tensor(field) or field.dim() != 5 or field.shape[1] != 3:
-            raise ValueError('The backbone must return a [B, 3, D, H, W] field (got '
-                             f'{type(field).__name__}{tuple(field.shape) if torch.is_tensor(field) else ""})')
+            raise ValueError(
+                'The backbone must return a [B, 3, D, H, W] field (got '
+                f'{type(field).__name__}{tuple(field.shape) if torch.is_tensor(field) else ""})'
+            )
         if self.field_scale is not None:
             field = field * self.field_scale
         if not with_spr:
@@ -703,19 +798,38 @@ class LDDMMWrapper(nn.Module):
 
     # -- forward -------------------------------------------------------------------------- #
     def forward(self, inputs, return_dict=False):
+        """Predict the field with the backbone and integrate it to a diffeomorphism.
+
+        Args:
+            inputs: Tuple ``(mov, fix)`` of tensors [B, 1, D, H, W].
+            return_dict: If True, return the full output dict (see the class docstring) instead of the flow.
+
+        Returns:
+            The forward displacement field ``flow`` [B, 3, D', H', W'] or, with ``return_dict=True``, the dict
+            produced by :meth:`LDDMMIntegrator.shoot` / :meth:`LDDMMIntegrator.relax` extended with
+            ``momentum`` (shooting) or ``pre_velocities`` (tvf) and, when applicable, ``kernel_weights``,
+            ``omt`` and ``spr_weight``.
+
+        Raises:
+            ValueError: With ``param='tvf'``, if the backbone field resolution differs from that of ``mov``.
+        """
         mov, fix = inputs
         if self.param == 'shooting':
             m0, lam = self.predict_field(mov, fix, with_spr=True)
             w0 = self.predict_weights(mov, fix, m0, lam) if self.spatially_varying else None
             if self.int_scale > 1:
-                m0 = F.interpolate(m0, scale_factor=self.int_scale, mode='trilinear', align_corners=False) * self.int_scale
+                m0 = (
+                    F.interpolate(m0, scale_factor=self.int_scale, mode='trilinear', align_corners=False)
+                    * self.int_scale
+                )
                 if w0 is not None:
                     w0 = F.interpolate(w0, scale_factor=self.int_scale, mode='trilinear', align_corners=False)
                 if lam is not None:
                     lam = F.interpolate(lam, scale_factor=self.int_scale, mode='trilinear', align_corners=False)
             integ = self._get_integrator(m0.shape[2:], m0.device)
-            out = integ.shoot(m0, weights=w0, energy_weight=lam if self.spr == 'energy' else None,
-                              return_path=self.return_path)
+            out = integ.shoot(
+                m0, weights=w0, energy_weight=lam if self.spr == 'energy' else None, return_path=self.return_path
+            )
             out['momentum'] = m0
         else:
             p0, lam = self.predict_field(mov, fix, with_spr=True)
@@ -732,8 +846,9 @@ class LDDMMWrapper(nn.Module):
                 pre_vel.append(p_t)
                 return p_t
 
-            out = integ.relax(predict, weights=w0, energy_weight=lam if self.spr == 'energy' else None,
-                              return_path=self.return_path)
+            out = integ.relax(
+                predict, weights=w0, energy_weight=lam if self.spr == 'energy' else None, return_path=self.return_path
+            )
             out['pre_velocities'] = pre_vel
         if w0 is not None:
             out['kernel_weights'] = w0
@@ -755,12 +870,15 @@ def load_backbone_weights(model, state_dict, verbose=True):
 
     Returns:
         (number of tensors loaded, number of tensors in the model).
+
     """
     own = model.state_dict()
     matched = {k: v for k, v in state_dict.items() if k in own and own[k].shape == v.shape}
     model.load_state_dict(matched, strict=False)
     if verbose:
         skipped = [k for k in own if k not in matched]
-        print(f'Loaded {len(matched)}/{len(own)} tensors from checkpoint; '
-              f'{len(skipped)} left at random init (e.g. {skipped[:3]})')
+        print(
+            f'Loaded {len(matched)}/{len(own)} tensors from checkpoint; '
+            f'{len(skipped)} left at random init (e.g. {skipped[:3]})'
+        )
     return len(matched), len(own)

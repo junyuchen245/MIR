@@ -1,5 +1,7 @@
-'''
-Fourier-Net and Fourier-Net+
+"""Fourier-Net and Fourier-Net+ registration networks wrapped for MIR.
+
+The networks predict a band-limited displacement field at low resolution; it is
+brought to full resolution by zero-padding its centred Fourier spectrum.
 
 Original code retrieved from:
 https://github.com/xi-jia/Fourier-Net
@@ -8,11 +10,12 @@ Modified for MIR by:
 Junyu Chen
 jchen245@jhmi.edu
 Johns Hopkins University
-'''
+"""
 
 import torch
 import torch.nn as nn
 import MIR.models.registration_utils as utils
+from typing import Tuple
 
 
 def _center_crop_frequency(x, crop_shape):
@@ -50,7 +53,17 @@ def _full_spatial_to_low_spatial(x, low_shape):
 
 
 class FourierNetBackbone(nn.Module):
-    """3-D Fourier-Net backbone from the original implementation."""
+    """3-D Fourier-Net backbone from the original implementation.
+
+    A 4-level strided encoder followed by a 2-level decoder, so the predicted
+    field has 1/4 of the input resolution along each axis.
+
+    Args:
+        in_channel: Number of concatenated moving/fixed input channels.
+        n_classes: Number of output displacement channels.
+        start_channel: Upstream start channel hyperparameter.
+        return_features: If True, also return the last decoder feature map.
+    """
 
     def __init__(self, in_channel=2, n_classes=3, start_channel=8, return_features=False):
         """Initialize the upstream 3-D Fourier-Net backbone."""
@@ -73,58 +86,129 @@ class FourierNetBackbone(nn.Module):
         self.ec8 = self.encoder(self.start_channel * 8, self.start_channel * 16, stride=2, bias=bias_opt)
         self.ec9 = self.encoder(self.start_channel * 16, self.start_channel * 8, bias=bias_opt)
 
-        self.r_dc1 = self.encoder(self.start_channel * 8 + self.start_channel * 8, self.start_channel * 8,
-                                  kernel_size=3, stride=1, bias=bias_opt)
-        self.r_dc2 = self.encoder(self.start_channel * 8, self.start_channel * 4, kernel_size=3, stride=1,
-                                  bias=bias_opt)
-        self.r_dc3 = self.encoder(self.start_channel * 4 + self.start_channel * 4, self.start_channel * 4,
-                                  kernel_size=3, stride=1, bias=bias_opt)
-        self.r_dc4 = self.encoder(self.start_channel * 4, self.start_channel * 2, kernel_size=3, stride=1,
-                                  bias=bias_opt)
-        self.rr_dc9 = self.outputs(self.start_channel * 2, self.n_classes, kernel_size=3, stride=1, padding=1,
-                                   bias=False)
+        self.r_dc1 = self.encoder(
+            self.start_channel * 8 + self.start_channel * 8,
+            self.start_channel * 8,
+            kernel_size=3,
+            stride=1,
+            bias=bias_opt,
+        )
+        self.r_dc2 = self.encoder(
+            self.start_channel * 8, self.start_channel * 4, kernel_size=3, stride=1, bias=bias_opt
+        )
+        self.r_dc3 = self.encoder(
+            self.start_channel * 4 + self.start_channel * 4,
+            self.start_channel * 4,
+            kernel_size=3,
+            stride=1,
+            bias=bias_opt,
+        )
+        self.r_dc4 = self.encoder(
+            self.start_channel * 4, self.start_channel * 2, kernel_size=3, stride=1, bias=bias_opt
+        )
+        self.rr_dc9 = self.outputs(
+            self.start_channel * 2, self.n_classes, kernel_size=3, stride=1, padding=1, bias=False
+        )
 
         self.r_up1 = self.decoder(self.start_channel * 8, self.start_channel * 8)
         self.r_up2 = self.decoder(self.start_channel * 4, self.start_channel * 4)
 
-    def encoder(self, in_channels, out_channels, kernel_size=3, stride=1, padding=1,
-                bias=False, batchnorm=False):
-        """Create an upstream Fourier-Net encoder block."""
+    def encoder(self, in_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False, batchnorm=False):
+        """Create an upstream Fourier-Net encoder block.
+
+        Args:
+            in_channels: Number of input channels.
+            out_channels: Number of output channels.
+            kernel_size: Convolution kernel size.
+            stride: Convolution stride.
+            padding: Convolution padding.
+            bias: Whether the convolution has a bias.
+            batchnorm: Insert ``BatchNorm3d`` before the activation.
+
+        Returns:
+            nn.Sequential: ``Conv3d`` (+ ``BatchNorm3d``) + ``PReLU``.
+        """
         if batchnorm:
             layer = nn.Sequential(
                 nn.Conv3d(in_channels, out_channels, kernel_size, stride=stride, padding=padding, bias=bias),
                 nn.BatchNorm3d(out_channels),
-                nn.PReLU())
+                nn.PReLU(),
+            )
         else:
             layer = nn.Sequential(
-                nn.Conv3d(in_channels, out_channels, kernel_size, stride=stride, padding=padding, bias=bias),
-                nn.PReLU())
+                nn.Conv3d(in_channels, out_channels, kernel_size, stride=stride, padding=padding, bias=bias), nn.PReLU()
+            )
         return layer
 
-    def decoder(self, in_channels, out_channels, kernel_size=2, stride=2, padding=0,
-                output_padding=0, bias=True):
-        """Create an upstream Fourier-Net decoder block."""
+    def decoder(self, in_channels, out_channels, kernel_size=2, stride=2, padding=0, output_padding=0, bias=True):
+        """Create an upstream Fourier-Net decoder block.
+
+        Args:
+            in_channels: Number of input channels.
+            out_channels: Number of output channels.
+            kernel_size: Transposed-convolution kernel size.
+            stride: Transposed-convolution stride (2 doubles the resolution).
+            padding: Transposed-convolution padding.
+            output_padding: Transposed-convolution output padding.
+            bias: Whether the convolution has a bias.
+
+        Returns:
+            nn.Sequential: ``ConvTranspose3d`` + ``PReLU``.
+        """
         layer = nn.Sequential(
-            nn.ConvTranspose3d(in_channels, out_channels, kernel_size, stride=stride,
-                               padding=padding, output_padding=output_padding, bias=bias),
-            nn.PReLU())
+            nn.ConvTranspose3d(
+                in_channels,
+                out_channels,
+                kernel_size,
+                stride=stride,
+                padding=padding,
+                output_padding=output_padding,
+                bias=bias,
+            ),
+            nn.PReLU(),
+        )
         return layer
 
-    def outputs(self, in_channels, out_channels, kernel_size=3, stride=1, padding=0,
-                bias=False, batchnorm=False):
-        """Create the upstream Fourier-Net output head."""
+    def outputs(self, in_channels, out_channels, kernel_size=3, stride=1, padding=0, bias=False, batchnorm=False):
+        """Create the upstream Fourier-Net output head.
+
+        Args:
+            in_channels: Number of input channels.
+            out_channels: Number of output channels.
+            kernel_size: Convolution kernel size.
+            stride: Convolution stride.
+            padding: Convolution padding.
+            bias: Whether the convolution has a bias.
+            batchnorm: Use ``Conv3d`` + ``BatchNorm3d`` + ``Tanh`` instead of a
+                plain linear ``Conv3d``.
+
+        Returns:
+            nn.Sequential: The output head.
+        """
         if batchnorm:
             layer = nn.Sequential(
                 nn.Conv3d(in_channels, out_channels, kernel_size, stride=stride, padding=padding, bias=bias),
                 nn.BatchNorm3d(out_channels),
-                nn.Tanh())
+                nn.Tanh(),
+            )
         else:
             layer = nn.Sequential(
-                nn.Conv3d(in_channels, out_channels, kernel_size, stride=stride, padding=padding, bias=bias))
+                nn.Conv3d(in_channels, out_channels, kernel_size, stride=stride, padding=padding, bias=bias)
+            )
         return layer
 
-    def forward(self, x, y):
-        """Run the original 3-D Fourier-Net backbone."""
+    def forward(self, x: torch.Tensor, y: torch.Tensor):
+        """Run the original 3-D Fourier-Net backbone.
+
+        Args:
+            x: Moving image ``[B, C, D, H, W]``; sizes must be divisible by 16.
+            y: Fixed image ``[B, C, D, H, W]``.
+
+        Returns:
+            Low-resolution field ``[B, n_classes, D/4, H/4, W/4]``; if
+            ``return_features`` is True, ``(flow, features)`` with features
+            ``[B, 2*start_channel, D/4, H/4, W/4]``.
+        """
         x_in = torch.cat((x, y), 1)
         e0 = self.eninput(x_in)
         e0 = self.ec1(e0)
@@ -156,7 +240,17 @@ class FourierNetBackbone(nn.Module):
 
 
 class FourierNetPlusCore(nn.Module):
-    """Low-resolution core network used by 3-D Fourier-Net+."""
+    """Low-resolution core network used by 3-D Fourier-Net+.
+
+    A 3-level strided encoder followed by a 2-level decoder, so the predicted
+    field has 1/2 of the (already low-resolution) input size along each axis.
+
+    Args:
+        in_channel: Number of concatenated moving/fixed input channels.
+        n_classes: Number of output displacement channels.
+        start_channel: Upstream start channel hyperparameter.
+        return_features: If True, also return the last decoder feature map.
+    """
 
     def __init__(self, in_channel=2, n_classes=3, start_channel=8, return_features=False):
         """Initialize the upstream Fourier-Net+ low-resolution core."""
@@ -177,56 +271,110 @@ class FourierNetPlusCore(nn.Module):
         self.ec6 = self.encoder(self.start_channel * 4, self.start_channel * 8, stride=2, bias=bias_opt)
         self.ec7 = self.encoder(self.start_channel * 8, self.start_channel * 4, bias=bias_opt)
 
-        self.dc1 = self.encoder(self.start_channel * 4, self.start_channel * 4, kernel_size=3,
-                                stride=1, bias=bias_opt)
-        self.dc2 = self.encoder(self.start_channel * 4, self.start_channel * 2, kernel_size=3, stride=1,
-                                bias=bias_opt)
-        self.dc3 = self.encoder(self.start_channel * 2, self.start_channel * 1, kernel_size=3,
-                                stride=1, bias=bias_opt)
-        self.dc9 = self.outputs(self.start_channel * 1, self.n_classes, kernel_size=3, stride=1, padding=1,
-                                bias=False)
+        self.dc1 = self.encoder(self.start_channel * 4, self.start_channel * 4, kernel_size=3, stride=1, bias=bias_opt)
+        self.dc2 = self.encoder(self.start_channel * 4, self.start_channel * 2, kernel_size=3, stride=1, bias=bias_opt)
+        self.dc3 = self.encoder(self.start_channel * 2, self.start_channel * 1, kernel_size=3, stride=1, bias=bias_opt)
+        self.dc9 = self.outputs(self.start_channel * 1, self.n_classes, kernel_size=3, stride=1, padding=1, bias=False)
 
         self.up1 = self.decoder(self.start_channel * 4, self.start_channel * 4)
         self.up2 = self.decoder(self.start_channel * 2, self.start_channel * 2)
 
-    def encoder(self, in_channels, out_channels, kernel_size=3, stride=1, padding=1,
-                bias=False, batchnorm=False):
-        """Create an upstream Fourier-Net+ encoder block."""
+    def encoder(self, in_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False, batchnorm=False):
+        """Create an upstream Fourier-Net+ encoder block.
+
+        Args:
+            in_channels: Number of input channels.
+            out_channels: Number of output channels.
+            kernel_size: Convolution kernel size.
+            stride: Convolution stride.
+            padding: Convolution padding.
+            bias: Whether the convolution has a bias.
+            batchnorm: Insert ``BatchNorm3d`` before the activation.
+
+        Returns:
+            nn.Sequential: ``Conv3d`` (+ ``BatchNorm3d``) + ``PReLU``.
+        """
         if batchnorm:
             layer = nn.Sequential(
                 nn.Conv3d(in_channels, out_channels, kernel_size, stride=stride, padding=padding, bias=bias),
                 nn.BatchNorm3d(out_channels),
-                nn.PReLU())
+                nn.PReLU(),
+            )
         else:
             layer = nn.Sequential(
-                nn.Conv3d(in_channels, out_channels, kernel_size, stride=stride, padding=padding, bias=bias),
-                nn.PReLU())
+                nn.Conv3d(in_channels, out_channels, kernel_size, stride=stride, padding=padding, bias=bias), nn.PReLU()
+            )
         return layer
 
-    def decoder(self, in_channels, out_channels, kernel_size=2, stride=2, padding=0,
-                output_padding=0, bias=True):
-        """Create an upstream Fourier-Net+ decoder block."""
+    def decoder(self, in_channels, out_channels, kernel_size=2, stride=2, padding=0, output_padding=0, bias=True):
+        """Create an upstream Fourier-Net+ decoder block.
+
+        Args:
+            in_channels: Number of input channels.
+            out_channels: Number of output channels.
+            kernel_size: Transposed-convolution kernel size.
+            stride: Transposed-convolution stride (2 doubles the resolution).
+            padding: Transposed-convolution padding.
+            output_padding: Transposed-convolution output padding.
+            bias: Whether the convolution has a bias.
+
+        Returns:
+            nn.Sequential: ``ConvTranspose3d`` + ``PReLU``.
+        """
         layer = nn.Sequential(
-            nn.ConvTranspose3d(in_channels, out_channels, kernel_size, stride=stride,
-                               padding=padding, output_padding=output_padding, bias=bias),
-            nn.PReLU())
+            nn.ConvTranspose3d(
+                in_channels,
+                out_channels,
+                kernel_size,
+                stride=stride,
+                padding=padding,
+                output_padding=output_padding,
+                bias=bias,
+            ),
+            nn.PReLU(),
+        )
         return layer
 
-    def outputs(self, in_channels, out_channels, kernel_size=3, stride=1, padding=0,
-                bias=False, batchnorm=False):
-        """Create the upstream Fourier-Net+ output head."""
+    def outputs(self, in_channels, out_channels, kernel_size=3, stride=1, padding=0, bias=False, batchnorm=False):
+        """Create the upstream Fourier-Net+ output head.
+
+        Args:
+            in_channels: Number of input channels.
+            out_channels: Number of output channels.
+            kernel_size: Convolution kernel size.
+            stride: Convolution stride.
+            padding: Convolution padding.
+            bias: Whether the convolution has a bias.
+            batchnorm: Use ``Conv3d`` + ``BatchNorm3d`` + ``Tanh`` instead of a
+                plain linear ``Conv3d``.
+
+        Returns:
+            nn.Sequential: The output head.
+        """
         if batchnorm:
             layer = nn.Sequential(
                 nn.Conv3d(in_channels, out_channels, kernel_size, stride=stride, padding=padding, bias=bias),
                 nn.BatchNorm3d(out_channels),
-                nn.Tanh())
+                nn.Tanh(),
+            )
         else:
             layer = nn.Sequential(
-                nn.Conv3d(in_channels, out_channels, kernel_size, stride=stride, padding=padding, bias=bias))
+                nn.Conv3d(in_channels, out_channels, kernel_size, stride=stride, padding=padding, bias=bias)
+            )
         return layer
 
-    def forward(self, x, y):
-        """Run the original Fourier-Net+ low-resolution core."""
+    def forward(self, x: torch.Tensor, y: torch.Tensor):
+        """Run the original Fourier-Net+ low-resolution core.
+
+        Args:
+            x: Low-resolution moving image ``[B, C, d, h, w]``; sizes must be
+                divisible by 8.
+            y: Low-resolution fixed image ``[B, C, d, h, w]``.
+
+        Returns:
+            Field ``[B, n_classes, d/2, h/2, w/2]``; if ``return_features`` is
+            True, ``(flow, features)`` with features ``[B, start_channel, d/2, h/2, w/2]``.
+        """
         x_in = torch.cat((x, y), 1)
         e0 = self.eninput(x_in)
         e0 = self.ec1(e0)
@@ -254,10 +402,31 @@ class FourierNetPlusCore(nn.Module):
 
 
 class FourierNetPlusBackbone(nn.Module):
-    """3-D Fourier-Net+ backbone with upstream low-frequency preprocessing."""
+    """3-D Fourier-Net+ backbone with upstream low-frequency preprocessing.
 
-    def __init__(self, in_channel=2, n_classes=3, start_channel=8, img_size=(160, 192, 224),
-                 low_img_size=None, return_features=False):
+    Both images are reduced to ``low_img_size`` by cropping their centred
+    Fourier spectra, :class:`FourierNetPlusCore` predicts a field, and the
+    field is zero-padded in the Fourier domain back to ``img_size``.
+
+    Args:
+        in_channel: Number of concatenated moving/fixed input channels.
+        n_classes: Number of output displacement channels.
+        start_channel: Upstream start channel hyperparameter.
+        img_size: Full-resolution image size.
+        low_img_size: Center-cropped low-frequency image size (defaults to
+            half of ``img_size``).
+        return_features: If True, also return the upsampled decoder features.
+    """
+
+    def __init__(
+        self,
+        in_channel=2,
+        n_classes=3,
+        start_channel=8,
+        img_size=(160, 192, 224),
+        low_img_size=None,
+        return_features=False,
+    ):
         """Initialize Fourier-Net+.
 
         Args:
@@ -265,8 +434,10 @@ class FourierNetPlusBackbone(nn.Module):
             n_classes: Number of output displacement channels.
             start_channel: Upstream start channel hyperparameter.
             img_size: Full-resolution image size.
-            low_img_size: Center-cropped low-frequency image size.
+            low_img_size: Center-cropped low-frequency image size (defaults to
+                half of ``img_size``).
             return_features: If True, also return the upsampled decoder features.
+
         """
         super().__init__()
         self.return_features = return_features
@@ -276,8 +447,18 @@ class FourierNetPlusBackbone(nn.Module):
         self.low_img_size = tuple(low_img_size)
         self.net1 = FourierNetPlusCore(in_channel, n_classes, start_channel, return_features=return_features)
 
-    def forward(self, x, y):
-        """Run Fourier-Net+ and return full-resolution normalized displacement."""
+    def forward(self, x: torch.Tensor, y: torch.Tensor):
+        """Run Fourier-Net+ and return full-resolution normalized displacement.
+
+        Args:
+            x: Moving image ``[B, C, *img_size]``.
+            y: Fixed image ``[B, C, *img_size]``.
+
+        Returns:
+            Normalized-grid displacement ``[B, n_classes, *img_size]``; if
+            ``return_features`` is True, ``(flow, features)`` with the decoder
+            features also brought to ``img_size``.
+        """
         x_low = _full_spatial_to_low_spatial(x, self.low_img_size)
         y_low = _full_spatial_to_low_spatial(y, self.low_img_size)
         if self.return_features:
@@ -297,6 +478,7 @@ class _FourierNetBase(nn.Module):
         super().__init__()
         if configs is None:
             from MIR.models.configs_FourierNet import get_FourierNet_default_config
+
             configs = get_FourierNet_default_config()
 
         self.configs = configs
@@ -353,7 +535,15 @@ class _FourierNetBase(nn.Module):
 
 
 class FourierNet(_FourierNetBase):
-    """MIR-callable 3-D Fourier-Net registration model."""
+    """MIR-callable 3-D Fourier-Net registration model.
+
+    Args:
+        configs: Config object with Fourier-Net hyperparameters (defaults to
+            ``get_FourierNet_default_config()``).
+        gen_output: If True, also return the warped moving image.
+        SVF: Optional override for stationary velocity field integration.
+        SVF_steps: Optional override for scaling-and-squaring steps.
+    """
 
     def __init__(self, configs=None, gen_output=False, SVF=None, SVF_steps=None):
         """Initialize FourierNet.
@@ -363,6 +553,7 @@ class FourierNet(_FourierNetBase):
             gen_output: If True, also return the warped moving image.
             SVF: Optional override for stationary velocity field integration.
             SVF_steps: Optional override for scaling-and-squaring steps.
+
         """
         super().__init__(configs=configs, gen_output=gen_output)
         if SVF is not None:
@@ -379,8 +570,16 @@ class FourierNet(_FourierNetBase):
             start_channel=start_channel,
         )
 
-    def forward(self, input_imgs):
-        """Run FourierNet registration."""
+    def forward(self, input_imgs: Tuple[torch.Tensor, torch.Tensor]):
+        """Run FourierNet registration.
+
+        Args:
+            input_imgs: Tuple `(mov, fix)` tensors of shape ``[B, C, D, H, W]``.
+
+        Returns:
+            Voxel displacement field ``[B, 3, D, H, W]`` (integrated if ``SVF``);
+            if `gen_output` is True, the tuple ``(warped, flow)``.
+        """
         mov, fix = input_imgs
         low_flow = self.backbone(mov, fix)
         normalized_flow = _low_spatial_to_full_spatial(low_flow, mov.shape[2:])
@@ -388,12 +587,23 @@ class FourierNet(_FourierNetBase):
 
 
 class FourierNetPlus(_FourierNetBase):
-    """MIR-callable 3-D Fourier-Net+ registration model."""
+    """MIR-callable 3-D Fourier-Net+ registration model.
+
+    Inputs must have the spatial size ``configs.img_size``.
+
+    Args:
+        configs: Config object with Fourier-Net+ hyperparameters (defaults to
+            ``get_FourierNetPlus_default_config()``).
+        gen_output: If True, also return the warped moving image.
+        SVF: Optional override for stationary velocity field integration.
+        SVF_steps: Optional override for scaling-and-squaring steps.
+    """
 
     def __init__(self, configs=None, gen_output=False, SVF=None, SVF_steps=None):
         """Initialize FourierNetPlus."""
         if configs is None:
             from MIR.models.configs_FourierNet import get_FourierNetPlus_default_config
+
             configs = get_FourierNetPlus_default_config()
         super().__init__(configs=configs, gen_output=gen_output)
         if SVF is not None:
@@ -413,8 +623,16 @@ class FourierNetPlus(_FourierNetBase):
             low_img_size=low_img_size,
         )
 
-    def forward(self, input_imgs):
-        """Run FourierNet+ registration."""
+    def forward(self, input_imgs: Tuple[torch.Tensor, torch.Tensor]):
+        """Run FourierNet+ registration.
+
+        Args:
+            input_imgs: Tuple `(mov, fix)` tensors of shape ``[B, C, *img_size]``.
+
+        Returns:
+            Voxel displacement field ``[B, 3, *img_size]`` (integrated if
+            ``SVF``); if `gen_output` is True, the tuple ``(warped, flow)``.
+        """
         mov, fix = input_imgs
         normalized_flow = self.backbone(mov, fix)
         return self._finish_flow(mov, normalized_flow)
@@ -423,10 +641,18 @@ class FourierNetPlus(_FourierNetBase):
 class FourierNetSPR(_FourierNetBase):
     """MIR-callable 3-D Fourier-Net with spatially varying regularization weights.
 
+    Args:
+        configs: Config object with Fourier-Net hyperparameters (defaults to
+            ``get_FourierNet_default_config()``).
+        SVF: Whether to integrate a stationary velocity field.
+        SVF_steps: Optional override for scaling-and-squaring steps.
+        gen_output: If True and `SVF=False`, also return the warped moving image.
+
     Forward outputs:
         `(flow, x_weight)` when `SVF=False`, or
         `(pos_flow, neg_flow, x_weight)` when `SVF=True`, mirroring
-        `TransMorphTVFSPR`.
+        `TransMorphTVFSPR`. With `SVF=False` and `gen_output=True` the output is
+        `(warped, flow, x_weight)`.
     """
 
     def __init__(self, configs=None, SVF=True, SVF_steps=None, gen_output=False):
@@ -466,8 +692,17 @@ class FourierNetSPR(_FourierNetBase):
         x_weight = self.wts_act(x_weight)
         return torch.clamp(x_weight, self.eps, 1.0)
 
-    def forward(self, input_imgs):
-        """Run FourierNetSPR registration."""
+    def forward(self, input_imgs: Tuple[torch.Tensor, torch.Tensor]):
+        """Run FourierNetSPR registration.
+
+        Args:
+            input_imgs: Tuple `(mov, fix)` tensors of shape ``[B, C, D, H, W]``.
+
+        Returns:
+            See the class docstring. Displacements are in voxel units (SVF
+            outputs clamped to ``[-100, 100]``); ``x_weight`` has shape
+            ``[B, 1, D, H, W]`` with values in ``[1e-6, 1]``.
+        """
         mov, fix = input_imgs
         low_flow, low_features = self.backbone(mov, fix)
         normalized_flow = _low_spatial_to_full_spatial(low_flow, mov.shape[2:])
@@ -491,16 +726,25 @@ class FourierNetSPR(_FourierNetBase):
 class FourierNetPlusSPR(_FourierNetBase):
     """MIR-callable 3-D Fourier-Net+ with spatially varying regularization weights.
 
+    Args:
+        configs: Config object with Fourier-Net+ hyperparameters (defaults to
+            ``get_FourierNetPlus_default_config()``).
+        SVF: Whether to integrate a stationary velocity field.
+        SVF_steps: Optional override for scaling-and-squaring steps.
+        gen_output: If True and `SVF=False`, also return the warped moving image.
+
     Forward outputs:
         `(flow, x_weight)` when `SVF=False`, or
         `(pos_flow, neg_flow, x_weight)` when `SVF=True`, mirroring
-        `TransMorphTVFSPR`.
+        `TransMorphTVFSPR`. With `SVF=False` and `gen_output=True` the output is
+        `(warped, flow, x_weight)`.
     """
 
     def __init__(self, configs=None, SVF=True, SVF_steps=None, gen_output=False):
         """Initialize FourierNetPlusSPR."""
         if configs is None:
             from MIR.models.configs_FourierNet import get_FourierNetPlus_default_config
+
             configs = get_FourierNetPlus_default_config()
         super().__init__(configs=configs, gen_output=gen_output)
         self.SVF = bool(SVF)
@@ -540,8 +784,17 @@ class FourierNetPlusSPR(_FourierNetBase):
         x_weight = self.wts_act(x_weight)
         return torch.clamp(x_weight, self.eps, 1.0)
 
-    def forward(self, input_imgs):
-        """Run FourierNetPlusSPR registration."""
+    def forward(self, input_imgs: Tuple[torch.Tensor, torch.Tensor]):
+        """Run FourierNetPlusSPR registration.
+
+        Args:
+            input_imgs: Tuple `(mov, fix)` tensors of shape ``[B, C, *img_size]``.
+
+        Returns:
+            See the class docstring. Displacements are in voxel units (SVF
+            outputs clamped to ``[-100, 100]``); ``x_weight`` has shape
+            ``[B, 1, *img_size]`` with values in ``[1e-6, 1]``.
+        """
         mov, fix = input_imgs
         normalized_flow, features = self.backbone(mov, fix)
         flow = self._normalized_to_voxel_flow(normalized_flow)

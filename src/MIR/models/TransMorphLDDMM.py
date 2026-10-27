@@ -1,5 +1,4 @@
-'''
-TransMorph-LDDMM: TransMorph with a time-varying velocity field (LDDMM) parameterization.
+"""TransMorph-LDDMM: TransMorph with a time-varying velocity field (LDDMM) parameterization.
 
 Instead of a stationary velocity field (SVF) integrated by scaling-and-squaring, the
 transformation is the end point of a flow
@@ -28,23 +27,23 @@ Conventions follow the rest of MIR: a displacement field ``u`` warps the moving 
 ``mov(x + u(x))`` (``SpatialTransformer``), and ``psi = id + u`` corresponds to the LDDMM
 flow phi_1.  The inverse map ``id + w`` is integrated alongside and returned as well.
 
-References
-----------
-Beg, Miller, Trouve, Younes. Computing large deformation metric mappings via geodesic
-    flows of diffeomorphisms. IJCV 2005.
-Vialard, Risser, Rueckert, Cotter. Diffeomorphic 3D image registration via geodesic
-    shooting using an efficient adjoint calculation. IJCV 2012.
-Zhang & Fletcher. Fast diffeomorphic image registration via Fourier-approximated Lie
-    algebras (FLASH). IJCV 2019.
-Yang, Kwitt, Styner, Niethammer. Quicksilver: Fast predictive image registration.
-    NeuroImage 2017.
-Chen et al. TransMorph: Transformer for unsupervised medical image registration.
-    MedIA 2022.
+References:
+    - Beg, Miller, Trouve, Younes. Computing large deformation metric mappings via geodesic
+      flows of diffeomorphisms. IJCV 2005.
+    - Vialard, Risser, Rueckert, Cotter. Diffeomorphic 3D image registration via geodesic
+      shooting using an efficient adjoint calculation. IJCV 2012.
+    - Zhang & Fletcher. Fast diffeomorphic image registration via Fourier-approximated Lie
+      algebras (FLASH). IJCV 2019.
+    - Yang, Kwitt, Styner, Niethammer. Quicksilver: Fast predictive image registration.
+      NeuroImage 2017.
+    - Chen et al. TransMorph: Transformer for unsupervised medical image registration.
+      MedIA 2022.
 
 Junyu Chen
 jchen245@jhmi.edu
 Johns Hopkins University
-'''
+
+"""
 
 import torch
 import torch.nn as nn
@@ -55,8 +54,14 @@ from MIR.models.TransMorph import Conv3dReLU, DecoderBlock, RegistrationHead
 
 
 # Kernel, integrator and geometry helpers live in MIR.models.lddmm (re-exported here).
-from MIR.models.lddmm import (FourierKernel, SpatiallyVaryingKernel, LDDMMIntegrator, jacobian_fd, det3x3,  # noqa: F401
-                              load_backbone_weights)
+from MIR.models.lddmm import (  # noqa: F401 -- several of these are re-exported from this module
+    FourierKernel,
+    SpatiallyVaryingKernel,
+    LDDMMIntegrator,
+    jacobian_fd,
+    det3x3,
+    load_backbone_weights,
+)
 
 
 # --------------------------------------------------------------------------- #
@@ -95,11 +100,27 @@ class TransMorphLDDMM(nn.Module):
 
     Forward outputs:
         Dense displacement field [B, 3, D*int_scale, H*int_scale, W*int_scale] (or a dict).
+
     """
 
-    def __init__(self, config, param='shooting', time_steps=7, kernel='helmholtz', alpha=2.0,
-                 gamma=1.0, power=2, sigma=2.0, kernel_weights=None, sigmas=None, weight_smooth_sigma=1.0,
-                 omt_power=2.0, spr=None, int_scale=1, swin_type='swin'):
+    def __init__(
+        self,
+        config,
+        param='shooting',
+        time_steps=7,
+        kernel='helmholtz',
+        alpha=2.0,
+        gamma=1.0,
+        power=2,
+        sigma=2.0,
+        kernel_weights=None,
+        sigmas=None,
+        weight_smooth_sigma=1.0,
+        omt_power=2.0,
+        spr=None,
+        int_scale=1,
+        swin_type='swin',
+    ):
         super().__init__()
         if param not in ('shooting', 'tvf'):
             raise ValueError(f"param must be 'shooting' or 'tvf', got {param}")
@@ -114,37 +135,44 @@ class TransMorphLDDMM(nn.Module):
         self.if_transskip = config.if_transskip
         self.img_size = tuple(config.img_size)
         embed_dim = config.embed_dim
-        self.transformer = swin.SwinTransformer(patch_size=config.patch_size,
-                                                in_chans=config.in_chans,
-                                                embed_dim=config.embed_dim,
-                                                depths=config.depths,
-                                                num_heads=config.num_heads,
-                                                window_size=config.window_size,
-                                                mlp_ratio=config.mlp_ratio,
-                                                qkv_bias=config.qkv_bias,
-                                                drop_rate=config.drop_rate,
-                                                drop_path_rate=config.drop_path_rate,
-                                                ape=config.ape,
-                                                spe=config.spe,
-                                                rpe=config.rpe,
-                                                patch_norm=config.patch_norm,
-                                                use_checkpoint=config.use_checkpoint,
-                                                out_indices=config.out_indices,
-                                                pat_merg_rf=config.pat_merg_rf,
-                                                )
-        self.up0 = DecoderBlock(embed_dim * 4, embed_dim * 2, skip_channels=embed_dim * 2 if self.if_transskip else 0,
-                                use_batchnorm=False)
-        self.up1 = DecoderBlock(embed_dim * 2, embed_dim, skip_channels=embed_dim if self.if_transskip else 0,
-                                use_batchnorm=False)
-        self.up2 = DecoderBlock(embed_dim, embed_dim // 2, skip_channels=embed_dim // 2 if self.if_transskip else 0,
-                                use_batchnorm=False)
+        self.transformer = swin.SwinTransformer(
+            patch_size=config.patch_size,
+            in_chans=config.in_chans,
+            embed_dim=config.embed_dim,
+            depths=config.depths,
+            num_heads=config.num_heads,
+            window_size=config.window_size,
+            mlp_ratio=config.mlp_ratio,
+            qkv_bias=config.qkv_bias,
+            drop_rate=config.drop_rate,
+            drop_path_rate=config.drop_path_rate,
+            ape=config.ape,
+            spe=config.spe,
+            rpe=config.rpe,
+            patch_norm=config.patch_norm,
+            use_checkpoint=config.use_checkpoint,
+            out_indices=config.out_indices,
+            pat_merg_rf=config.pat_merg_rf,
+        )
+        self.up0 = DecoderBlock(
+            embed_dim * 4, embed_dim * 2, skip_channels=embed_dim * 2 if self.if_transskip else 0, use_batchnorm=False
+        )
+        self.up1 = DecoderBlock(
+            embed_dim * 2, embed_dim, skip_channels=embed_dim if self.if_transskip else 0, use_batchnorm=False
+        )
+        self.up2 = DecoderBlock(
+            embed_dim, embed_dim // 2, skip_channels=embed_dim // 2 if self.if_transskip else 0, use_batchnorm=False
+        )
         self.c1 = Conv3dReLU(2, embed_dim // 2, 3, 1, use_batchnorm=False)
         self.avg_pool = nn.AvgPool3d(3, stride=2, padding=1)
         if self.param == 'shooting':
             self.c2 = Conv3dReLU(2, config.reg_head_chan, 3, 1, use_batchnorm=False)
-            self.up3 = DecoderBlock(embed_dim // 2, config.reg_head_chan,
-                                    skip_channels=config.reg_head_chan if self.if_convskip else 0,
-                                    use_batchnorm=False)
+            self.up3 = DecoderBlock(
+                embed_dim // 2,
+                config.reg_head_chan,
+                skip_channels=config.reg_head_chan if self.if_convskip else 0,
+                use_batchnorm=False,
+            )
             self.reg_head = RegistrationHead(in_channels=config.reg_head_chan, out_channels=3, kernel_size=3)
         else:
             self.cs = nn.ModuleList()
@@ -152,9 +180,14 @@ class TransMorphLDDMM(nn.Module):
             self.reg_heads = nn.ModuleList()
             for _ in range(self.time_steps):
                 self.cs.append(Conv3dReLU(2, embed_dim // 2, 3, 1))
-                self.up3s.append(DecoderBlock(embed_dim // 2, config.reg_head_chan,
-                                              skip_channels=embed_dim // 2 if self.if_convskip else 0,
-                                              use_batchnorm=False))
+                self.up3s.append(
+                    DecoderBlock(
+                        embed_dim // 2,
+                        config.reg_head_chan,
+                        skip_channels=embed_dim // 2 if self.if_convskip else 0,
+                        use_batchnorm=False,
+                    )
+                )
                 self.reg_heads.append(RegistrationHead(in_channels=config.reg_head_chan, out_channels=3, kernel_size=3))
             self.spatial_trans = utils.SpatialTransformer(self.img_size)
 
@@ -180,21 +213,24 @@ class TransMorphLDDMM(nn.Module):
             self.kernel = SpatiallyVaryingKernel(sigmas, weight_smooth_sigma, omt_power).scaled(s)
             self.wts_head = nn.Sequential(
                 Conv3dReLU(config.reg_head_chan, config.reg_head_chan, 3, 1, use_batchnorm=False),
-                nn.Conv3d(config.reg_head_chan, len(sigmas), 3, padding=1))
+                nn.Conv3d(config.reg_head_chan, len(sigmas), 3, padding=1),
+            )
             nn.init.zeros_(self.wts_head[-1].weight)
             bias = torch.zeros(len(sigmas))
             bias[-1] = 3.0  # start with ~87% of the weight on the smoothest kernel
             with torch.no_grad():
                 self.wts_head[-1].bias.copy_(bias)
         else:
-            self.kernel = FourierKernel(kernel=kernel, alpha=alpha, gamma=gamma, power=power, sigma=sigma,
-                                        weights=kernel_weights).scaled(s)
+            self.kernel = FourierKernel(
+                kernel=kernel, alpha=alpha, gamma=gamma, power=power, sigma=sigma, weights=kernel_weights
+            ).scaled(s)
             self.wts_head = None
         self.int_size = tuple(d * s for d in self.img_size)
         self.integrator = LDDMMIntegrator(self.int_size, self.time_steps, self.kernel)
 
     @property
-    def spatially_varying(self):
+    def spatially_varying(self) -> bool:
+        """Whether ``self.kernel`` is a :class:`SpatiallyVaryingKernel`."""
         return isinstance(self.kernel, SpatiallyVaryingKernel)
 
     def _spr_weight(self, x):
@@ -227,6 +263,17 @@ class TransMorphLDDMM(nn.Module):
         return x
 
     def forward(self, inputs, return_dict=False):
+        """Predict the momentum (shooting) or per-step pre-velocities (tvf) and integrate the flow.
+
+        Args:
+            inputs: Tuple ``(mov, fix)`` of tensors [B, 1, D, H, W] with ``(D, H, W) == config.img_size``.
+            return_dict: If True, return the full output dict (see the class docstring) instead of the flow.
+
+        Returns:
+            The forward displacement field ``flow`` [B, 3, D*int_scale, H*int_scale, W*int_scale] or, with
+            ``return_dict=True``, the integrator output dict extended with ``momentum`` (shooting) or
+            ``pre_velocities`` (tvf) and, when applicable, ``kernel_weights``, ``omt`` and ``spr_weight``.
+        """
         mov, fix = inputs
         feats = self.encode(mov, fix)
         if self.param == 'shooting':
@@ -236,7 +283,10 @@ class TransMorphLDDMM(nn.Module):
             lam = self._spr_weight(x)
             w0 = self._weights(x, lam)
             if self.int_scale > 1:
-                m0 = F.interpolate(m0, scale_factor=self.int_scale, mode='trilinear', align_corners=False) * self.int_scale
+                m0 = (
+                    F.interpolate(m0, scale_factor=self.int_scale, mode='trilinear', align_corners=False)
+                    * self.int_scale
+                )
                 if w0 is not None:
                     w0 = F.interpolate(w0, scale_factor=self.int_scale, mode='trilinear', align_corners=False)
                 if lam is not None:
@@ -270,4 +320,3 @@ class TransMorphLDDMM(nn.Module):
         if return_dict:
             return out
         return out['flow']
-

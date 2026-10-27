@@ -66,6 +66,21 @@ obtained by integrating ``-v``. This is the default for most diffeomorphic model
    integrate = VecInt(inshape=(D, H, W), nsteps=7)
    flow, inv_flow = integrate(v), integrate(-v)
 
+To turn any displacement field into an SVF (for example to make a network's displacement output
+diffeomorphic, or to average fields in the velocity domain), fit one with ``fit_warp_to_svf`` (or the
+coarse-to-fine ``fit_warp_to_svf_fast``) and choose what to get back with ``output_type``:
+
+.. code-block:: python
+
+   from MIR.models import fit_warp_to_svf
+   v = fit_warp_to_svf(disp, output_type="velocity")          # the fitted velocity field
+   disp_diffeo = fit_warp_to_svf(disp, output_type="displacement")   # exp(v), a diffeomorphic displacement
+
+.. note::
+   The older names ``output_type="disp"`` (the default) and ``output_type="svf"`` still work but are inverted
+   relative to what they return: ``"disp"`` returns the **velocity** and ``"svf"`` returns the **displacement**.
+   Prefer the explicit ``"velocity"`` / ``"displacement"`` in new code.
+
 Time-varying composition (TVF)
 ------------------------------
 

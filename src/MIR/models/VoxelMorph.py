@@ -1,5 +1,4 @@
-'''
-VoxelMorph
+"""VoxelMorph: U-Net based deformable registration network.
 
 Original code retrieved from:
 https://github.com/voxelmorph/voxelmorph
@@ -13,7 +12,7 @@ Modified and tested by:
 Junyu Chen
 jchen245@jhmi.edu
 Johns Hopkins University
-'''
+"""
 
 import torch
 import torch.nn as nn
@@ -21,15 +20,26 @@ import torch.nn as nn
 import numpy as np
 from torch.distributions.normal import Normal
 import MIR.models.registration_utils as utils
+from typing import Tuple
+
 
 class ConvBlock(nn.Module):
     """Convolutional block with LeakyReLU for U-Net.
+
+    Kernel size 3, padding 1, LeakyReLU slope 0.2.
+
+    Args:
+        ndims: Number of spatial dimensions (1, 2 or 3).
+        in_channels: Number of input channels.
+        out_channels: Number of output channels.
+        stride: Convolution stride.
 
     Inputs:
         x: Tensor of shape ``[B, C, *spatial]``.
 
     Returns:
         Tensor with updated channels and spatial size.
+
     """
 
     def __init__(self, ndims, in_channels, out_channels, stride=1):
@@ -39,11 +49,19 @@ class ConvBlock(nn.Module):
         self.main = Conv(in_channels, out_channels, 3, stride, 1)
         self.activation = nn.LeakyReLU(0.2)
 
-    def forward(self, x):
-        """Apply convolution and activation."""
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Apply convolution and activation.
+
+        Args:
+            x: Tensor of shape ``[B, in_channels, *spatial]``.
+
+        Returns:
+            torch.Tensor: Tensor of shape ``[B, out_channels, *spatial / stride]``.
+        """
         out = self.main(x)
         out = self.activation(out)
         return out
+
 
 class Unet(nn.Module):
     """U-Net backbone for VoxelMorph.
@@ -51,11 +69,18 @@ class Unet(nn.Module):
     Layer features can be specified directly as lists or derived from
     a base feature count and number of levels.
 
+    Args:
+        inshape: Spatial input shape, e.g. (192, 192, 192).
+        nb_features: Feature specification for encoder/decoder.
+        nb_levels: Number of U-Net levels when `nb_features` is int.
+        feat_mult: Per-level feature multiplier when `nb_features` is int.
+
     Inputs:
         x: Tensor of shape ``[B, 2, *spatial]`` with concatenated images.
 
     Returns:
         Tensor of decoded features at full resolution.
+
     """
 
     def __init__(self, inshape, nb_features=None, nb_levels=None, feat_mult=1):
@@ -63,9 +88,16 @@ class Unet(nn.Module):
 
         Args:
             inshape: Spatial input shape, e.g. (192, 192, 192).
-            nb_features: Feature specification for encoder/decoder.
+            nb_features: Feature specification for encoder/decoder: a pair
+                ``(enc_nf, dec_nf)`` or an int. Defaults to
+                ``((8, 32, 32, 32), (32, 32, 32, 32, 32, 8, 8))``.
             nb_levels: Number of U-Net levels when `nb_features` is int.
             feat_mult: Per-level feature multiplier when `nb_features` is int.
+
+        Raises:
+            ValueError: If `nb_features` is an int and `nb_levels` is None, or
+                `nb_levels` is given while `nb_features` is not an int.
+
         """
         super().__init__()
 
@@ -101,7 +133,7 @@ class Unet(nn.Module):
         # configure decoder (up-sampling path)
         enc_history = list(reversed(self.enc_nf))
         self.uparm = nn.ModuleList()
-        for i, nf in enumerate(self.dec_nf[:len(self.enc_nf)]):
+        for i, nf in enumerate(self.dec_nf[: len(self.enc_nf)]):
             channels = prev_nf + enc_history[i] if i > 0 else prev_nf
             self.uparm.append(ConvBlock(ndims, channels, nf, stride=1))
             prev_nf = nf
@@ -109,13 +141,20 @@ class Unet(nn.Module):
         # configure extra decoder convolutions (no up-sampling)
         prev_nf += 2
         self.extras = nn.ModuleList()
-        for nf in self.dec_nf[len(self.enc_nf):]:
+        for nf in self.dec_nf[len(self.enc_nf) :]:
             self.extras.append(ConvBlock(ndims, prev_nf, nf, stride=1))
             prev_nf = nf
 
-    def forward(self, x):
-        """Run U-Net forward pass."""
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Run U-Net forward pass.
 
+        Args:
+            x: Tensor of shape ``[B, 2, *spatial]``; spatial sizes must be
+                divisible by ``2**len(enc_nf)``.
+
+        Returns:
+            torch.Tensor: Features of shape ``[B, dec_nf[-1], *spatial]``.
+        """
         # get encoder activations
         x_enc = [x]
         for layer in self.downarm:
@@ -134,32 +173,47 @@ class Unet(nn.Module):
 
         return x
 
+
 class VxmDense(nn.Module):
     """VoxelMorph network for nonlinear image registration.
+
+    Args:
+        configs: Config object with VoxelMorph hyperparameters (``img_size``,
+            ``nb_unet_features``, ``nb_unet_levels``, ``unet_feat_mult``,
+            ``use_probs``).
+        gen_output: If True, also return the warped moving image.
 
     Inputs:
         input_imgs: Tuple `(mov, fix)` of tensors ``[B, 1, *spatial]``.
 
     Returns:
-        Flow tensor, and optionally warped image if `gen_output` is True.
+        Flow tensor, or ``(warped, flow)`` if `gen_output` is True.
+
     """
-    def __init__(self,
+
+    def __init__(
+        self,
         configs,
-        gen_output=False,):
+        gen_output=False,
+    ):
         """Initialize VoxelMorph with config settings.
 
         Args:
             configs: Config object with VoxelMorph hyperparameters.
             gen_output: If True, also return the warped moving image.
+
+        Raises:
+            NotImplementedError: If ``configs.use_probs`` is True.
+
         """
         super().__init__()
 
         inshape = configs.img_size
-        nb_unet_features= configs.nb_unet_features
-        nb_unet_levels= configs.nb_unet_levels
-        unet_feat_mult= configs.unet_feat_mult
-        use_probs= configs.use_probs
-        
+        nb_unet_features = configs.nb_unet_features
+        nb_unet_levels = configs.nb_unet_levels
+        unet_feat_mult = configs.unet_feat_mult
+        use_probs = configs.use_probs
+
         # internal flag indicating whether to return flow or integrated warp during inference
         self.training = True
 
@@ -169,10 +223,7 @@ class VxmDense(nn.Module):
 
         # configure core unet model
         self.unet_model = Unet(
-            inshape,
-            nb_features=nb_unet_features,
-            nb_levels=nb_unet_levels,
-            feat_mult=unet_feat_mult
+            inshape, nb_features=nb_unet_features, nb_levels=nb_unet_levels, feat_mult=unet_feat_mult
         )
 
         # configure unet to flow field layer
@@ -192,16 +243,17 @@ class VxmDense(nn.Module):
         if self.gen_output:
             self.transformer = utils.SpatialTransformer(inshape)
 
-    def forward(self, input_imgs):
+    def forward(self, input_imgs: Tuple[torch.Tensor, torch.Tensor]):
         """Run VoxelMorph forward pass.
 
         Args:
-            input_imgs: Tuple `(mov, fix)` tensors.
+            input_imgs: Tuple `(mov, fix)` tensors of shape ``[B, 1, *spatial]``.
 
         Returns:
-            Flow tensor, and optionally warped moving image.
-        """
+            Displacement field ``[B, ndims, *spatial]`` (voxel units, not
+            integrated); if `gen_output` is True, the tuple ``(warped_mov, flow)``.
 
+        """
         # concatenate inputs and propagate unet
         mov, fix = input_imgs
         x = torch.cat((mov, fix), dim=1)
@@ -217,6 +269,5 @@ class VxmDense(nn.Module):
             # warp image with flow field
             y_source = self.transformer(mov, pos_flow)
             return y_source, pos_flow
-        else:
-            # return flow field
-            return pos_flow
+        # return flow field
+        return pos_flow

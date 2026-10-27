@@ -1,5 +1,5 @@
-'''
-TransMorph model
+"""TransMorph model.
+
 Chen, J., Du, Y., He, Y., Segars, W. P., Li, Y., & Frey, E. C. (2021).
 TransMorph: Transformer for unsupervised medical image registration.
 arXiv preprint arXiv:2111.10480.
@@ -13,7 +13,7 @@ Modified and tested by:
 Junyu Chen
 jchen245@jhmi.edu
 Johns Hopkins University
-'''
+"""
 
 import torch
 import torch.nn as nn
@@ -25,16 +25,29 @@ import MIR.models.Deformable_Swin_Transformer as dswin
 import MIR.models.Deformable_Swin_Transformer_v2 as dswin_v2
 import numpy as np
 import torch.nn.functional as F
+from typing import Optional, Tuple
+
+
 class Conv3dReLU(nn.Sequential):
-    """3D convolution + normalization + LeakyReLU block."""
+    """3D convolution + normalization + LeakyReLU block.
+
+    Args:
+        in_channels (int): Number of input channels.
+        out_channels (int): Number of output channels.
+        kernel_size (int): Convolution kernel size.
+        padding (int): Convolution padding. Default: 0.
+        stride (int): Convolution stride. Default: 1.
+        use_batchnorm (bool): Use BatchNorm3d if True, otherwise InstanceNorm3d. Default: True.
+    """
+
     def __init__(
-            self,
-            in_channels,
-            out_channels,
-            kernel_size,
-            padding=0,
-            stride=1,
-            use_batchnorm=True,
+        self,
+        in_channels,
+        out_channels,
+        kernel_size,
+        padding=0,
+        stride=1,
+        use_batchnorm=True,
     ):
         conv = nn.Conv3d(
             in_channels,
@@ -50,17 +63,27 @@ class Conv3dReLU(nn.Sequential):
         else:
             nm = nn.BatchNorm3d(out_channels)
 
-        super(Conv3dReLU, self).__init__(conv, nm, relu)
+        super().__init__(conv, nm, relu)
 
 
 class DecoderBlock(nn.Module):
-    """Decoder block with upsampling and optional skip connection."""
+    """Decoder block with upsampling and optional skip connection.
+
+    Upsamples by 2 (trilinear), concatenates the skip tensor (if any) and applies two :class:`Conv3dReLU` blocks.
+
+    Args:
+        in_channels (int): Number of input channels.
+        out_channels (int): Number of output channels.
+        skip_channels (int): Number of channels of the skip tensor (0 if none). Default: 0.
+        use_batchnorm (bool): Use BatchNorm3d if True, otherwise InstanceNorm3d. Default: True.
+    """
+
     def __init__(
-            self,
-            in_channels,
-            out_channels,
-            skip_channels=0,
-            use_batchnorm=True,
+        self,
+        in_channels,
+        out_channels,
+        skip_channels=0,
+        use_batchnorm=True,
     ):
         super().__init__()
         self.conv1 = Conv3dReLU(
@@ -79,15 +102,15 @@ class DecoderBlock(nn.Module):
         )
         self.up = nn.Upsample(scale_factor=2, mode='trilinear', align_corners=False)
 
-    def forward(self, x, skip=None):
+    def forward(self, x: torch.Tensor, skip: Optional[torch.Tensor] = None) -> torch.Tensor:
         """Forward pass.
 
         Args:
             x: Tensor of shape [B, C, D, H, W].
-            skip: Optional skip tensor concatenated on channel axis.
+            skip: Optional skip tensor of shape [B, skip_channels, 2D, 2H, 2W], concatenated on channel axis.
 
         Returns:
-            Tensor after upsampling and convolutions.
+            torch.Tensor: Tensor of shape [B, out_channels, 2D, 2H, 2W].
         """
         x = self.up(x)
         if skip is not None:
@@ -96,13 +119,26 @@ class DecoderBlock(nn.Module):
         x = self.conv2(x)
         return x
 
+
 class RegistrationHead(nn.Sequential):
-    """Predict a dense displacement field from decoder features."""
+    """Predict a dense displacement field from decoder features.
+
+    A single 3D convolution whose weights are initialized from N(0, 1e-5) and bias to zero, so the initial
+    prediction is close to the identity transform.
+
+    Args:
+        in_channels (int): Number of input feature channels.
+        out_channels (int): Number of output channels (3 for a 3D displacement field).
+        kernel_size (int): Convolution kernel size. Default: 3.
+        upsampling (int): Unused; kept for backward compatibility. Default: 1.
+    """
+
     def __init__(self, in_channels, out_channels, kernel_size=3, upsampling=1):
         conv3d = nn.Conv3d(in_channels, out_channels, kernel_size=kernel_size, padding=kernel_size // 2)
         conv3d.weight = nn.Parameter(Normal(0, 1e-5).sample(conv3d.weight.shape))
         conv3d.bias = nn.Parameter(torch.zeros(conv3d.bias.shape))
         super().__init__(conv3d)
+
 
 class TransMorph(nn.Module):
     """TransMorph model.
@@ -118,87 +154,103 @@ class TransMorph(nn.Module):
 
     Forward outputs:
         Dense flow tensor of shape [B, 3, D, H, W].
+
+    Raises:
+        ValueError: If ``swin_type`` is not one of 'swin', 'dswin', 'dswinv2'.
     """
+
     def __init__(self, config, SVF=True, SVF_steps=7, swin_type='swin'):
-        '''
-        Original TransMorph Model
-        '''
-        super(TransMorph, self).__init__()
+        """Original TransMorph Model."""
+        super().__init__()
         if_convskip = config.if_convskip
         self.if_convskip = if_convskip
         if_transskip = config.if_transskip
         self.if_transskip = if_transskip
         embed_dim = config.embed_dim
         if swin_type == 'swin':
-            self.transformer = swin.SwinTransformer(patch_size=config.patch_size,
-                                           in_chans=config.in_chans,
-                                           embed_dim=config.embed_dim,
-                                           depths=config.depths,
-                                           num_heads=config.num_heads,
-                                           window_size=config.window_size,
-                                           mlp_ratio=config.mlp_ratio,
-                                           qkv_bias=config.qkv_bias,
-                                           drop_rate=config.drop_rate,
-                                           drop_path_rate=config.drop_path_rate,
-                                           ape=config.ape,
-                                           spe=config.spe,
-                                           rpe=config.rpe,
-                                           patch_norm=config.patch_norm,
-                                           use_checkpoint=config.use_checkpoint,
-                                           out_indices=config.out_indices,
-                                           pat_merg_rf=config.pat_merg_rf,
-                                           )
+            self.transformer = swin.SwinTransformer(
+                patch_size=config.patch_size,
+                in_chans=config.in_chans,
+                embed_dim=config.embed_dim,
+                depths=config.depths,
+                num_heads=config.num_heads,
+                window_size=config.window_size,
+                mlp_ratio=config.mlp_ratio,
+                qkv_bias=config.qkv_bias,
+                drop_rate=config.drop_rate,
+                drop_path_rate=config.drop_path_rate,
+                ape=config.ape,
+                spe=config.spe,
+                rpe=config.rpe,
+                patch_norm=config.patch_norm,
+                use_checkpoint=config.use_checkpoint,
+                out_indices=config.out_indices,
+                pat_merg_rf=config.pat_merg_rf,
+            )
         elif swin_type == 'dswin':
-            self.transformer = dswin.DefSwinTransformer(patch_size=config.patch_size,
-                                           in_chans=config.in_chans,
-                                           embed_dim=config.embed_dim,
-                                           depths=config.depths,
-                                           num_heads=config.num_heads,
-                                           window_size=config.window_size,
-                                           mlp_ratio=config.mlp_ratio,
-                                           qkv_bias=config.qkv_bias,
-                                           drop_rate=config.drop_rate,
-                                           drop_path_rate=config.drop_path_rate,
-                                           ape=config.ape,
-                                           spe=config.spe,
-                                           rpe=config.rpe,
-                                           patch_norm=config.patch_norm,
-                                           use_checkpoint=config.use_checkpoint,
-                                           out_indices=config.out_indices,
-                                           pat_merg_rf=config.pat_merg_rf,
-                                           dwin_size=config.dwin_kernel_size,
-                                           img_size=config.img_size,
-                                           )
+            self.transformer = dswin.DefSwinTransformer(
+                patch_size=config.patch_size,
+                in_chans=config.in_chans,
+                embed_dim=config.embed_dim,
+                depths=config.depths,
+                num_heads=config.num_heads,
+                window_size=config.window_size,
+                mlp_ratio=config.mlp_ratio,
+                qkv_bias=config.qkv_bias,
+                drop_rate=config.drop_rate,
+                drop_path_rate=config.drop_path_rate,
+                ape=config.ape,
+                spe=config.spe,
+                rpe=config.rpe,
+                patch_norm=config.patch_norm,
+                use_checkpoint=config.use_checkpoint,
+                out_indices=config.out_indices,
+                pat_merg_rf=config.pat_merg_rf,
+                dwin_size=config.dwin_kernel_size,
+                img_size=config.img_size,
+            )
         elif swin_type == 'dswinv2':
-            self.transformer = dswin_v2.DefSwinTransformerV2(patch_size=config.patch_size,
-                                           in_chans=config.in_chans,
-                                           embed_dim=config.embed_dim,
-                                           depths=config.depths,
-                                           num_heads=config.num_heads,
-                                           window_size=config.window_size,
-                                           mlp_ratio=config.mlp_ratio,
-                                           qkv_bias=config.qkv_bias,
-                                           drop_rate=config.drop_rate,
-                                           drop_path_rate=config.drop_path_rate,
-                                           ape=config.ape,
-                                           spe=config.spe,
-                                           rpe=config.rpe,
-                                           patch_norm=config.patch_norm,
-                                           use_checkpoint=config.use_checkpoint,
-                                           out_indices=config.out_indices,
-                                           pat_merg_rf=config.pat_merg_rf,
-                                           dwin_size=config.dwin_kernel_size,
-                                           img_size=config.img_size,
-                                           )
+            self.transformer = dswin_v2.DefSwinTransformerV2(
+                patch_size=config.patch_size,
+                in_chans=config.in_chans,
+                embed_dim=config.embed_dim,
+                depths=config.depths,
+                num_heads=config.num_heads,
+                window_size=config.window_size,
+                mlp_ratio=config.mlp_ratio,
+                qkv_bias=config.qkv_bias,
+                drop_rate=config.drop_rate,
+                drop_path_rate=config.drop_path_rate,
+                ape=config.ape,
+                spe=config.spe,
+                rpe=config.rpe,
+                patch_norm=config.patch_norm,
+                use_checkpoint=config.use_checkpoint,
+                out_indices=config.out_indices,
+                pat_merg_rf=config.pat_merg_rf,
+                dwin_size=config.dwin_kernel_size,
+                img_size=config.img_size,
+            )
         else:
             raise ValueError(f'Unknown Transformer type: {swin_type}')
         self.swin_type = swin_type
-        self.up0 = DecoderBlock(embed_dim*4, embed_dim*2, skip_channels=embed_dim*2 if if_transskip else 0, use_batchnorm=False)
-        self.up1 = DecoderBlock(embed_dim*2, embed_dim, skip_channels=embed_dim if if_transskip else 0, use_batchnorm=False)  # 384, 20, 20, 64
-        self.up2 = DecoderBlock(embed_dim, embed_dim//2, skip_channels=embed_dim//2 if if_transskip else 0, use_batchnorm=False)  # 384, 40, 40, 64
-        self.up3 = DecoderBlock(embed_dim//2, config.reg_head_chan, skip_channels=config.reg_head_chan if if_convskip else 0, use_batchnorm=False)  # 384, 80, 80, 128
-        #self.up4 = DecoderBlock(embed_dim//2, config.reg_head_chan, skip_channels=config.reg_head_chan if if_convskip else 0, use_batchnorm=False)  # 384, 160, 160, 256
-        self.c1 = Conv3dReLU(2, embed_dim//2, 3, 1, use_batchnorm=False)
+        self.up0 = DecoderBlock(
+            embed_dim * 4, embed_dim * 2, skip_channels=embed_dim * 2 if if_transskip else 0, use_batchnorm=False
+        )
+        self.up1 = DecoderBlock(
+            embed_dim * 2, embed_dim, skip_channels=embed_dim if if_transskip else 0, use_batchnorm=False
+        )  # 384, 20, 20, 64
+        self.up2 = DecoderBlock(
+            embed_dim, embed_dim // 2, skip_channels=embed_dim // 2 if if_transskip else 0, use_batchnorm=False
+        )  # 384, 40, 40, 64
+        self.up3 = DecoderBlock(
+            embed_dim // 2,
+            config.reg_head_chan,
+            skip_channels=config.reg_head_chan if if_convskip else 0,
+            use_batchnorm=False,
+        )  # 384, 80, 80, 128
+        # self.up4 = DecoderBlock(embed_dim//2, config.reg_head_chan, skip_channels=config.reg_head_chan if if_convskip else 0, use_batchnorm=False)  # 384, 160, 160, 256
+        self.c1 = Conv3dReLU(2, embed_dim // 2, 3, 1, use_batchnorm=False)
         self.c2 = Conv3dReLU(2, config.reg_head_chan, 3, 1, use_batchnorm=False)
         self.reg_head = RegistrationHead(
             in_channels=config.reg_head_chan,
@@ -215,10 +267,12 @@ class TransMorph(nn.Module):
         """Forward pass for the TransMorph model.
 
         Args:
-            inputs: Tuple of moving and fixed images `(mov, fix)`.
+            inputs: Tuple of moving and fixed images `(mov, fix)`, each of shape [B, 1, D, H, W].
 
         Returns:
-            Predicted dense flow field.
+            torch.Tensor: Predicted dense displacement field of shape [B, 3, D, H, W] (in voxels). With ``SVF``
+            enabled, the network output is treated as a stationary velocity field, integrated by scaling and
+            squaring and clamped to [-100, 100].
         """
         mov, fix = inputs
         x = torch.cat((mov, fix), dim=1)
@@ -229,7 +283,7 @@ class TransMorph(nn.Module):
         else:
             f3 = None
             f4 = None
-        
+
         if self.swin_type == 'swin':
             out_feats = self.transformer(x)
         else:
@@ -241,9 +295,9 @@ class TransMorph(nn.Module):
                 f2 = out_feats[-3]
             else:
                 mov_f1, fix_f1 = out_feats[-2]
-                f1 = (mov_f1 + fix_f1)
+                f1 = mov_f1 + fix_f1
                 mov_f2, fix_f2 = out_feats[-3]
-                f2 = (mov_f2 + fix_f2)
+                f2 = mov_f2 + fix_f2
         else:
             f1 = None
             f2 = None
@@ -252,18 +306,19 @@ class TransMorph(nn.Module):
             f0 = out_feats[-1]
         else:
             mov_f0, fix_f0 = out_feats[-1]
-            f0 = (mov_f0 + fix_f0)
+            f0 = mov_f0 + fix_f0
         x = self.up0(f0, f1)
         x = self.up1(x, f2)
         x = self.up2(x, f3)
         x = self.up3(x, f4)
         flow = self.reg_head(x)
-        
+
         if self.SVF:
             flow = self.vec_int(flow)
             flow = torch.clamp(flow, -100, 100)
-        
+
         return flow
+
 
 class TransMorphTVF(nn.Module):
     """TransMorph TVF model with progressive flow integration.
@@ -281,9 +336,13 @@ class TransMorphTVF(nn.Module):
 
     Forward outputs:
         Dense flow tensor of shape [B, 3, D, H, W].
+
+    Raises:
+        ValueError: If ``swin_type`` is not one of 'swin', 'dswin', 'dswinv2'.
     """
+
     def __init__(self, config, time_steps=12, SVF=False, SVF_steps=7, composition='composition', swin_type='swin'):
-        super(TransMorphTVF, self).__init__()
+        super().__init__()
         if_convskip = config.if_convskip
         self.if_convskip = if_convskip
         if_transskip = config.if_transskip
@@ -293,87 +352,107 @@ class TransMorphTVF(nn.Module):
         self.img_size = config.img_size
         self.composition = composition
         if swin_type == 'swin':
-            self.transformer = swin.SwinTransformer(patch_size=config.patch_size,
-                                           in_chans=config.in_chans,
-                                           embed_dim=config.embed_dim,
-                                           depths=config.depths,
-                                           num_heads=config.num_heads,
-                                           window_size=config.window_size,
-                                           mlp_ratio=config.mlp_ratio,
-                                           qkv_bias=config.qkv_bias,
-                                           drop_rate=config.drop_rate,
-                                           drop_path_rate=config.drop_path_rate,
-                                           ape=config.ape,
-                                           spe=config.spe,
-                                           rpe=config.rpe,
-                                           patch_norm=config.patch_norm,
-                                           use_checkpoint=config.use_checkpoint,
-                                           out_indices=config.out_indices,
-                                           pat_merg_rf=config.pat_merg_rf,
-                                           )
+            self.transformer = swin.SwinTransformer(
+                patch_size=config.patch_size,
+                in_chans=config.in_chans,
+                embed_dim=config.embed_dim,
+                depths=config.depths,
+                num_heads=config.num_heads,
+                window_size=config.window_size,
+                mlp_ratio=config.mlp_ratio,
+                qkv_bias=config.qkv_bias,
+                drop_rate=config.drop_rate,
+                drop_path_rate=config.drop_path_rate,
+                ape=config.ape,
+                spe=config.spe,
+                rpe=config.rpe,
+                patch_norm=config.patch_norm,
+                use_checkpoint=config.use_checkpoint,
+                out_indices=config.out_indices,
+                pat_merg_rf=config.pat_merg_rf,
+            )
         elif swin_type == 'dswin':
-            self.transformer = dswin.DefSwinTransformer(patch_size=config.patch_size,
-                                           in_chans=config.in_chans,
-                                           embed_dim=config.embed_dim,
-                                           depths=config.depths,
-                                           num_heads=config.num_heads,
-                                           window_size=config.window_size,
-                                           mlp_ratio=config.mlp_ratio,
-                                           qkv_bias=config.qkv_bias,
-                                           drop_rate=config.drop_rate,
-                                           drop_path_rate=config.drop_path_rate,
-                                           ape=config.ape,
-                                           spe=config.spe,
-                                           rpe=config.rpe,
-                                           patch_norm=config.patch_norm,
-                                           use_checkpoint=config.use_checkpoint,
-                                           out_indices=config.out_indices,
-                                           pat_merg_rf=config.pat_merg_rf,
-                                           dwin_size=config.dwin_kernel_size,
-                                           img_size=config.img_size,
-                                           )
+            self.transformer = dswin.DefSwinTransformer(
+                patch_size=config.patch_size,
+                in_chans=config.in_chans,
+                embed_dim=config.embed_dim,
+                depths=config.depths,
+                num_heads=config.num_heads,
+                window_size=config.window_size,
+                mlp_ratio=config.mlp_ratio,
+                qkv_bias=config.qkv_bias,
+                drop_rate=config.drop_rate,
+                drop_path_rate=config.drop_path_rate,
+                ape=config.ape,
+                spe=config.spe,
+                rpe=config.rpe,
+                patch_norm=config.patch_norm,
+                use_checkpoint=config.use_checkpoint,
+                out_indices=config.out_indices,
+                pat_merg_rf=config.pat_merg_rf,
+                dwin_size=config.dwin_kernel_size,
+                img_size=config.img_size,
+            )
         elif swin_type == 'dswinv2':
-            self.transformer = dswin_v2.DefSwinTransformerV2(patch_size=config.patch_size,
-                                           in_chans=config.in_chans,
-                                           embed_dim=config.embed_dim,
-                                           depths=config.depths,
-                                           num_heads=config.num_heads,
-                                           window_size=config.window_size,
-                                           mlp_ratio=config.mlp_ratio,
-                                           qkv_bias=config.qkv_bias,
-                                           drop_rate=config.drop_rate,
-                                           drop_path_rate=config.drop_path_rate,
-                                           ape=config.ape,
-                                           spe=config.spe,
-                                           rpe=config.rpe,
-                                           patch_norm=config.patch_norm,
-                                           use_checkpoint=config.use_checkpoint,
-                                           out_indices=config.out_indices,
-                                           pat_merg_rf=config.pat_merg_rf,
-                                           dwin_size=config.dwin_kernel_size,
-                                           img_size=config.img_size,
-                                           )
+            self.transformer = dswin_v2.DefSwinTransformerV2(
+                patch_size=config.patch_size,
+                in_chans=config.in_chans,
+                embed_dim=config.embed_dim,
+                depths=config.depths,
+                num_heads=config.num_heads,
+                window_size=config.window_size,
+                mlp_ratio=config.mlp_ratio,
+                qkv_bias=config.qkv_bias,
+                drop_rate=config.drop_rate,
+                drop_path_rate=config.drop_path_rate,
+                ape=config.ape,
+                spe=config.spe,
+                rpe=config.rpe,
+                patch_norm=config.patch_norm,
+                use_checkpoint=config.use_checkpoint,
+                out_indices=config.out_indices,
+                pat_merg_rf=config.pat_merg_rf,
+                dwin_size=config.dwin_kernel_size,
+                img_size=config.img_size,
+            )
         else:
             raise ValueError(f'Unknown Transformer type: {swin_type}')
         self.swin_type = swin_type
-        self.up0 = DecoderBlock(embed_dim * 4, embed_dim * 2, skip_channels=embed_dim * 2 if if_transskip else 0,
-                                use_batchnorm=False)
-        self.up1 = DecoderBlock(embed_dim * 2, embed_dim, skip_channels=embed_dim if if_transskip else 0,
-                                use_batchnorm=False)  # 384, 20, 20, 64
-        self.up2 = DecoderBlock(embed_dim, embed_dim//2, skip_channels=embed_dim//2 if if_transskip else 0,
-                                use_batchnorm=False)  # 384, 20, 20, 64
-        self.c1 = Conv3dReLU(2, embed_dim//2, 3, 1)
+        self.up0 = DecoderBlock(
+            embed_dim * 4, embed_dim * 2, skip_channels=embed_dim * 2 if if_transskip else 0, use_batchnorm=False
+        )
+        self.up1 = DecoderBlock(
+            embed_dim * 2, embed_dim, skip_channels=embed_dim if if_transskip else 0, use_batchnorm=False
+        )  # 384, 20, 20, 64
+        self.up2 = DecoderBlock(
+            embed_dim, embed_dim // 2, skip_channels=embed_dim // 2 if if_transskip else 0, use_batchnorm=False
+        )  # 384, 20, 20, 64
+        self.c1 = Conv3dReLU(2, embed_dim // 2, 3, 1)
         self.avg_pool = nn.AvgPool3d(3, stride=2, padding=1)
         self.reg_heads = nn.ModuleList()
         self.up3s = nn.ModuleList()
         self.cs = nn.ModuleList()
-        for t in range(self.time_steps):
+        for _t in range(self.time_steps):
             self.cs.append(Conv3dReLU(2, embed_dim // 2, 3, 1))
-            self.reg_heads.append(RegistrationHead(in_channels=config.reg_head_chan, out_channels=3, kernel_size=3, ))
-            self.up3s.append(DecoderBlock(embed_dim//2, config.reg_head_chan, skip_channels=embed_dim // 2 if if_convskip else 0,
-                                   use_batchnorm=False))
+            self.reg_heads.append(
+                RegistrationHead(
+                    in_channels=config.reg_head_chan,
+                    out_channels=3,
+                    kernel_size=3,
+                )
+            )
+            self.up3s.append(
+                DecoderBlock(
+                    embed_dim // 2,
+                    config.reg_head_chan,
+                    skip_channels=embed_dim // 2 if if_convskip else 0,
+                    use_batchnorm=False,
+                )
+            )
         self.spatial_trans_ = utils.SpatialTransformer(config.img_size)
-        self.spatial_trans = utils.SpatialTransformer((config.img_size[0]*2, config.img_size[1]*2, config.img_size[2]*2))
+        self.spatial_trans = utils.SpatialTransformer(
+            (config.img_size[0] * 2, config.img_size[1] * 2, config.img_size[2] * 2)
+        )
         self.upsamp = nn.Upsample(scale_factor=2, mode="trilinear", align_corners=False)
 
         self.reg_head = RegistrationHead(
@@ -389,11 +468,17 @@ class TransMorphTVF(nn.Module):
     def forward(self, inputs):
         """Forward pass for the TransMorphTVF model.
 
+        At each of the ``time_steps`` steps a flow increment is predicted from the shared decoder features and the
+        currently warped moving image, and accumulated into the total flow (``'composition'``: the increment is
+        warped by the previous total flow; otherwise it is warped by itself).
+
         Args:
-            inputs: Tuple of moving and fixed images `(mov, fix)`.
+            inputs: Tuple of moving and fixed images `(mov, fix)`, each of shape [B, 1, D, H, W] with
+                ``(D, H, W) == config.img_size``.
 
         Returns:
-            Predicted dense flow field.
+            torch.Tensor: Predicted dense displacement field of shape [B, 3, D, H, W]. With ``SVF`` enabled, the
+            accumulated flow is additionally integrated by scaling and squaring and clamped to [-100, 100].
         """
         mov, fix = inputs
         x_cat = torch.cat((mov, fix), dim=1)
@@ -412,9 +497,9 @@ class TransMorphTVF(nn.Module):
                 f2 = out_feats[-3]
             else:
                 mov_f1, fix_f1 = out_feats[-2]
-                f1 = (mov_f1 + fix_f1)
+                f1 = mov_f1 + fix_f1
                 mov_f2, fix_f2 = out_feats[-3]
-                f2 = (mov_f2 + fix_f2)
+                f2 = mov_f2 + fix_f2
         else:
             f1 = None
             f2 = None
@@ -422,12 +507,14 @@ class TransMorphTVF(nn.Module):
             f0 = out_feats[-1]
         else:
             mov_f0, fix_f0 = out_feats[-1]
-            f0 = (mov_f0 + fix_f0)
+            f0 = mov_f0 + fix_f0
         x = self.up0(f0, f1)
         x = self.up1(x, f2)
         xx = self.up2(x, f3)
         def_x = mov.clone()
-        flow_previous = torch.zeros((mov.shape[0], 3, self.img_size[0], self.img_size[1], self.img_size[2])).to(mov.device)
+        flow_previous = torch.zeros((mov.shape[0], 3, self.img_size[0], self.img_size[1], self.img_size[2])).to(
+            mov.device
+        )
         flows = []
 
         # flow integration
@@ -451,7 +538,8 @@ class TransMorphTVF(nn.Module):
             flow = self.vec_int(flow)
             flow = torch.clamp(flow, -100, 100)
         return flow
-    
+
+
 class TransMorphTVFSPR(nn.Module):
     """TransMorph TVF with spatially varying regularization.
 
@@ -467,13 +555,16 @@ class TransMorphTVFSPR(nn.Module):
         inputs: Tuple `(mov, fix)` tensors of shape [B, 1, D, H, W].
 
     Forward outputs:
-        Tuple `(flow, spatial_wts)` where `flow` is [B, 3, D, H, W].
+        Tuple `(flow, spatial_wts)` where `flow` is [B, 3, D, H, W], or `(pos_flow, neg_flow, spatial_wts)` when
+        ``SVF`` is enabled (the default).
+
+    Raises:
+        ValueError: If ``swin_type`` is not one of 'swin', 'dswin', 'dswinv2'.
     """
+
     def __init__(self, config, SVF=True, time_steps=12, SVF_steps=7, composition='composition', swin_type='swin'):
-        '''
-        Multi-resolution TransMorph
-        '''
-        super(TransMorphTVFSPR, self).__init__()
+        """Multi-resolution TransMorph."""
+        super().__init__()
         if_convskip = config.if_convskip
         self.if_convskip = if_convskip
         if_transskip = config.if_transskip
@@ -483,88 +574,107 @@ class TransMorphTVFSPR(nn.Module):
         self.img_size = config.img_size
         self.composition = composition
         if swin_type == 'swin':
-            self.transformer = swin.SwinTransformer(patch_size=config.patch_size,
-                                           in_chans=config.in_chans,
-                                           embed_dim=config.embed_dim,
-                                           depths=config.depths,
-                                           num_heads=config.num_heads,
-                                           window_size=config.window_size,
-                                           mlp_ratio=config.mlp_ratio,
-                                           qkv_bias=config.qkv_bias,
-                                           drop_rate=config.drop_rate,
-                                           drop_path_rate=config.drop_path_rate,
-                                           ape=config.ape,
-                                           spe=config.spe,
-                                           rpe=config.rpe,
-                                           patch_norm=config.patch_norm,
-                                           use_checkpoint=config.use_checkpoint,
-                                           out_indices=config.out_indices,
-                                           pat_merg_rf=config.pat_merg_rf,
-                                           )
+            self.transformer = swin.SwinTransformer(
+                patch_size=config.patch_size,
+                in_chans=config.in_chans,
+                embed_dim=config.embed_dim,
+                depths=config.depths,
+                num_heads=config.num_heads,
+                window_size=config.window_size,
+                mlp_ratio=config.mlp_ratio,
+                qkv_bias=config.qkv_bias,
+                drop_rate=config.drop_rate,
+                drop_path_rate=config.drop_path_rate,
+                ape=config.ape,
+                spe=config.spe,
+                rpe=config.rpe,
+                patch_norm=config.patch_norm,
+                use_checkpoint=config.use_checkpoint,
+                out_indices=config.out_indices,
+                pat_merg_rf=config.pat_merg_rf,
+            )
         elif swin_type == 'dswin':
-            self.transformer = dswin.DefSwinTransformer(patch_size=config.patch_size,
-                                           in_chans=config.in_chans,
-                                           embed_dim=config.embed_dim,
-                                           depths=config.depths,
-                                           num_heads=config.num_heads,
-                                           window_size=config.window_size,
-                                           mlp_ratio=config.mlp_ratio,
-                                           qkv_bias=config.qkv_bias,
-                                           drop_rate=config.drop_rate,
-                                           drop_path_rate=config.drop_path_rate,
-                                           ape=config.ape,
-                                           spe=config.spe,
-                                           rpe=config.rpe,
-                                           patch_norm=config.patch_norm,
-                                           use_checkpoint=config.use_checkpoint,
-                                           out_indices=config.out_indices,
-                                           pat_merg_rf=config.pat_merg_rf,
-                                           dwin_size=config.dwin_kernel_size,
-                                           img_size=config.img_size,
-                                           )
+            self.transformer = dswin.DefSwinTransformer(
+                patch_size=config.patch_size,
+                in_chans=config.in_chans,
+                embed_dim=config.embed_dim,
+                depths=config.depths,
+                num_heads=config.num_heads,
+                window_size=config.window_size,
+                mlp_ratio=config.mlp_ratio,
+                qkv_bias=config.qkv_bias,
+                drop_rate=config.drop_rate,
+                drop_path_rate=config.drop_path_rate,
+                ape=config.ape,
+                spe=config.spe,
+                rpe=config.rpe,
+                patch_norm=config.patch_norm,
+                use_checkpoint=config.use_checkpoint,
+                out_indices=config.out_indices,
+                pat_merg_rf=config.pat_merg_rf,
+                dwin_size=config.dwin_kernel_size,
+                img_size=config.img_size,
+            )
         elif swin_type == 'dswinv2':
-            self.transformer = dswin_v2.DefSwinTransformerV2(patch_size=config.patch_size,
-                                           in_chans=config.in_chans,
-                                           embed_dim=config.embed_dim,
-                                           depths=config.depths,
-                                           num_heads=config.num_heads,
-                                           window_size=config.window_size,
-                                           mlp_ratio=config.mlp_ratio,
-                                           qkv_bias=config.qkv_bias,
-                                           drop_rate=config.drop_rate,
-                                           drop_path_rate=config.drop_path_rate,
-                                           ape=config.ape,
-                                           spe=config.spe,
-                                           rpe=config.rpe,
-                                           patch_norm=config.patch_norm,
-                                           use_checkpoint=config.use_checkpoint,
-                                           out_indices=config.out_indices,
-                                           pat_merg_rf=config.pat_merg_rf,
-                                           dwin_size=config.dwin_kernel_size,
-                                           img_size=config.img_size,
-                                           )
+            self.transformer = dswin_v2.DefSwinTransformerV2(
+                patch_size=config.patch_size,
+                in_chans=config.in_chans,
+                embed_dim=config.embed_dim,
+                depths=config.depths,
+                num_heads=config.num_heads,
+                window_size=config.window_size,
+                mlp_ratio=config.mlp_ratio,
+                qkv_bias=config.qkv_bias,
+                drop_rate=config.drop_rate,
+                drop_path_rate=config.drop_path_rate,
+                ape=config.ape,
+                spe=config.spe,
+                rpe=config.rpe,
+                patch_norm=config.patch_norm,
+                use_checkpoint=config.use_checkpoint,
+                out_indices=config.out_indices,
+                pat_merg_rf=config.pat_merg_rf,
+                dwin_size=config.dwin_kernel_size,
+                img_size=config.img_size,
+            )
         else:
             raise ValueError(f'Unknown Transformer type: {swin_type}')
         self.swin_type = swin_type
-        self.up0 = DecoderBlock(embed_dim * 4, embed_dim * 2, skip_channels=embed_dim * 2 if if_transskip else 0,
-                                use_batchnorm=False)
-        self.up1 = DecoderBlock(embed_dim * 2, embed_dim, skip_channels=embed_dim if if_transskip else 0,
-                                use_batchnorm=False)  # 384, 20, 20, 64
-        self.up2 = DecoderBlock(embed_dim, embed_dim//2, skip_channels=embed_dim//2 if if_transskip else 0,
-                                use_batchnorm=False)  # 384, 20, 20, 64
-        self.c1 = Conv3dReLU(2, embed_dim//2, 3, 1, use_batchnorm=False)
+        self.up0 = DecoderBlock(
+            embed_dim * 4, embed_dim * 2, skip_channels=embed_dim * 2 if if_transskip else 0, use_batchnorm=False
+        )
+        self.up1 = DecoderBlock(
+            embed_dim * 2, embed_dim, skip_channels=embed_dim if if_transskip else 0, use_batchnorm=False
+        )  # 384, 20, 20, 64
+        self.up2 = DecoderBlock(
+            embed_dim, embed_dim // 2, skip_channels=embed_dim // 2 if if_transskip else 0, use_batchnorm=False
+        )  # 384, 20, 20, 64
+        self.c1 = Conv3dReLU(2, embed_dim // 2, 3, 1, use_batchnorm=False)
         self.avg_pool = nn.AvgPool3d(3, stride=2, padding=1)
         self.reg_heads = nn.ModuleList()
         self.up3s = nn.ModuleList()
         self.cs = nn.ModuleList()
-        for t in range(self.time_steps):
+        for _t in range(self.time_steps):
             self.cs.append(Conv3dReLU(2, embed_dim // 2, 3, 1, use_batchnorm=False))
-            self.reg_heads.append(RegistrationHead(in_channels=config.reg_head_chan, out_channels=3, kernel_size=3, ))
-            self.up3s.append(DecoderBlock(embed_dim//2, config.reg_head_chan, skip_channels=embed_dim // 2 if if_convskip else 0,
-                                   use_batchnorm=False))
+            self.reg_heads.append(
+                RegistrationHead(
+                    in_channels=config.reg_head_chan,
+                    out_channels=3,
+                    kernel_size=3,
+                )
+            )
+            self.up3s.append(
+                DecoderBlock(
+                    embed_dim // 2,
+                    config.reg_head_chan,
+                    skip_channels=embed_dim // 2 if if_convskip else 0,
+                    use_batchnorm=False,
+                )
+            )
         self.spatial_trans_half = utils.SpatialTransformer(config.img_size)
         self.spatial_trans = utils.SpatialTransformer(
-            (config.img_size[0] * 2, config.img_size[1] * 2, config.img_size[2] * 2))
+            (config.img_size[0] * 2, config.img_size[1] * 2, config.img_size[2] * 2)
+        )
         self.reg_head = RegistrationHead(
             in_channels=config.reg_head_chan,
             out_channels=3,
@@ -573,10 +683,8 @@ class TransMorphTVFSPR(nn.Module):
         self.SVF = SVF
         if self.SVF:
             self.integrate = utils.VecInt(config.img_size, SVF_steps)
-        self.sigma_0 = Conv3dReLU(config.reg_head_chan, embed_dim // 2, 3, 3 // 2,
-                                   use_batchnorm=False)
-        self.sigma_1 = Conv3dReLU(embed_dim // 2, embed_dim // 2, 3, 3 // 2,
-                                   use_batchnorm=False)
+        self.sigma_0 = Conv3dReLU(config.reg_head_chan, embed_dim // 2, 3, 3 // 2, use_batchnorm=False)
+        self.sigma_1 = Conv3dReLU(embed_dim // 2, embed_dim // 2, 3, 3 // 2, use_batchnorm=False)
         self.sigma_2 = nn.Conv3d(embed_dim // 2, 1, kernel_size=3, padding=1)
         self.reg_head = RegistrationHead(
             in_channels=config.reg_head_chan,
@@ -594,7 +702,9 @@ class TransMorphTVFSPR(nn.Module):
 
         Returns:
             Tuple `(flow, x_weight)` or `(pos_flow, neg_flow, x_weight)` when
-            SVF is enabled.
+            SVF is enabled. ``x_weight`` is a [B, 1, D, H, W] map of spatially varying regularization weights in
+            [1e-6, 1] (sigmoid output). With SVF, the accumulated flow is used as a velocity field: ``pos_flow``
+            integrates it and ``neg_flow`` integrates its negation (both clamped to [-100, 100]).
         """
         mov, fix = inputs
         x_cat = torch.cat((mov, fix), dim=1)
@@ -613,9 +723,9 @@ class TransMorphTVFSPR(nn.Module):
                 f2 = out_feats[-3]
             else:
                 mov_f1, fix_f1 = out_feats[-2]
-                f1 = (mov_f1 + fix_f1)
+                f1 = mov_f1 + fix_f1
                 mov_f2, fix_f2 = out_feats[-3]
-                f2 = (mov_f2 + fix_f2)
+                f2 = mov_f2 + fix_f2
         else:
             f1 = None
             f2 = None
@@ -624,12 +734,14 @@ class TransMorphTVFSPR(nn.Module):
             f0 = out_feats[-1]
         else:
             mov_f0, fix_f0 = out_feats[-1]
-            f0 = (mov_f0 + fix_f0)
+            f0 = mov_f0 + fix_f0
         x = self.up0(f0, f1)
         x = self.up1(x, f2)
         xx = self.up2(x, f3)
         def_x = mov.clone()
-        flow_previous = torch.zeros((mov.shape[0], 3, self.img_size[0], self.img_size[1], self.img_size[2])).to(mov.device)
+        flow_previous = torch.zeros((mov.shape[0], 3, self.img_size[0], self.img_size[1], self.img_size[2])).to(
+            mov.device
+        )
         flows = []
 
         # flow integration
@@ -662,8 +774,8 @@ class TransMorphTVFSPR(nn.Module):
             neg_flow = self.integrate(neg_flow)
             neg_flow = torch.clamp(neg_flow, -100, 100)
             return pos_flow, neg_flow, x_weight
-        else:
-            return flow, x_weight
+        return flow, x_weight
+
 
 class TransMorphAffine(nn.Module):
     """Affine TransMorph head predicting global parameters.
@@ -678,73 +790,83 @@ class TransMorphAffine(nn.Module):
     Forward outputs:
         Tuple `(aff, scl, trans, shr)` with rotation, scale, translation,
         and shear parameters.
+
+    The parameter heads take the flattened last-stage features, which must have ``embed_dim * 4`` channels at
+    ``config.img_size // 16`` resolution.
+
+    Raises:
+        ValueError: If ``swin_type`` is not one of 'swin', 'dswin', 'dswinv2'.
     """
+
     def __init__(self, config, swin_type):
-        super(TransMorphAffine, self).__init__()
-        out_size = (config.img_size[0]//16, config.img_size[1]//16, config.img_size[2]//16)
+        super().__init__()
+        out_size = (config.img_size[0] // 16, config.img_size[1] // 16, config.img_size[2] // 16)
         embed_dim = config.embed_dim
         self.img_size = config.img_size
         if swin_type == 'swin':
-            self.transformer = swin.SwinTransformer(patch_size=config.patch_size,
-                                            in_chans=config.in_chans,
-                                            embed_dim=config.embed_dim,
-                                            depths=config.depths,
-                                            num_heads=config.num_heads,
-                                            window_size=config.window_size,
-                                            mlp_ratio=config.mlp_ratio,
-                                            qkv_bias=config.qkv_bias,
-                                            drop_rate=config.drop_rate,
-                                            drop_path_rate=config.drop_path_rate,
-                                            ape=config.ape,
-                                            spe=config.spe,
-                                            rpe=config.rpe,
-                                            patch_norm=config.patch_norm,
-                                            use_checkpoint=config.use_checkpoint,
-                                            out_indices=config.out_indices,
-                                            pat_merg_rf=config.pat_merg_rf,
-                                            )
+            self.transformer = swin.SwinTransformer(
+                patch_size=config.patch_size,
+                in_chans=config.in_chans,
+                embed_dim=config.embed_dim,
+                depths=config.depths,
+                num_heads=config.num_heads,
+                window_size=config.window_size,
+                mlp_ratio=config.mlp_ratio,
+                qkv_bias=config.qkv_bias,
+                drop_rate=config.drop_rate,
+                drop_path_rate=config.drop_path_rate,
+                ape=config.ape,
+                spe=config.spe,
+                rpe=config.rpe,
+                patch_norm=config.patch_norm,
+                use_checkpoint=config.use_checkpoint,
+                out_indices=config.out_indices,
+                pat_merg_rf=config.pat_merg_rf,
+            )
         elif swin_type == 'dswin':
-            self.transformer = dswin.DefSwinTransformer(patch_size=config.patch_size,
-                                            in_chans=config.in_chans,
-                                            embed_dim=config.embed_dim,
-                                            depths=config.depths,
-                                            num_heads=config.num_heads,
-                                            window_size=config.window_size,
-                                            mlp_ratio=config.mlp_ratio,
-                                            qkv_bias=config.qkv_bias,
-                                            drop_rate=config.drop_rate,
-                                            drop_path_rate=config.drop_path_rate,
-                                            ape=config.ape,
-                                            spe=config.spe,
-                                            rpe=config.rpe,
-                                            patch_norm=config.patch_norm,
-                                            use_checkpoint=config.use_checkpoint,
-                                            out_indices=config.out_indices,
-                                            pat_merg_rf=config.pat_merg_rf,
-                                            dwin_size=config.dwin_kernel_size,
-                                            img_size=config.img_size,
-                                            )
+            self.transformer = dswin.DefSwinTransformer(
+                patch_size=config.patch_size,
+                in_chans=config.in_chans,
+                embed_dim=config.embed_dim,
+                depths=config.depths,
+                num_heads=config.num_heads,
+                window_size=config.window_size,
+                mlp_ratio=config.mlp_ratio,
+                qkv_bias=config.qkv_bias,
+                drop_rate=config.drop_rate,
+                drop_path_rate=config.drop_path_rate,
+                ape=config.ape,
+                spe=config.spe,
+                rpe=config.rpe,
+                patch_norm=config.patch_norm,
+                use_checkpoint=config.use_checkpoint,
+                out_indices=config.out_indices,
+                pat_merg_rf=config.pat_merg_rf,
+                dwin_size=config.dwin_kernel_size,
+                img_size=config.img_size,
+            )
         elif swin_type == 'dswinv2':
-            self.transformer = dswin_v2.DefSwinTransformerV2(patch_size=config.patch_size,
-                                            in_chans=config.in_chans,
-                                            embed_dim=config.embed_dim,
-                                            depths=config.depths,
-                                            num_heads=config.num_heads,
-                                            window_size=config.window_size,
-                                            mlp_ratio=config.mlp_ratio,
-                                            qkv_bias=config.qkv_bias,
-                                            drop_rate=config.drop_rate,
-                                            drop_path_rate=config.drop_path_rate,
-                                            ape=config.ape,
-                                            spe=config.spe,
-                                            rpe=config.rpe,
-                                            patch_norm=config.patch_norm,
-                                            use_checkpoint=config.use_checkpoint,
-                                            out_indices=config.out_indices,
-                                            pat_merg_rf=config.pat_merg_rf,
-                                            dwin_size=config.dwin_kernel_size,
-                                            img_size=config.img_size,
-                                            )
+            self.transformer = dswin_v2.DefSwinTransformerV2(
+                patch_size=config.patch_size,
+                in_chans=config.in_chans,
+                embed_dim=config.embed_dim,
+                depths=config.depths,
+                num_heads=config.num_heads,
+                window_size=config.window_size,
+                mlp_ratio=config.mlp_ratio,
+                qkv_bias=config.qkv_bias,
+                drop_rate=config.drop_rate,
+                drop_path_rate=config.drop_path_rate,
+                ape=config.ape,
+                spe=config.spe,
+                rpe=config.rpe,
+                patch_norm=config.patch_norm,
+                use_checkpoint=config.use_checkpoint,
+                out_indices=config.out_indices,
+                pat_merg_rf=config.pat_merg_rf,
+                dwin_size=config.dwin_kernel_size,
+                img_size=config.img_size,
+            )
         else:
             raise ValueError(f'Unknown Transformer type: {swin_type}')
         self.swin_type = swin_type
@@ -788,8 +910,16 @@ class TransMorphAffine(nn.Module):
         shear_head_f.bias = nn.Parameter(Normal(0, 1e-4).sample(shear_head_f.bias.shape))
         self.shear_mlp.append(shear_head_f)
         self.inst_norm = nn.InstanceNorm3d(embed_dim * 4)
-    def softplus(self, x):  # Softplus
-        """Apply softplus activation."""
+
+    def softplus(self, x: torch.Tensor) -> torch.Tensor:  # Softplus
+        """Apply softplus activation, ``log(1 + exp(x))``.
+
+        Args:
+            x: Input tensor.
+
+        Returns:
+            torch.Tensor: Element-wise softplus of ``x``.
+        """
         return torch.log(1 + torch.exp(x))
 
     def forward(self, inputs):
@@ -799,7 +929,9 @@ class TransMorphAffine(nn.Module):
             inputs: Tuple of moving and fixed images `(mov, fix)`.
 
         Returns:
-            Tuple `(aff, scl, trans, shr)` of affine parameters.
+            Tuple `(aff, scl, trans, shr)` of affine parameters: ``aff`` [B, 3] rotation angles in [-pi, pi],
+            ``scl`` [B, 3] scales in [0, 5] (initialized near 1), ``trans`` [B, 3] unbounded translations and
+            ``shr`` [B, 6] shear parameters in [-pi, pi].
         """
         mov, fix = inputs
         x_cat = torch.cat((mov, fix), dim=1)
@@ -809,28 +941,38 @@ class TransMorphAffine(nn.Module):
         else:
             out_feats = self.transformer((mov, fix))
             mov_f0, fix_f0 = out_feats[-1]
-            f0 = (mov_f0 + fix_f0)
-        
+            f0 = mov_f0 + fix_f0
+
         out = self.inst_norm(f0)
         x5 = torch.flatten(out, start_dim=1)
 
-        aff_ = self.aff_mlp(x5)*0.1
-        scl_ = self.scl_mlp(x5)*0.1
-        trans_ = self.trans_mlp(x5)*0.1
-        shr_ = self.shear_mlp(x5)*0.1
+        aff_ = self.aff_mlp(x5) * 0.1
+        scl_ = self.scl_mlp(x5) * 0.1
+        trans_ = self.trans_mlp(x5) * 0.1
+        shr_ = self.shear_mlp(x5) * 0.1
         trans = trans_.clone()
         aff = torch.clamp(aff_, min=-1, max=1) * np.pi
         scl = scl_ + 1
         scl = torch.clamp(scl, min=0, max=5)
         shr = torch.clamp(shr_, min=-1, max=1) * np.pi  # shr = torch.tanh(shr) * np.pi
-        return aff, scl, trans, shr#, aff_, scl_, trans_, shr_
+        return aff, scl, trans, shr  # , aff_, scl_, trans_, shr_
+
 
 class TransMorphTVFAutoPETAtlas(nn.Module):
+    """Symmetric TransMorph-TVF variant used for atlas building on autoPET.
+
+    The inputs are downsampled by 2, a time-varying flow is accumulated at half resolution, upsampled to full
+    resolution and integrated (7 scaling-and-squaring steps) in both directions.
+
+    Args:
+        config: Configuration object containing model parameters; ``config.img_size`` is the half-resolution
+            image size.
+        time_steps: Number of time steps for progressive registration. Default: 5.
+    """
+
     def __init__(self, config, time_steps=5):
-        '''
-        Multi-resolution TransMorph
-        '''
-        super(TransMorphTVFAutoPETAtlas, self).__init__()
+        """Multi-resolution TransMorph."""
+        super().__init__()
         if_convskip = config.if_convskip
         self.if_convskip = if_convskip
         if_transskip = config.if_transskip
@@ -838,42 +980,59 @@ class TransMorphTVFAutoPETAtlas(nn.Module):
         embed_dim = config.embed_dim
         self.time_steps = time_steps
         self.img_size = config.img_size
-        self.transformer = swin.SwinTransformer(patch_size=config.patch_size,
-                                           in_chans=config.in_chans,
-                                           embed_dim=config.embed_dim,
-                                           depths=config.depths,
-                                           num_heads=config.num_heads,
-                                           window_size=config.window_size,
-                                           mlp_ratio=config.mlp_ratio,
-                                           qkv_bias=config.qkv_bias,
-                                           drop_rate=config.drop_rate,
-                                           drop_path_rate=config.drop_path_rate,
-                                           ape=config.ape,
-                                           spe=config.spe,
-                                           patch_norm=config.patch_norm,
-                                           use_checkpoint=config.use_checkpoint,
-                                           out_indices=config.out_indices,
-                                           pat_merg_rf=config.pat_merg_rf,
-                                           )
-        self.up0 = DecoderBlock(embed_dim * 4, embed_dim * 2, skip_channels=embed_dim * 2 if if_transskip else 0,
-                                use_batchnorm=False)
-        self.up1 = DecoderBlock(embed_dim * 2, embed_dim, skip_channels=embed_dim if if_transskip else 0,
-                                use_batchnorm=False)  # 384, 20, 20, 64
-        self.up2 = DecoderBlock(embed_dim, embed_dim//2, skip_channels=embed_dim//2 if if_transskip else 0,
-                                use_batchnorm=False)  # 384, 20, 20, 64
-        self.c1 = Conv3dReLU(2, embed_dim//2, 3, 1, use_batchnorm=False)
+        self.transformer = swin.SwinTransformer(
+            patch_size=config.patch_size,
+            in_chans=config.in_chans,
+            embed_dim=config.embed_dim,
+            depths=config.depths,
+            num_heads=config.num_heads,
+            window_size=config.window_size,
+            mlp_ratio=config.mlp_ratio,
+            qkv_bias=config.qkv_bias,
+            drop_rate=config.drop_rate,
+            drop_path_rate=config.drop_path_rate,
+            ape=config.ape,
+            spe=config.spe,
+            patch_norm=config.patch_norm,
+            use_checkpoint=config.use_checkpoint,
+            out_indices=config.out_indices,
+            pat_merg_rf=config.pat_merg_rf,
+        )
+        self.up0 = DecoderBlock(
+            embed_dim * 4, embed_dim * 2, skip_channels=embed_dim * 2 if if_transskip else 0, use_batchnorm=False
+        )
+        self.up1 = DecoderBlock(
+            embed_dim * 2, embed_dim, skip_channels=embed_dim if if_transskip else 0, use_batchnorm=False
+        )  # 384, 20, 20, 64
+        self.up2 = DecoderBlock(
+            embed_dim, embed_dim // 2, skip_channels=embed_dim // 2 if if_transskip else 0, use_batchnorm=False
+        )  # 384, 20, 20, 64
+        self.c1 = Conv3dReLU(2, embed_dim // 2, 3, 1, use_batchnorm=False)
         self.avg_pool = nn.AvgPool3d(3, stride=2, padding=1)
         self.reg_heads = nn.ModuleList()
         self.up3s = nn.ModuleList()
         self.cs = nn.ModuleList()
-        for t in range(self.time_steps):
+        for _t in range(self.time_steps):
             self.cs.append(Conv3dReLU(2, embed_dim // 2, 3, 1, use_batchnorm=False))
-            self.reg_heads.append(RegistrationHead(in_channels=config.reg_head_chan, out_channels=3, kernel_size=3, ))
-            self.up3s.append(DecoderBlock(embed_dim//2, config.reg_head_chan, skip_channels=embed_dim // 2 if if_convskip else 0,
-                                   use_batchnorm=False))
+            self.reg_heads.append(
+                RegistrationHead(
+                    in_channels=config.reg_head_chan,
+                    out_channels=3,
+                    kernel_size=3,
+                )
+            )
+            self.up3s.append(
+                DecoderBlock(
+                    embed_dim // 2,
+                    config.reg_head_chan,
+                    skip_channels=embed_dim // 2 if if_convskip else 0,
+                    use_batchnorm=False,
+                )
+            )
         self.spatial_trans_half = utils.SpatialTransformer(config.img_size)
         self.spatial_trans = utils.SpatialTransformer(
-            (config.img_size[0] * 2, config.img_size[1] * 2, config.img_size[2] * 2))
+            (config.img_size[0] * 2, config.img_size[1] * 2, config.img_size[2] * 2)
+        )
         self.reg_head = RegistrationHead(
             in_channels=config.reg_head_chan,
             out_channels=3,
@@ -882,7 +1041,18 @@ class TransMorphTVFAutoPETAtlas(nn.Module):
         self.upsamp = nn.Upsample(scale_factor=2, mode="trilinear", align_corners=False)
         self.integrate = utils.VecInt((config.img_size[0] * 2, config.img_size[1] * 2, config.img_size[2] * 2), 7)
 
-    def forward(self, inputs):
+    def forward(self, inputs: Tuple[torch.Tensor, torch.Tensor]) -> Tuple[torch.Tensor, ...]:
+        """Register source and target symmetrically.
+
+        Args:
+            inputs: Tuple `(source, target)` of full-resolution images, each of shape [B, 1, 2D, 2H, 2W] where
+                ``(D, H, W) == config.img_size``.
+
+        Returns:
+            Tuple `(def_sor, def_tar, pos_flow, neg_flow)`: the source warped by ``pos_flow``, the target warped by
+            ``neg_flow``, and the full-resolution forward and inverse displacement fields [B, 3, 2D, 2H, 2W]
+            obtained by integrating the upsampled velocity field and its negation.
+        """
         source, target = inputs
         mov, fix = F.avg_pool3d(source, 2), F.avg_pool3d(target, 2)
         x_cat = torch.cat((mov, fix), dim=1)
@@ -918,17 +1088,18 @@ class TransMorphTVFAutoPETAtlas(nn.Module):
             def_x = self.spatial_trans_half(mov, flow_new)
             flow_previous = flow_new
         flow = flow_new
-        pos_flow = F.interpolate(flow.cuda(), scale_factor=2, mode='trilinear', align_corners=False) * 2
+        pos_flow = F.interpolate(flow, scale_factor=2, mode='trilinear', align_corners=False) * 2
         neg_flow = -pos_flow
         pos_flow = self.integrate(pos_flow)
         neg_flow = self.integrate(neg_flow)
         def_sor = self.spatial_trans(source, pos_flow)
         def_tar = self.spatial_trans(target, neg_flow)
-        
+
         return def_sor, def_tar, pos_flow, neg_flow
+
 
 CONFIGS = {
     'TransMorph-3-LVL': configs.get_3DTransMorph3Lvl_config(),
     'TransMorph-3-LVL-DWin': configs.get_3DTransMorphDWin3Lvl_config(),
-    'TransMorph': configs.get_3DTransMorph_config()
+    'TransMorph': configs.get_3DTransMorph_config(),
 }

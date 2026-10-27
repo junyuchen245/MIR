@@ -241,6 +241,13 @@ and under :doc:`about/publications`) and link to the
    api
 
 .. toctree::
+   :caption: Development
+   :hidden:
+
+   development/contributing
+   about/changelog
+
+.. toctree::
    :caption: About
    :hidden:
 

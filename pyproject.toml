@@ -3,16 +3,27 @@ requires = ["setuptools>=64", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "MIR"           # lowercase package name
+name = "MIR"
 version = "0.0.1"
-description = "Medical-image registration toolkit"
+description = "MIR: a PyTorch toolkit for learning-based and classical medical image registration"
 authors = [{ name = "Junyu Chen", email = "jchen245@jhmi.edu" }]
 readme = "README.md"
+license = { file = "LICENSE" }
 requires-python = ">=3.8.16"
+keywords = ["medical imaging", "image registration", "deep learning", "pytorch", "deformable registration"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Topic :: Scientific/Engineering :: Image Processing",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+]
 
-# Dependencies
+# Runtime dependencies
 dependencies = [
-	"pytest",
 	"antspyx",
 	"einops>=0.8.1",
 	"matplotlib>=3.7.3",
@@ -30,8 +41,16 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["black", "pytest"]
+dev = ["pytest", "ruff>=0.5", "pre-commit"]
+docs = ["sphinx>=7", "furo>=2024.8.6", "sphinx-design>=0.5", "sphinx-copybutton>=0.5"]
 dicom = ["pydicom"]
+download = ["gdown"]
+
+[project.urls]
+Homepage = "https://github.com/junyuchen245/MIR"
+Documentation = "https://junyuchen.me/MIR/"
+Source = "https://github.com/junyuchen245/MIR"
+Issues = "https://github.com/junyuchen245/MIR/issues"
 
 [project.scripts]
 mir-dicom-info = "MIR.utils.dicom_utils:main"
@@ -51,3 +70,45 @@ package-dir = {"" = "src"}    # <-- tell it that your packages live in src/
 [tool.setuptools.packages.find]
 where  = ["src"]             # <-- look under src/
 include = ["MIR*",] 
+# ---------------------------------------------------------------------------------------------------- code quality
+[tool.ruff]
+target-version = "py38"
+line-length = 120
+src = ["src", "tests", "tools"]
+# Vendored third-party code is kept close to upstream and is not linted or reformatted here.
+extend-exclude = [
+    "src/MIR/models/SITReg",
+    "src/MIR/models/fireants",
+    "src/MIR/models/convexAdam",
+    "src/MIR/intensity_normalization",
+    "src/MIR/random_image_generation/perlin_numpy",
+    "tutorials",
+    "docs",
+    "build",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "B", "UP", "PIE", "D"]
+ignore = [
+    "E501",    # long lines: code is formatted by `ruff format`; remaining long lines are strings/comments
+    "E741",    # short variable names (l, I) follow the published equations
+    "B006",    # mutable argument defaults are part of the public signatures and are never mutated
+    "B008",    # function calls in argument defaults: same reason
+    "B905",    # zip(strict=) is not available on Python 3.8
+    "UP006", "UP007", "UP035", "UP045",   # PEP 585/604 annotations need Python >= 3.9/3.10 at runtime
+    "UP031",   # %-formatting kept where output formatting must stay byte-identical
+    "D105", "D107",                       # magic methods and __init__ are documented in the class docstring
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"src/MIR/**/__init__.py" = ["F401"]          # re-exports define the public API
+"src/MIR/models/configs_*.py" = ["D"]        # configuration factories are self-describing
+"src/MIR/label_reference.py" = ["D"]         # data tables
+"tests/**" = ["D", "E402", "E731"]   # section-wise imports and small lambda stubs in tests
+"tools/**" = ["D"]
+
+[tool.ruff.format]
+quote-style = "preserve"

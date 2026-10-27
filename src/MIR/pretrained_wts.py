@@ -1,32 +1,29 @@
-"""Pretrained weight and dataset ID registry for MIR."""
+"""Pretrained weight and dataset ID registry for MIR.
 
-import numpy as np
+All values are Google Drive file IDs. ``ModelWeights`` maps a model name to ``{'wts': <file id>, 'wts_key': <key of
+the state dict inside the checkpoint>}``; ``DatasetJSONs`` and ``ValEvalModules`` map a LUMIR edition to the dataset
+JSON and validation evaluation module; ``FDG_atlas_autoPET`` maps an autoPET FDG atlas name to its file ID.
+"""
 
 ModelWeights = {
-    'VFA-LUMIR24-MonoModal': {'wts':'17XEfRYJbnrtCVhaBCOvQVOLkWhix9PAK', 'wts_key':'model_state_dict'},
-    'VFA-LUMIR25-MultiModal': {'wts':'1cDY3isltI-uSCiivgP2zcx_5LeR8vIJ6', 'wts_key':'state_dict'},
-    'TransMorphTVF-LUMIR24-MonoModal': {'wts':'1SSqI88l1MdrPJgE4Rn8pqXnVfZNPxtry', 'wts_key':'state_dict'},
-    'VFA-SegHead': {'wts':'1gbWE5t_QwntpiY6vYEvf2wFi1YVm49Kg', 'wts_key':'state_dict'},
-    'VFA-SynthHead': {'wts':'17Dn5xXTnVs0LB35IWOM22F6d5BORbgRH', 'wts_key':'state_dict'},
-    'MedIA-TM-SPR-Beta-autoPET': {'wts':'1NCdoK4khv4j8JAjlgeJo6EB4dSQr83r6', 'wts_key':'state_dict'},
-    'MedIA-TM-SPR-Gaussian-autoPET': {'wts':'1WqiR5YB8ypx-NUvYU_kQMb3edRVOLi09', 'wts_key':'state_dict'},
-    'VFA-IXI-Atlas2Subject': {'wts':'1bw57iW8V1uRicGP298Lw7qihlaYqqnC5', 'wts_key':'state_dict'},
-    'TransMorph-IXI-Atlas2Subject': {'wts':'1EgpjJ7S4qjK3o1Ew8UcCBF01g5x0N2ot', 'wts_key':'state_dict'},
-    'TransMorphTVF-IXI-Atlas2Subject': {'wts':'1IlqloZ_3XZkbYrzRwE3uAEsgiIoi7vY4', 'wts_key':'state_dict'},
-    'VFA-SPR-IXI-Atlas2Subject': {'wts':'1DifJUBmR8RBETo2FXAhzbjjSA7JFexKY', 'wts_key':'state_dict'},
-    'SITReg-IXI-Atlas2Subject': {'wts':'1sW7WnaGwfq9CzQF5iCtiAx6AVY7-dsMd', 'wts_key':'state_dict'},
-    'SITReg-SPR-IXI-Atlas2Subject': {'wts':'1E5-7QPvrQ3PanhAhlXPQj-2Qa25259cu', 'wts_key':'state_dict'},
+    'VFA-LUMIR24-MonoModal': {'wts': '17XEfRYJbnrtCVhaBCOvQVOLkWhix9PAK', 'wts_key': 'model_state_dict'},
+    'VFA-LUMIR25-MultiModal': {'wts': '1cDY3isltI-uSCiivgP2zcx_5LeR8vIJ6', 'wts_key': 'state_dict'},
+    'TransMorphTVF-LUMIR24-MonoModal': {'wts': '1SSqI88l1MdrPJgE4Rn8pqXnVfZNPxtry', 'wts_key': 'state_dict'},
+    'VFA-SegHead': {'wts': '1gbWE5t_QwntpiY6vYEvf2wFi1YVm49Kg', 'wts_key': 'state_dict'},
+    'VFA-SynthHead': {'wts': '17Dn5xXTnVs0LB35IWOM22F6d5BORbgRH', 'wts_key': 'state_dict'},
+    'MedIA-TM-SPR-Beta-autoPET': {'wts': '1NCdoK4khv4j8JAjlgeJo6EB4dSQr83r6', 'wts_key': 'state_dict'},
+    'MedIA-TM-SPR-Gaussian-autoPET': {'wts': '1WqiR5YB8ypx-NUvYU_kQMb3edRVOLi09', 'wts_key': 'state_dict'},
+    'VFA-IXI-Atlas2Subject': {'wts': '1bw57iW8V1uRicGP298Lw7qihlaYqqnC5', 'wts_key': 'state_dict'},
+    'TransMorph-IXI-Atlas2Subject': {'wts': '1EgpjJ7S4qjK3o1Ew8UcCBF01g5x0N2ot', 'wts_key': 'state_dict'},
+    'TransMorphTVF-IXI-Atlas2Subject': {'wts': '1IlqloZ_3XZkbYrzRwE3uAEsgiIoi7vY4', 'wts_key': 'state_dict'},
+    'VFA-SPR-IXI-Atlas2Subject': {'wts': '1DifJUBmR8RBETo2FXAhzbjjSA7JFexKY', 'wts_key': 'state_dict'},
+    'SITReg-IXI-Atlas2Subject': {'wts': '1sW7WnaGwfq9CzQF5iCtiAx6AVY7-dsMd', 'wts_key': 'state_dict'},
+    'SITReg-SPR-IXI-Atlas2Subject': {'wts': '1E5-7QPvrQ3PanhAhlXPQj-2Qa25259cu', 'wts_key': 'state_dict'},
 }
 
-DatasetJSONs = {
-    'LUMIR24': '1b0hyH7ggjCysJG-VGvo38XVE8bFVRMxb',
-    'LUMIR25': '164Flc1C6oufONGimvpKlrNtq5t3obXEo'
-}
+DatasetJSONs = {'LUMIR24': '1b0hyH7ggjCysJG-VGvo38XVE8bFVRMxb', 'LUMIR25': '164Flc1C6oufONGimvpKlrNtq5t3obXEo'}
 
-ValEvalModules = {
-    'LUMIR24': '11JY7E7MQRYOVb6ejKj_16w0w3QVyVWeE',
-    'LUMIR25': '1yp_ERmLMdhtsCDLKe1HyL18_oNgEermO'
-}
+ValEvalModules = {'LUMIR24': '11JY7E7MQRYOVb6ejKj_16w0w3QVyVWeE', 'LUMIR25': '1yp_ERmLMdhtsCDLKe1HyL18_oNgEermO'}
 
 FDG_atlas_autoPET = {
     'fdg_autoPET_CT_atlas_norm01_2.8x2.8x3.8': '1VGXnimeyN7bCzBOK4JKUFCYrOWin-IX6',

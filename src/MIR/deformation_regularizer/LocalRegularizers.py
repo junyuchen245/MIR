@@ -6,6 +6,8 @@ deformation regularization.
 
 from __future__ import annotations
 
+from typing import Optional, Union
+
 import torch
 
 
@@ -19,58 +21,87 @@ def _apply_penalty(tensor: torch.Tensor, penalty: str) -> torch.Tensor:
         return tensor.pow(2)
     return tensor
 
-class logBeta(torch.nn.Module):
-    """Negative log-likelihood term for Beta prior on weights."""
 
-    def __init__(self, eps=1e-6):
+class logBeta(torch.nn.Module):
+    """Negative log-likelihood term for Beta prior on weights.
+
+    Implements ``(1 - alpha) * mean(log(w))``, the negative log-density of a ``Beta(alpha, 1)`` prior up to a
+    constant, with ``w`` clamped to ``[eps, 1]``.
+
+    Args:
+        eps: Lower clamp for the weights before taking the logarithm.
+    """
+
+    def __init__(self, eps: float = 1e-6):
         super().__init__()
         self.eps = eps
-        self.beta = 1.
+        self.beta = 1.0
 
-    def forward(self, weights, alpha):
+    def forward(self, weights: torch.Tensor, alpha: Union[float, torch.Tensor]) -> torch.Tensor:
         """Compute Beta prior regularization.
 
         Args:
-            weights: Tensor of weights.
+            weights: Tensor of weights (any shape), expected in (0, 1].
             alpha: Beta distribution alpha parameter.
 
         Returns:
-            Scalar regularization loss.
+            Scalar regularization loss (mean over all elements).
+
         """
         lambdas = torch.clamp(weights, self.eps, 1.0)
         log_beta = torch.log(lambdas)
-        return (1. - alpha) * log_beta.mean()
+        return (1.0 - alpha) * log_beta.mean()
+
 
 class logGaussian(torch.nn.Module):
-    """Gaussian prior regularizer for weights."""
+    """Gaussian prior regularizer for weights.
 
-    def __init__(self, gaus_bond=5., eps=1e-6):
+    Implements ``inv_sigma2 * mean((w - 1)^2)`` with ``w`` clamped to ``[eps, gaus_bond]``, i.e. a Gaussian prior
+    centred at 1.
+
+    Args:
+        gaus_bond: Upper clamp for the weights.
+        eps: Lower clamp for the weights.
+    """
+
+    def __init__(self, gaus_bond: float = 5.0, eps: float = 1e-6):
         super().__init__()
         self.eps = eps
         self.gaus_bond = gaus_bond
 
-    def forward(self, weights, inv_sigma2):
+    def forward(self, weights: torch.Tensor, inv_sigma2: Union[float, torch.Tensor]) -> torch.Tensor:
         """Compute Gaussian prior regularization.
 
         Args:
-            weights: Tensor of weights.
+            weights: Tensor of weights (any shape).
             inv_sigma2: Inverse variance scalar/tensor.
 
         Returns:
-            Scalar regularization loss.
+            Scalar regularization loss (a tensor-valued ``inv_sigma2`` broadcasts against the scalar mean).
+
         """
         weights = torch.clamp(weights, self.eps, self.gaus_bond)
-        return inv_sigma2 * torch.mean((weights - 1.) ** 2)
+        return inv_sigma2 * torch.mean((weights - 1.0) ** 2)
+
 
 class LocalGrad3d(torch.nn.Module):
-    """Local 3D gradient loss."""
+    """Local 3D gradient loss (spatially weighted diffusion regulariser).
 
-    def __init__(self, penalty='l1', loss_mult=None):
+    Forward differences of the field along each spatial axis are penalised (``|d|`` or ``d^2``), multiplied by the
+    spatial weight map (cropped to match the difference), averaged over all elements per axis, and the three axis
+    means are averaged.
+
+    Args:
+        penalty: ``'l2'`` squares the differences; any other value uses absolute differences (``'l1'``).
+        loss_mult: Optional multiplier applied to the final loss.
+    """
+
+    def __init__(self, penalty: str = 'l1', loss_mult: Optional[float] = None):
         super().__init__()
         self.penalty = penalty
         self.loss_mult = loss_mult
 
-    def forward(self, y_pred, weight):
+    def forward(self, y_pred: torch.Tensor, weight: torch.Tensor) -> torch.Tensor:
         """Compute weighted 3D gradient regularization.
 
         Args:
@@ -79,6 +110,7 @@ class LocalGrad3d(torch.nn.Module):
 
         Returns:
             Scalar weighted gradient penalty.
+
         """
         dy = torch.abs(y_pred[:, :, 1:, :, :] - y_pred[:, :, :-1, :, :])
         dx = torch.abs(y_pred[:, :, :, 1:, :] - y_pred[:, :, :, :-1, :])
@@ -99,14 +131,19 @@ class LocalGrad3d(torch.nn.Module):
 
 
 class LocalGrad2d(torch.nn.Module):
-    """Local 2D gradient loss (spatially weighted), the 2D counterpart of ``LocalGrad3d``."""
+    """Local 2D gradient loss (spatially weighted), the 2D counterpart of ``LocalGrad3d``.
 
-    def __init__(self, penalty='l1', loss_mult=None):
+    Args:
+        penalty: ``'l2'`` squares the differences; any other value uses absolute differences (``'l1'``).
+        loss_mult: Optional multiplier applied to the final loss.
+    """
+
+    def __init__(self, penalty: str = 'l1', loss_mult: Optional[float] = None):
         super().__init__()
         self.penalty = penalty
         self.loss_mult = loss_mult
 
-    def forward(self, y_pred, weight):
+    def forward(self, y_pred: torch.Tensor, weight: torch.Tensor) -> torch.Tensor:
         """Compute weighted 2D gradient regularization.
 
         Args:
@@ -115,6 +152,7 @@ class LocalGrad2d(torch.nn.Module):
 
         Returns:
             Scalar weighted gradient penalty.
+
         """
         dy = torch.abs(y_pred[:, :, 1:, :] - y_pred[:, :, :-1, :])
         dx = torch.abs(y_pred[:, :, :, 1:] - y_pred[:, :, :, :-1])

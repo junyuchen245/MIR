@@ -21,7 +21,7 @@ Variants
      - Output
    * - ``VFA``
      - Base model; ``SVF=True`` integrates the field, ``return_full=True`` also returns the
-       warped images and the inverse flow, ``return_all_flows=True`` the per-level flows.
+       warped images and the inverse flow ``exp(-v)``, ``return_all_flows=True`` the per-level flows.
      - ``flow``
    * - ``VFASPR``
      - VFA with a spatially varying regularization decoder on the matching features.

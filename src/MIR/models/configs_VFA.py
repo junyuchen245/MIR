@@ -2,6 +2,7 @@
 
 import ml_collections
 
+
 def get_VFA_default_config():
     '''
     VFA default config.
@@ -18,7 +19,7 @@ def get_VFA_default_config():
     config.max_channels: int, maximum number of channels in the encoder.
     '''
     config = ml_collections.ConfigDict()
-    config.name ="VFA"
+    config.name = "VFA"
     config.skip = 0
     config.initialize = 0.1
     config.downsamples = 4

@@ -1,8 +1,8 @@
 """Utilities for managing prebuilt deedsBCV binaries.
 
-This module downloads precompiled binaries for Linux/Windows from GitHub
-Releases and exposes helpers to locate the executables without requiring
-local compilation.
+This module locates precompiled deedsBCV executables (bundled with the package, from ``$MIR_DEEDSBCV_DIR``, or
+downloaded to a cache from Google Drive or a release URL) without requiring local compilation. Downloaded release
+archives are only available for Linux.
 """
 
 import os
@@ -11,6 +11,7 @@ import stat
 import tarfile
 import zipfile
 from pathlib import Path
+from typing import Union
 from urllib.request import urlretrieve
 
 DEFAULT_VERSION = "v0.1.0"
@@ -61,10 +62,31 @@ def _ensure_executable(path: Path) -> None:
 def get_deedsbcv_dir(
     version: str = DEFAULT_VERSION,
     base_url: str = DEFAULT_BASE_URL,
-    cache_dir: Path = DEFAULT_CACHE_DIR,
+    cache_dir: Union[str, Path] = DEFAULT_CACHE_DIR,
     force_download: bool = False,
 ) -> Path:
-    """Ensure deedsBCV binaries exist and return the directory path."""
+    """Ensure deedsBCV binaries exist and return the directory path.
+
+    The bundled ``MIR/models/deedsBCV/bin`` directory is returned if it contains any executable. Otherwise the
+    binaries are looked up in, or downloaded to, ``cache_dir / version`` (a ``.complete`` marker file records a
+    finished download).
+
+    Args:
+        version: Release version, used as the cache sub-directory and in release URLs.
+        base_url: ``"bundled"`` (no download), ``"gdrive"`` (download each executable with ``gdown``; file IDs can
+            be overridden by ``MIR_DEEDSBCV_GDRIVE_<NAME>_ID`` environment variables) or a base URL from which
+            ``{base_url}/{version}/<asset>`` is downloaded and extracted.
+        cache_dir: Cache root directory.
+        force_download: Download again even if the cache marker exists.
+
+    Returns:
+        Directory containing the executables.
+
+    Raises:
+        RuntimeError: If ``base_url == "bundled"`` and no bundled or cached binaries exist, if a Google Drive file
+            ID is missing, or if the platform is not Linux when downloading a release archive.
+
+    """
     bundled = _bundled_dir()
     if bundled.is_dir() and any((bundled / exe).exists() for exe in EXECUTABLES):
         return bundled
@@ -114,12 +136,29 @@ def get_deedsbcv_executable(
     name: str = "deedsBCV",
     version: str = DEFAULT_VERSION,
     base_url: str = DEFAULT_BASE_URL,
-    cache_dir: Path = DEFAULT_CACHE_DIR,
+    cache_dir: Union[str, Path] = DEFAULT_CACHE_DIR,
     force_download: bool = False,
 ) -> Path:
-    """Return the full path to a deedsBCV executable, downloading if needed."""
-    base = Path(os.environ.get("MIR_DEEDSBCV_DIR", ""))
-    if base.is_dir():
+    """Return the full path to a deedsBCV executable, downloading if needed.
+
+    ``$MIR_DEEDSBCV_DIR`` is checked first when it is set; if the executable
+    is not found there, :func:`get_deedsbcv_dir` is used. On Windows the ``.exe`` suffix is added. The returned
+    path is not checked for existence in the fallback case.
+
+    Args:
+        name: Executable name (``"deedsBCV"``, ``"applyBCV"``, ``"applyBCVfloat"`` or ``"linearBCV"``).
+        version: Release version passed to :func:`get_deedsbcv_dir`.
+        base_url: Download source passed to :func:`get_deedsbcv_dir`.
+        cache_dir: Cache root directory passed to :func:`get_deedsbcv_dir`.
+        force_download: Passed to :func:`get_deedsbcv_dir`.
+
+    Returns:
+        Path to the executable.
+
+    """
+    env_dir = os.environ.get("MIR_DEEDSBCV_DIR", "")
+    base = Path(env_dir) if env_dir else None  # unset: do not fall back to the current directory
+    if base is not None and base.is_dir():
         exe = base / name
         if platform.system().lower() == "windows":
             exe = exe.with_suffix(".exe")

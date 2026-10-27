@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 from pathlib import Path
 import importlib.resources as resources
 
@@ -29,19 +29,33 @@ from MIR.image_similarity import (
 
 
 class AffineReg3D(nn.Module):
-    """3D affine registration with configurable degrees of freedom. This is an optimization-based approach, not deep learning-based.
+    """3D affine registration with configurable degrees of freedom (optimization-based, not learned).
+
+    The transform is parameterized by rotation angles (radians), translations (voxels), log-scales and shear
+    coefficients, each of shape ``[batch_size, 3]`` (shear ``[batch_size, 6]``). Parameters not enabled by ``dof`` are
+    registered as zero buffers. The linear part ``Shear @ Scale @ Rz @ Ry @ Rx`` acts about the volume center and the
+    resulting voxel displacement field is applied with :class:`~MIR.models.registration_utils.SpatialTransformer`.
 
     Args:
-        vol_shape: Spatial shape tuple (D, H, W).
-        dof: Degrees of freedom, one of: "affine", "rigid", "translation", "scaling".
-        scales: Multi-scale factors (e.g., (0.25, 0.5, 1)).
-        loss_funcs: Loss names per scale ("mse", "l1", "ncc", "fastncc", "pcc", "localcorrratio", "corrratio", "ssim3d", "mutualinformation", "localmutualinformation", "mind", "mattes", "nmi", "ngf").
-        loss_weights: Optional loss weights per scale.
+        vol_shape: Spatial shape tuple ``(D, H, W)``; must have length 3.
+        dof: Degrees of freedom, one of ``"affine"`` (rotation, translation, scale, shear), ``"rigid"`` (rotation,
+            translation), ``"translation"`` or ``"scaling"`` (translation and scale). Case-insensitive.
+        scales: Multi-scale factors used by :meth:`optimize` (e.g. ``(0.25, 0.5, 1)``).
+        loss_funcs: Loss names per scale (``"mse"``, ``"l1"``, ``"ncc"``, ``"fastncc"``, ``"pcc"``,
+            ``"localcorrratio"``, ``"corrratio"``, ``"ssim3d"``, ``"mutualinformation"``,
+            ``"localmutualinformation"``, ``"mind"``, ``"mattes"``, ``"nmi"``, ``"ngf"``); the last entry is reused
+            when there are fewer losses than scales.
+        loss_weights: Optional loss weights; only the first entry is used, by :meth:`forward`.
         mode: Sampling mode for SpatialTransformer.
-        batch_size: Parameter batch size (defaults to 1).
-        match_fixed: If True, pad/crop inputs to fixed image shape.
-        pad_mode: Padding mode for size matching.
-        pad_value: Constant value for padding (if pad_mode == "constant").
+        batch_size: Parameter batch size (defaults to 1); parameters with batch size 1 are broadcast to the input
+            batch.
+        match_fixed: If True, pad/crop inputs to the fixed image shape.
+        pad_mode: Padding mode for size matching (passed to ``torch.nn.functional.pad``).
+        pad_value: Constant value for padding (if ``pad_mode == "constant"``).
+
+    Raises:
+        ValueError: If ``vol_shape`` does not have three entries.
+
     """
 
     def __init__(
@@ -96,9 +110,7 @@ class AffineReg3D(nn.Module):
         else:
             self.register_buffer("shear", torch.zeros(self.batch_size, 6))
 
-        self._grid_cache: Dict[
-            Tuple[Tuple[int, int, int], torch.device, torch.dtype], torch.Tensor
-        ] = {}
+        self._grid_cache: Dict[Tuple[Tuple[int, int, int], torch.device, torch.dtype], torch.Tensor] = {}
         self._transformers: Dict[Tuple[int, int, int], SpatialTransformer] = {}
 
     def reset_parameters(self) -> None:
@@ -338,15 +350,27 @@ class AffineReg3D(nn.Module):
         moving: torch.Tensor,
         fixed: torch.Tensor,
         target_shape: Optional[Sequence[int]] = None,
-    ):
-        """Compute affine registration at full resolution.
+    ) -> Dict[str, Any]:
+        """Warp ``moving`` with the current affine parameters at full resolution and evaluate the loss.
+
+        If ``match_fixed`` is set or ``target_shape`` is given, both images are center-padded/cropped to the target
+        shape (``target_shape`` or the fixed image shape) first. The loss is ``loss_funcs[0]`` (``"ncc"`` if empty)
+        evaluated as ``loss(fixed, warped)``, multiplied by ``loss_weights[0]`` if weights are set.
 
         Args:
             moving: Moving image tensor (B, C, D, H, W).
             fixed: Fixed image tensor (B, C, D, H, W).
+            target_shape: Optional spatial shape ``(D, H, W)`` to pad/crop both images to.
 
         Returns:
-            Dict with keys: warped, flow, affine, loss, losses (single entry).
+            Dict with keys ``"warped"`` (B, C, D, H, W), ``"flow"`` (voxel displacement, B, 3, D, H, W),
+            ``"affine"`` (B, 3, 4; linear part plus translation in voxels, about the volume center), ``"loss"`` and
+            ``"losses"`` (single-entry list).
+
+        Raises:
+            ValueError: If shapes differ while neither ``match_fixed`` nor ``target_shape`` is set, if the inputs are
+                not 5-D, or if ``target_shape`` does not have three entries.
+
         """
         if moving.shape != fixed.shape:
             if not self.match_fixed and target_shape is None:
@@ -397,14 +421,23 @@ class AffineReg3D(nn.Module):
     ) -> torch.Tensor:
         """Apply a given affine matrix to the moving image.
 
+        The matrix is interpreted in voxel coordinates about the volume center (as returned in ``"affine"`` by
+        :meth:`forward`) and converted to a displacement field.
+
         Args:
             moving: Moving image tensor (B, C, D, H, W).
             affine: Affine matrix with shape (3,4), (B,3,4), (4,4), or (B,4,4).
             invert: If True, apply the inverse affine.
-            target_shape: Optional target shape for padding/cropping.
+            target_shape: Optional target shape for padding/cropping. ``moving`` is padded/cropped if this is given
+                or if ``match_fixed`` is set.
 
         Returns:
             Warped image tensor (B, C, D, H, W).
+
+        Raises:
+            ValueError: If ``moving`` is not 5-D, ``target_shape`` does not have three entries, or ``affine`` has an
+                unsupported shape.
+
         """
         if moving.dim() != 5:
             raise ValueError("Expected 5D tensor (B, C, D, H, W).")
@@ -454,6 +487,7 @@ class AffineReg3D(nn.Module):
 
         Returns:
             Affine matrix tensor (B, 3, 4) in voxel coordinates.
+
         """
         if flow.dim() != 5:
             raise ValueError("flow must have shape (B, 3, D, H, W)")
@@ -476,7 +510,7 @@ class AffineReg3D(nn.Module):
 
         affines = []
         for b in range(batch_size):
-            y = (grid_flat + flow_sub[b].reshape(3, -1).T)  # (N, 3)
+            y = grid_flat + flow_sub[b].reshape(3, -1).T  # (N, 3)
             sol = torch.linalg.lstsq(x_aug, y).solution  # (4, 3)
             affines.append(sol.T)
         return torch.stack(affines, dim=0)
@@ -495,6 +529,7 @@ class AffineReg3D(nn.Module):
             shape: Spatial shape (D, H, W).
             steps: Optimization steps for parameter fitting.
             lr: Learning rate for parameter fitting.
+
         """
         if affine.dim() == 2:
             affine = affine.unsqueeze(0)
@@ -555,11 +590,15 @@ class AffineReg3D(nn.Module):
 
             ssd, ssd_argmin = correlate(mind_fix_s, mind_mov_s, disp_hw, grid_sp, shape, n_ch)
 
-            disp_mesh_t = nnf.affine_grid(
-                disp_hw * torch.eye(3, 4, device=device, dtype=dtype).unsqueeze(0),
-                (1, 1, disp_hw * 2 + 1, disp_hw * 2 + 1, disp_hw * 2 + 1),
-                align_corners=True,
-            ).permute(0, 4, 1, 2, 3).reshape(3, -1, 1)
+            disp_mesh_t = (
+                nnf.affine_grid(
+                    disp_hw * torch.eye(3, 4, device=device, dtype=dtype).unsqueeze(0),
+                    (1, 1, disp_hw * 2 + 1, disp_hw * 2 + 1, disp_hw * 2 + 1),
+                    align_corners=True,
+                )
+                .permute(0, 4, 1, 2, 3)
+                .reshape(3, -1, 1)
+            )
 
             disp_soft = coupled_convex(ssd, ssd_argmin, disp_mesh_t, grid_sp, shape)
             disp_hr = nnf.interpolate(disp_soft, size=shape, mode="trilinear", align_corners=False) * grid_sp
@@ -587,8 +626,14 @@ class AffineReg3D(nn.Module):
         mind_init_mind_r: int = 1,
         mind_init_mind_d: int = 2,
         mind_init_sample_stride: int = 4,
-    ):
+    ) -> Union[Dict[str, Any], Tuple[Dict[str, Any], List[float]]]:
         """Optimize affine parameters to align moving to fixed.
+
+        Inputs are padded/cropped as in :meth:`forward` and, if ``normalize`` is set, clipped to their
+        [2%, 98%] quantile range and rescaled to [0, 1]. For each entry of ``self.scales`` both images are trilinearly
+        resampled and the loss for that scale is minimized for the given number of steps. The final output is
+        computed by :meth:`forward` on the padded (unnormalized) moving image and the (possibly normalized) fixed
+        image.
 
         Args:
             moving: Moving image tensor (B, C, D, H, W).
@@ -600,6 +645,7 @@ class AffineReg3D(nn.Module):
             steps: Number of optimization steps (used if steps_per_scale is None).
             steps_per_scale: Optional per-scale step counts matching self.scales.
             return_history: Whether to return loss history.
+            verbose: Print the loss at the first, last and every 10th step of each scale.
             normalize: Whether to normalize images before optimization.
             lbfgs_history_size: History size for LBFGS.
             mind_init: Whether to run a short MIND-based pre-alignment stage.
@@ -610,7 +656,14 @@ class AffineReg3D(nn.Module):
             mind_init_sample_stride: Subsampling stride when fitting affine from convex flow.
 
         Returns:
-            Tuple of (output_dict, loss_history) if return_history else output_dict.
+            Tuple of (output_dict, loss_history) if return_history else output_dict; ``output_dict`` is the
+            :meth:`forward` result and ``loss_history`` holds one float per optimization step.
+
+        Raises:
+            RuntimeError: If the selected DOF has no learnable parameters.
+            ValueError: If ``optimizer_name`` is unknown, ``target_shape`` does not have three entries or
+                ``steps_per_scale`` does not match the number of scales.
+
         """
         params = [p for p in self.parameters() if p.requires_grad]
         if not params:
@@ -641,9 +694,11 @@ class AffineReg3D(nn.Module):
             moving = self._pad_or_crop(moving, target, self.pad_mode, self.pad_value)
             fixed = self._pad_or_crop(fixed, target, self.pad_mode, self.pad_value)
         moving_ = moving.clone()
+        fixed_ = fixed.clone()
         if normalize:
             moving = self._normalize_image(moving)
             fixed = self._normalize_image(fixed)
+
         def _run_optimization(
             scales: Sequence[float],
             steps_per_scale_local: Optional[Sequence[int]],
@@ -670,11 +725,12 @@ class AffineReg3D(nn.Module):
                     loss_name = loss_funcs_local[min(scale_idx, len(loss_funcs_local) - 1)]
                     loss_fn = self._resolve_loss(loss_name)
 
+                    # closure() reads this iteration's shape/mov/fix/transformer/loss_fn and is consumed within it
                     def closure():
                         optimizer_local.zero_grad(set_to_none=True)
-                        flow = self._affine_to_flow(shape, mov.shape[0], mov.device, mov.dtype)
-                        warped = transformer(mov, flow)
-                        loss_val = loss_fn(fix, warped)
+                        flow = self._affine_to_flow(shape, mov.shape[0], mov.device, mov.dtype)  # noqa: B023
+                        warped = transformer(mov, flow)  # noqa: B023
+                        loss_val = loss_fn(fix, warped)  # noqa: B023
                         loss_val.backward()
                         return loss_val
 
@@ -711,7 +767,7 @@ class AffineReg3D(nn.Module):
             log_prefix="[AffineReg3D]",
         )
 
-        output = self.forward(moving_, fixed, target_shape=target_shape)
+        output = self.forward(moving_, fixed_, target_shape=target_shape)  # original intensities for both
 
         if return_history:
             return output, loss_history
@@ -719,18 +775,26 @@ class AffineReg3D(nn.Module):
 
 
 class PreAffineToTemplate(nn.Module):
-    '''
-    Affine pre-alignment to a fixed template before deformable registration.
+    """Affine pre-alignment to a fixed template before deformable registration.
+
+    The template is loaded with nibabel and kept as a float tensor ``[1, 1, *template_shape]`` (``self.atlas``, on the
+    CPU; it is moved to the input device on each call). Registration is done by an :class:`AffineReg3D` with
+    ``match_fixed=True``.
 
     Args:
         mode: Interpolation mode for SpatialTransformer.
-        template_type: Template name to load ("lumir" or "mni").
+        template_type: Template to load: ``"lumir"`` (LUMIR template), ``"mni"`` (MNI ICBM152 2009c T1, masked) or
+            any other value, which is treated as a file name/path.
         batch_size: Batch size for affine parameters.
         dof: Degrees of freedom for affine model.
         scales: Multi-scale factors for loss computation.
         loss_funcs: Loss names per scale.
-        device: Device for the affine model and template.
-    '''
+        device: Device for the affine model.
+
+    Raises:
+        FileNotFoundError: If the template file cannot be found.
+
+    """
 
     def __init__(
         self,
@@ -786,27 +850,40 @@ class PreAffineToTemplate(nn.Module):
         if package_templates.is_file():
             return package_templates
 
-        repo_templates = Path(__file__).resolve().parents[3] / "tutorials" / "brain_MRI_preprocessing" / direct_path.name
+        repo_templates = (
+            Path(__file__).resolve().parents[3] / "tutorials" / "brain_MRI_preprocessing" / direct_path.name
+        )
         if repo_templates.is_file():
             return repo_templates
 
         raise FileNotFoundError(f"Template not found: {name}")
 
-    def forward(self, x: torch.Tensor, optimize: bool = True, verbose: bool = False):
-        '''
-        Forward pass of the affine registration module
+    def forward(self, x: torch.Tensor, optimize: bool = True, verbose: bool = False) -> Dict[str, Any]:
+        """Affinely register an input image to the template.
+
         Args:
-            x: Input image tensor (B, C, H, W, D)
+            x: Input image tensor (B, C, H, W, D).
+            optimize: If True, run :meth:`AffineReg3D.optimize` with 50 steps per scale (this assumes three scales);
+                otherwise only evaluate the current parameters with :meth:`AffineReg3D.forward`.
+            verbose: Print optimization progress.
+
         Returns:
-            Affine registered image tensor (B, C, H, W, D)
-        '''
+            Output dict of :class:`AffineReg3D` (keys ``"warped"``, ``"flow"``, ``"affine"``, ``"loss"``,
+            ``"losses"``); ``"warped"`` is the registered image in template space.
+
+        Raises:
+            ValueError: If ``x`` is not 5-D.
+
+        """
         if x.ndim != 5:
             raise ValueError("Input must have shape (B,C,H,W,D)")
         batch_size = x.shape[0]
 
         fixed = self.atlas.repeat(batch_size, 1, 1, 1, 1).to(x.device)
         if optimize:
-            output = self.reg_model.optimize(x, fixed, verbose=verbose, steps_per_scale=[50, 50, 50])
+            output = self.reg_model.optimize(
+                x, fixed, verbose=verbose, steps_per_scale=[50] * len(self.reg_model.scales)
+            )
         else:
             output = self.reg_model(x, fixed)
         return output

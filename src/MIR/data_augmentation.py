@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 import random
+from typing import Optional, Sequence, Tuple, Union
 
 import numpy as np
 import torch
@@ -101,8 +102,27 @@ def _build_affine_matrix_3d(
     return affine_matrix
 
 
-def flip_aug(im_1, im_2, im_label_1=None, im_label_2=None):
-    """Flip paired images along randomly selected spatial axes."""
+def flip_aug(
+    im_1: torch.Tensor,
+    im_2: torch.Tensor,
+    im_label_1: Optional[torch.Tensor] = None,
+    im_label_2: Optional[torch.Tensor] = None,
+) -> Union[Tuple[torch.Tensor, torch.Tensor], Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]]:
+    """Flip paired images along randomly selected spatial axes.
+
+    Each spatial axis (dims 2, 3, 4) is flipped with probability 0.5 (drawn with ``np.random``); the same flips are
+    applied to all inputs. Runs under ``torch.no_grad()``.
+
+    Args:
+        im_1: First image ``[B, C, H, W, D]``.
+        im_2: Second image ``[B, C, H, W, D]``.
+        im_label_1: Optional label map for ``im_1``, same spatial layout.
+        im_label_2: Optional label map for ``im_2``, same spatial layout.
+
+    Returns:
+        ``(im_1, im_2, im_label_1, im_label_2)`` if both labels are given, otherwise ``(im_1, im_2)``.
+
+    """
     with torch.no_grad():
         has_labels = _should_transform_labels(im_label_1, im_label_2)
 
@@ -120,15 +140,39 @@ def flip_aug(im_1, im_2, im_label_1=None, im_label_2=None):
             return im_1, im_2, im_label_1, im_label_2
         return im_1, im_2
 
-def affine_aug(im, im_label=None, seed=10, angle_range=10, trans_range=0.1, scale_range=0.1):
-    """Apply a random 3D affine transformation to an image and optional label."""
+
+def affine_aug(
+    im: torch.Tensor,
+    im_label: Optional[torch.Tensor] = None,
+    seed: Optional[int] = 10,
+    angle_range: float = 10,
+    trans_range: float = 0.1,
+    scale_range: float = 0.1,
+) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
+    """Apply a random 3D affine transformation to an image and optional label.
+
+    Rotation angles, scale offsets and translations are drawn uniformly with Python's ``random`` module and combined
+    as ``Rx @ Ry @ Rz @ [diag(1 + s) | t]``. The image is resampled bilinearly and the label with nearest neighbour
+    (``affine_grid``/``grid_sample``, ``align_corners=False``, border padding). Runs under ``torch.no_grad()``.
+
+    Args:
+        im: Image ``[B, C, H, W, D]``.
+        im_label: Optional label map ``[B, C, H, W, D]`` warped with the same transform.
+        seed: If not None, ``random.seed(seed)`` is called first (this reseeds the global ``random`` module, so with
+            the default the same transform is drawn on every call); pass None for a new transform each call.
+        angle_range: Maximum absolute rotation angle per axis, in degrees.
+        trans_range: Maximum absolute translation per axis, in normalized ``[-1, 1]`` grid units.
+        scale_range: Maximum absolute scale offset per axis (scale factor ``1 + s``).
+
+    Returns:
+        The warped image, or ``(warped_image, warped_label)`` if ``im_label`` is given.
+
+    """
     with torch.no_grad():
         if seed is not None:
             random.seed(seed)
 
-        angle_xyz = tuple(
-            random.uniform(-angle_range, angle_range) * math.pi / 180 for _ in range(3)
-        )
+        angle_xyz = tuple(random.uniform(-angle_range, angle_range) * math.pi / 180 for _ in range(3))
         scale_xyz = tuple(random.uniform(-scale_range, scale_range) for _ in range(3))
         trans_xyz = tuple(random.uniform(-trans_range, trans_range) for _ in range(3))
 
@@ -158,8 +202,20 @@ def affine_aug(im, im_label=None, seed=10, angle_range=10, trans_range=0.1, scal
 # --------------------------------------------------------------------------
 # helper 1 :   1‑D three‑class Gaussian mixture (EM, 20 iters)
 # --------------------------------------------------------------------------
-def gmm_soft_masks(brain_vox, iters: int = 40):
-    """Estimate three soft tissue masks with a 1D Gaussian mixture model."""
+def gmm_soft_masks(brain_vox: torch.Tensor, iters: int = 40) -> torch.Tensor:
+    """Estimate three soft tissue masks with a 1D Gaussian mixture model.
+
+    The three components are initialized by nearest-center assignment to centers spread between the 5% and 95%
+    intensity quantiles and refined with ``iters`` EM iterations.
+
+    Args:
+        brain_vox: 1-D tensor ``(N,)`` of voxel intensities.
+        iters: Number of EM iterations.
+
+    Returns:
+        Posterior memberships ``(N, 3)``, columns ordered by increasing component mean.
+
+    """
     x = brain_vox[:, None]
 
     centers = torch.linspace(
@@ -200,24 +256,25 @@ def gmm_soft_masks(brain_vox, iters: int = 40):
     order = torch.argsort(mu)
     return post[order].T.reshape(brain_vox.shape + (-1,))
 
+
 def fcm_soft_masks(
-    brain_vox: torch.Tensor,
-    n_clusters: int = 3,
-    m: float = 2.,
-    iters: int = 30,
-    eps: float = 1e-6
+    brain_vox: torch.Tensor, n_clusters: int = 3, m: float = 2.0, iters: int = 30, eps: float = 1e-6
 ) -> torch.Tensor:
-    """
-    Fuzzy C-Means on 1-D intensities, k-means init, correct broadcasting.
+    """Fuzzy C-Means clustering of 1-D intensities.
 
-    brain_vox : Tensor, shape (N,) of [0,1] intensities
-    n_clusters: number of tissue classes (3→CSF/GM/WM)
-    m         : fuzziness exponent (>1, larger→softer)
-    iters     : EM updates
-    eps       : small constant to avoid zeros
-    Returns U of shape (N, n_clusters) with soft memberships.
-    """
+    Cluster centers are initialized at evenly spaced quantiles between 5% and 95% of the intensities.
 
+    Args:
+        brain_vox: Tensor of intensities (flattened to ``(N,)``), typically in [0, 1].
+        n_clusters: Number of tissue classes (3 -> CSF/GM/WM).
+        m: Fuzziness exponent (>1, larger -> softer).
+        iters: Number of center/membership updates.
+        eps: Small constant to avoid zeros.
+
+    Returns:
+        Soft memberships ``U`` of shape ``(N, n_clusters)``, columns ordered by increasing center.
+
+    """
     x = brain_vox.flatten().to(brain_vox.device)
     x = x.unsqueeze(1)
 
@@ -227,16 +284,16 @@ def fcm_soft_masks(
     dist = torch.abs(x - centers).clamp_min(eps)
     exponent = 2.0 / (m - 1.0)
     ratio = dist.unsqueeze(2) / dist.unsqueeze(1)
-    denom = (ratio ** exponent).sum(dim=2)
+    denom = (ratio**exponent).sum(dim=2)
     U = 1.0 / denom
 
     for _ in range(iters):
-        Um = U ** m
+        Um = U**m
         centers = (Um * x).sum(dim=0, keepdim=True) / Um.sum(dim=0, keepdim=True).clamp_min(eps)
 
         dist = torch.abs(x - centers).clamp_min(eps)
         ratio = dist.unsqueeze(2) / dist.unsqueeze(1)
-        denom = (ratio ** exponent).sum(dim=2)
+        denom = (ratio**exponent).sum(dim=2)
         U = 1.0 / denom
 
     centers_flat = centers.flatten()
@@ -245,8 +302,23 @@ def fcm_soft_masks(
 
     return U
 
+
 def mask_edge(mask: torch.BoolTensor, kernel_size: int = 3) -> torch.BoolTensor:
-    """Compute the one-voxel edge of a 3D binary mask."""
+    """Compute the inner edge of a 3D binary mask.
+
+    Edge voxels are foreground voxels that have a background voxel within a ``kernel_size`` cube neighbourhood.
+
+    Args:
+        mask: Boolean mask ``(D, H, W)``.
+        kernel_size: Odd neighbourhood size.
+
+    Returns:
+        Boolean edge mask ``(1, 1, D, H, W)``.
+
+    Raises:
+        ValueError: If ``mask`` is not boolean or ``kernel_size`` is not an odd positive integer.
+
+    """
     if mask.dtype != torch.bool:
         raise ValueError('mask must be a BoolTensor')
     if kernel_size % 2 == 0 or kernel_size < 1:
@@ -262,7 +334,23 @@ def mask_edge(mask: torch.BoolTensor, kernel_size: int = 3) -> torch.BoolTensor:
 
 
 def fill_holes_torch(mask: torch.BoolTensor, closing_size: int = 3) -> torch.BoolTensor:
-    """Remove small gaps and fill internal holes in a 3D mask."""
+    """Remove small gaps and fill internal holes in a 3D mask.
+
+    A morphological closing with a ``closing_size`` cube is applied, then background regions not connected
+    (26-connectivity) to the volume border are filled.
+
+    Args:
+        mask: Boolean mask ``(D, H, W)`` or ``(B, C, D, H, W)``.
+        closing_size: Odd size of the closing structuring element.
+
+    Returns:
+        Filled boolean mask with the shape of ``mask``.
+
+    Raises:
+        ValueError: If ``mask`` is not boolean, has an unsupported number of dims, or ``closing_size`` is not an odd
+            positive integer.
+
+    """
     if mask.dtype != torch.bool:
         raise ValueError('mask must be a BoolTensor')
     if closing_size % 2 == 0 or closing_size < 1:
@@ -309,9 +397,22 @@ def fill_holes_torch(mask: torch.BoolTensor, closing_size: int = 3) -> torch.Boo
 
 
 class SimulatedWidthThickness(torch.nn.Module):
-    """Simulate coarse resolution along the width dimension."""
+    """Simulate coarse resolution along the width (last) dimension.
 
-    def __init__(self, min_factor=2, max_factor=5, p=0.5):
+    In training mode, with probability ``p`` the input is average-pooled along the last axis by a random integer
+    factor in ``[min_factor, max_factor]`` and trilinearly upsampled back. In eval mode the input is returned
+    unchanged.
+
+    Args:
+        min_factor: Minimum downsampling factor (>= 1).
+        max_factor: Maximum downsampling factor (>= ``min_factor``).
+        p: Probability of applying the transform.
+
+    Raises:
+        ValueError: If the factor range is invalid.
+    """
+
+    def __init__(self, min_factor: int = 2, max_factor: int = 5, p: float = 0.5):
         super().__init__()
         if min_factor < 1 or max_factor < min_factor:
             raise ValueError('Invalid factor range')
@@ -320,11 +421,17 @@ class SimulatedWidthThickness(torch.nn.Module):
         self.p = p
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """
+        """Apply the simulated coarse width resolution.
+
         Args:
-            x: Tensor of shape (C, D, H, W) or (B, C, D, H, W)
+            x: Tensor of shape (C, D, H, W) or (B, C, D, H, W).
+
         Returns:
-            Tensor of same shape with simulated coarse width resolution
+            Tensor of same shape with simulated coarse width resolution.
+
+        Raises:
+            ValueError: If ``x`` is not 4-D or 5-D.
+
         """
         if x.dim() not in (4, 5):
             raise ValueError('x must have shape (C, D, H, W) or (B, C, D, H, W)')
@@ -360,6 +467,7 @@ class SimulatedWidthThickness(torch.nn.Module):
             return x_coarse.squeeze(0)
         return x_coarse
 
+
 def random_contrast_lut(
     img: torch.Tensor,
     num_bins: int = 128,
@@ -367,8 +475,23 @@ def random_contrast_lut(
     chunk_size: int = 64,
     use_half: bool = True,
 ) -> torch.Tensor:
-    """Apply a smooth random LUT to a 2D or 3D image tensor in ``[0, 1]``."""
+    """Apply a smooth random LUT to a 2D or 3D image tensor in ``[0, 1]``.
 
+    A random LUT of ``num_bins`` values is smoothed with a Gaussian kernel, min-max normalized and pinned to 0 at the
+    first and 1 at the last bin; intensities are mapped by linear interpolation between bins. The image is processed
+    in chunks along its second-to-last axis to limit memory.
+
+    Args:
+        img: Image tensor with values in ``[0, 1]`` (any leading dims).
+        num_bins: Number of LUT bins.
+        sigma_bins: Gaussian smoothing sigma, in bins.
+        chunk_size: Chunk length along the second-to-last axis.
+        use_half: Compute LUT indices and values in float16.
+
+    Returns:
+        Remapped tensor with the shape and dtype of ``img``.
+
+    """
     device = img.device
     dtype = img.dtype
     idx_dtype = torch.float16 if use_half else torch.float32
@@ -396,35 +519,40 @@ def random_contrast_lut(
         patch = img[..., start_idx:end_idx, :]
         idx = (patch * (num_bins - 1)).to(idx_dtype)
         lo = idx.floor().long().clamp(0, num_bins - 2)
-        hi    = lo + 1
+        hi = lo + 1
         w = idx - lo.to(idx_dtype)
 
         v_lo = lut_smooth[lo]
-        v_hi  = lut_smooth[hi]
+        v_hi = lut_smooth[hi]
         mapped = v_lo + (v_hi - v_lo) * w
 
         out[..., start_idx:end_idx, :] = mapped.to(dtype)
 
     return out
 
+
 class RandomMultiContrastRemap(torch.nn.Module):
-    """
-    Augment a skull‑stripped T1‑w brain MRI so that the same anatomy can resemble
-    T2, FLAIR, T2*, or CT.  Background stays zero; brain voxels are re‑normalized
-    to [0,1] at the end.
+    """Augment a skull-stripped T1-w brain MRI so that the same anatomy can resemble T2, FLAIR, T2*, PD or CT.
+
+    Background stays zero; brain voxels are re-normalized to [0, 1] at the end.
 
     Args:
-        p: Probability of applying the augmentation
-        noise_std: Standard deviation of Gaussian noise added to the image
-        downsample_p: Probability of applying simulated coarse width resolution
+        p: Probability of applying the augmentation.
+        noise_std: Maximum standard deviation of Gaussian noise added inside the mask (sigma is drawn uniformly
+            from ``[0, noise_std]``).
+        downsample_p: Probability of applying simulated coarse width resolution (``'t2star'`` and ``'flair'``
+            recipes only, in training mode).
+        recipe: Recipes to choose from uniformly: ``'t2'``, ``'flair'``, ``'t2star'``, ``'pd'``, ``'ct'``,
+            ``'random_remap'``, ``'random_lut'``.
+
     """
 
     def __init__(
         self,
-        p=0.9,
-        noise_std=0.03,
-        downsample_p=0.5,
-        recipe=['t2', 'flair', 't2star', 'pd', 'ct', 'random_remap', 'random_lut'],
+        p: float = 0.9,
+        noise_std: float = 0.03,
+        downsample_p: float = 0.5,
+        recipe: Sequence[str] = ['t2', 'flair', 't2star', 'pd', 'ct', 'random_remap', 'random_lut'],
     ):
         super().__init__()
         self.p = p
@@ -439,9 +567,11 @@ class RandomMultiContrastRemap(torch.nn.Module):
         return 1.0 - x
 
     def _piecewise_linear(self, x, knots, values):
-        """
-        Safe piece-wise linear mapping that never indexes out of bounds.
-        x, knots, values : 1-D (knots and values same length, strictly increasing knots)
+        """Safe piece-wise linear mapping that never indexes out of bounds.
+
+        ``x``, ``knots`` and ``values`` are 1-D; ``knots`` and ``values`` have the same length and ``knots`` is
+        strictly increasing. Values at or below the first knot map to ``values[0]``; values above the last knot are
+        extrapolated linearly along the last segment.
         """
         idx = torch.searchsorted(knots, x)
         idx = torch.clamp(idx, max=len(knots) - 1)
@@ -478,8 +608,25 @@ class RandomMultiContrastRemap(torch.nn.Module):
         """Apply robust normalization used by the recipe transforms."""
         return _normalize_to_unit_interval(image, 0.05, 0.95)
 
-    def forward(self, img_, mask):
-        mask = fill_holes_torch(mask, closing_size=5)
+    def forward(self, img_: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
+        """Apply a randomly chosen contrast recipe.
+
+        The mask is hole-filled first. With probability ``1 - p`` the masked input is returned unchanged.
+        Tissue-class remapping uses only the first batch element and channel.
+
+        Args:
+            img_: Image ``[B, C, D, H, W]`` (or ``[C, D, H, W]``) with intensities roughly in [0, 1]; not modified.
+            mask: Boolean brain mask with the same layout as ``img_`` (``fill_holes_torch`` accepts 3-D or 5-D
+                masks).
+
+        Returns:
+            Augmented image with the shape of ``img_``; voxels outside the mask are zero.
+
+        """
+        if mask.dim() == 4:  # unbatched (C, D, H, W): fill_holes_torch expects (D, H, W) or (B, C, D, H, W)
+            mask = fill_holes_torch(mask.unsqueeze(0), closing_size=5)[0]
+        else:
+            mask = fill_holes_torch(mask, closing_size=5)
         img = img_.clone()
         if random.random() > self.p:
             return img * mask.float()
@@ -554,4 +701,3 @@ class RandomMultiContrastRemap(torch.nn.Module):
         if recipe in ('t2star', 'flair'):
             img = self.slice_down(img)
         return img
-        

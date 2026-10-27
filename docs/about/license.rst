@@ -18,9 +18,6 @@ contributions from the co-authors of the papers it implements.
 Contributing
 ------------
 
-Issues and pull requests are welcome on `GitHub <https://github.com/junyuchen245/MIR>`__. Please run the
-unit tests before submitting:
-
-.. code-block:: bash
-
-   python3.8 -m pytest tests -q
+Issues and pull requests are welcome on `GitHub <https://github.com/junyuchen245/MIR>`__. The
+:doc:`../development/contributing` guide describes the development setup, code style and the checks a change
+must pass (unit tests, lint, and the API and numerical-output compatibility checks).

@@ -1,6 +1,7 @@
 """Configuration presets for TransMorph models."""
 
 import ml_collections
+
 '''
 ********************************************************
                    Swin Transformer
@@ -12,22 +13,23 @@ in_chans (int): Number of input image channels. Default: 2 (for moving and fixed
 embed_dim (int): Patch embedding dimension. Default: 96
 depths (tuple(int)): Depth of each Swin Transformer layer.
 num_heads (tuple(int)): Number of attention heads in different layers.
-window_size (tuple(int)): Image size should be divisible by window size, 
+window_size (tuple(int)): Image size should be divisible by window size,
                      e.g., if image has a size of (160, 192, 224), then the window size can be (5, 6, 7)
 mlp_ratio (float): Ratio of mlp hidden dim to embedding dim. Default: 4
-pat_merg_rf (int): Embed_dim reduction factor in patch merging, e.g., N*C->N/4*C if set to four. Default: 4. 
+pat_merg_rf (int): Embed_dim reduction factor in patch merging, e.g., N*C->N/4*C if set to four. Default: 4.
 qkv_bias (bool): If True, add a learnable bias to query, key, value. Default: True
 drop_rate (float): Dropout rate. Default: 0
 drop_path_rate (float): Stochastic depth rate. Default: 0.1
 ape (bool): Enable learnable position embedding. Default: False
 spe (bool): Enable sinusoidal position embedding. Default: False
 patch_norm (bool): If True, add normalization after patch embedding. Default: True
-use_checkpoint (bool): Whether to use checkpointing to save memory. Default: False 
+use_checkpoint (bool): Whether to use checkpointing to save memory. Default: False
                        (Carried over from Swin Transformer, it is not needed)
 out_indices (tuple(int)): Indices of Transformer blocks to output features. Default: (0, 1, 2, 3)
-reg_head_chan (int): Number of channels in the registration head (i.e., the final convolutional layer) 
+reg_head_chan (int): Number of channels in the registration head (i.e., the final convolutional layer)
 img_size (int | tuple(int)): Input image size, e.g., (160, 192, 224)
 '''
+
 
 def get_3DTransMorphAtlas3Lvl_config():
     '''
@@ -57,6 +59,7 @@ def get_3DTransMorphAtlas3Lvl_config():
     config.reg_head_chan = 16
     config.img_size = (160, 192, 224)
     return config
+
 
 def get_3DTransMorphDWin3Lvl_config():
     """Return TransMorph 3-level config with dual-window attention.
@@ -89,6 +92,7 @@ def get_3DTransMorphDWin3Lvl_config():
     config.dwin_kernel_size = (7, 5, 3)
     return config
 
+
 def get_3DTransMorph3Lvl_config():
     """Return TransMorph 3-level config.
 
@@ -118,6 +122,7 @@ def get_3DTransMorph3Lvl_config():
     config.reg_head_chan = 16
     config.img_size = (160, 192, 224)
     return config
+
 
 def get_3DTransMorphAutoPET3Lvl_config():
     """Return TransMorph 3-level config for AutoPET settings.
@@ -150,6 +155,7 @@ def get_3DTransMorphAutoPET3Lvl_config():
     config.img_size = (160, 192, 224)
     return config
 
+
 def get_3DTransMorph_config():
     """Return base TransMorph 4-level config.
 
@@ -180,6 +186,7 @@ def get_3DTransMorph_config():
     config.img_size = (160, 192, 224)
     return config
 
+
 def get_3DTransMorphNoRelativePosEmbd_config():
     """Return TransMorph config without relative positional embeddings.
 
@@ -209,6 +216,7 @@ def get_3DTransMorphNoRelativePosEmbd_config():
     config.reg_head_chan = 16
     config.img_size = (160, 192, 224)
     return config
+
 
 def get_3DTransMorphSin_config():
     """Return TransMorph config with sinusoidal positional embeddings.
@@ -241,6 +249,7 @@ def get_3DTransMorphSin_config():
     config.pos_embed_method = 'relative'
     return config
 
+
 def get_3DTransMorphLrn_config():
     '''
     TransMorph with Learnable Positional Embedding
@@ -268,6 +277,7 @@ def get_3DTransMorphLrn_config():
     config.reg_head_chan = 16
     config.img_size = (160, 192, 224)
     return config
+
 
 def get_3DTransMorphNoConvSkip_config():
     '''
@@ -301,6 +311,7 @@ def get_3DTransMorphNoConvSkip_config():
     config.pos_embed_method = 'relative'
     return config
 
+
 def get_3DTransMorphNoTransSkip_config():
     '''
     No skip connections from Transformer blocks
@@ -331,6 +342,7 @@ def get_3DTransMorphNoTransSkip_config():
     config.reg_head_chan = 16
     config.img_size = (160, 192, 224)
     return config
+
 
 def get_3DTransMorphNoSkip_config():
     '''
@@ -363,6 +375,7 @@ def get_3DTransMorphNoSkip_config():
     config.img_size = (160, 192, 224)
     return config
 
+
 def get_3DTransMorphLarge_config():
     '''
     A Large TransMorph Network
@@ -390,6 +403,7 @@ def get_3DTransMorphLarge_config():
     config.reg_head_chan = 16
     config.img_size = (160, 192, 224)
     return config
+
 
 def get_3DTransMorphSmall_config():
     '''
@@ -419,6 +433,7 @@ def get_3DTransMorphSmall_config():
     config.img_size = (160, 192, 224)
     return config
 
+
 def get_3DTransMorphTiny_config():
     '''
     A Tiny TransMorph Network
@@ -446,6 +461,7 @@ def get_3DTransMorphTiny_config():
     config.reg_head_chan = 16
     config.img_size = (160, 192, 224)
     return config
+
 
 def get_3DTransMorphRelativePosEmbdSimple_config():
     config = ml_collections.ConfigDict()
