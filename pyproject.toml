@@ -41,7 +41,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest", "ruff>=0.5", "pre-commit"]
+dev = ["pytest", "ruff==0.17.3", "pre-commit"]
 docs = ["sphinx>=7", "furo>=2024.8.6", "sphinx-design>=0.5", "sphinx-copybutton>=0.5"]
 dicom = ["pydicom"]
 download = ["gdown"]

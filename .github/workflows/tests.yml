@@ -32,7 +32,7 @@ jobs:
           python-version: "3.8.16"
 
       - name: Install ruff
-        run: python -m pip install "ruff>=0.5"
+        run: python -m pip install "ruff==0.17.3"   # same version as pre-commit and local development
 
       - name: Lint (first-party code; vendored code is excluded in pyproject.toml)
         run: ruff check src/MIR tests tools
