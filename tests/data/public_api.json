@@ -943,7 +943,7 @@
      [
       "device",
       "POSITIONAL_OR_KEYWORD",
-      "'cpu'"
+      "'<cuda|cpu>'"
      ]
     ],
     "kind": "class",
@@ -987,7 +987,7 @@
      [
       "device",
       "POSITIONAL_OR_KEYWORD",
-      "'cpu'"
+      "'<cuda|cpu>'"
      ]
     ],
     "kind": "class",
@@ -1401,7 +1401,7 @@
      [
       "device",
       "POSITIONAL_OR_KEYWORD",
-      "'cpu'"
+      "'<cuda|cpu>'"
      ]
     ],
     "kind": "class",
@@ -1445,7 +1445,7 @@
      [
       "device",
       "POSITIONAL_OR_KEYWORD",
-      "'cpu'"
+      "'<cuda|cpu>'"
      ]
     ],
     "kind": "class",
@@ -5575,7 +5575,7 @@
       [
        "device",
        "POSITIONAL_OR_KEYWORD",
-       "'cpu'"
+       "'<cuda|cpu>'"
       ]
      ],
      "inner": [
@@ -7050,7 +7050,7 @@
      [
       "device",
       "POSITIONAL_OR_KEYWORD",
-      "'cpu'"
+      "'<cuda|cpu>'"
      ]
     ],
     "kind": "class",
@@ -8660,7 +8660,7 @@
      [
       "device",
       "POSITIONAL_OR_KEYWORD",
-      "device(type='cuda')"
+      "'<cuda|cpu>'"
      ]
     ]
    },
@@ -8705,7 +8705,7 @@
      [
       "device",
       "POSITIONAL_OR_KEYWORD",
-      "'cuda'"
+      "'<cuda|cpu>'"
      ]
     ]
    },
@@ -8764,7 +8764,7 @@
      [
       "device",
       "POSITIONAL_OR_KEYWORD",
-      "'cpu'"
+      "'<cuda|cpu>'"
      ]
     ]
    },
@@ -16531,7 +16531,7 @@
       [
        "device",
        "POSITIONAL_OR_KEYWORD",
-       "'cpu'"
+       "'<cuda|cpu>'"
       ]
      ],
      "inner": [
@@ -18368,7 +18368,7 @@
      [
       "device",
       "POSITIONAL_OR_KEYWORD",
-      "'cuda'"
+      "'<cuda|cpu>'"
      ]
     ]
    },
@@ -18732,7 +18732,7 @@
      [
       "device",
       "POSITIONAL_OR_KEYWORD",
-      "'cpu'"
+      "'<cuda|cpu>'"
      ]
     ],
     "kind": "class",
@@ -19330,7 +19330,7 @@
       [
        "device",
        "POSITIONAL_OR_KEYWORD",
-       "'cpu'"
+       "'<cuda|cpu>'"
       ]
      ],
      "inner": [
@@ -20128,7 +20128,7 @@
      [
       "device",
       "POSITIONAL_OR_KEYWORD",
-      "'cuda'"
+      "'<cuda|cpu>'"
      ]
     ]
    },
@@ -20213,7 +20213,7 @@
      [
       "device",
       "POSITIONAL_OR_KEYWORD",
-      "'cpu'"
+      "'<cuda|cpu>'"
      ]
     ]
    },
@@ -21243,7 +21243,7 @@
      [
       "cache_dir",
       "POSITIONAL_OR_KEYWORD",
-      "PosixPath('/home/jchen/.cache/mir/deedsbcv')"
+      "PosixPath('~/.cache/mir/deedsbcv')"
      ],
      [
       "force_download",
@@ -21273,7 +21273,7 @@
      [
       "cache_dir",
       "POSITIONAL_OR_KEYWORD",
-      "PosixPath('/home/jchen/.cache/mir/deedsbcv')"
+      "PosixPath('~/.cache/mir/deedsbcv')"
      ],
      [
       "force_download",
@@ -21680,7 +21680,7 @@
      [
       "cache_dir",
       "POSITIONAL_OR_KEYWORD",
-      "PosixPath('/home/jchen/.cache/mir/deedsbcv')"
+      "PosixPath('~/.cache/mir/deedsbcv')"
      ],
      [
       "force_download",
@@ -21710,7 +21710,7 @@
      [
       "cache_dir",
       "POSITIONAL_OR_KEYWORD",
-      "PosixPath('/home/jchen/.cache/mir/deedsbcv')"
+      "PosixPath('~/.cache/mir/deedsbcv')"
      ],
      [
       "force_download",

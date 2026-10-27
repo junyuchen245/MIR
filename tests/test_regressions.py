@@ -298,12 +298,16 @@ def test_sin_positional_encoding_follows_device():
 
 
 def test_random_multicontrast_remap_unbatched_input():
+    import random
+
     from MIR import RandomMultiContrastRemap
 
-    torch.manual_seed(0)
-    img = torch.rand(1, 16, 16, 16)
     mask = torch.zeros(1, 16, 16, 16, dtype=torch.bool)
     mask[:, 3:13, 3:13, 3:13] = True
-    out = RandomMultiContrastRemap()(img, mask)
-    out = out[0] if isinstance(out, (tuple, list)) else out
-    assert out.shape[-3:] == img.shape[-3:]
+    for seed in range(40):  # the recipe is drawn at random; cover all of them (incl. the float16 LUT on CPU)
+        random.seed(seed)
+        torch.manual_seed(seed)
+        img = torch.rand(1, 16, 16, 16)
+        out = RandomMultiContrastRemap()(img, mask)
+        out = out[0] if isinstance(out, (tuple, list)) else out
+        assert out.shape[-3:] == img.shape[-3:]

@@ -35,6 +35,24 @@ def _signature(obj) -> str:
         return "<no signature>"
 
 
+_HOME = os.path.expanduser("~")
+
+
+def _norm_default(value) -> str:
+    """Machine-independent repr of a default value.
+
+    Defaults computed at import time differ between machines: paths under the home directory (cache folders) and
+    devices chosen with ``torch.cuda.is_available()``. Both are normalised so that the snapshot compares equal on a
+    workstation and on a CPU-only CI runner.
+    """
+    r = _ADDRESS.sub("", repr(value))
+    if _HOME and _HOME != "/":
+        r = r.replace(_HOME, "~")
+    if r in ("'cuda'", "'cpu'", "device(type='cuda')", "device(type='cpu')", "device(type='cuda', index=0)"):
+        r = "'<cuda|cpu>'"
+    return r
+
+
 def _params(obj) -> list:
     """Parameter names, kinds and defaults -- the parts of a signature callers depend on (annotations excluded)."""
     try:
@@ -42,7 +60,7 @@ def _params(obj) -> list:
     except (TypeError, ValueError):
         return None
     return [
-        [p.name, p.kind.name, _ADDRESS.sub("", repr(p.default)) if p.default is not p.empty else None]
+        [p.name, p.kind.name, _norm_default(p.default) if p.default is not p.empty else None]
         for p in sig.parameters.values()
     ]
 

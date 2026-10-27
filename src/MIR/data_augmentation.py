@@ -518,7 +518,7 @@ def random_contrast_lut(
         end_idx = min(start_idx + chunk_size, height)
         patch = img[..., start_idx:end_idx, :]
         idx = (patch * (num_bins - 1)).to(idx_dtype)
-        lo = idx.floor().long().clamp(0, num_bins - 2)
+        lo = idx.float().floor().long().clamp(0, num_bins - 2)  # exact for fp16; Half floor is not on CPU
         hi = lo + 1
         w = idx - lo.to(idx_dtype)
 

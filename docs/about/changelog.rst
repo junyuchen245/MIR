@@ -53,7 +53,8 @@ Fixed: errors and crashes
 - ``MeanStream`` turned its running mean and count into trainable parameters after the first update.
 - The deedsBCV helper no longer picks up executables from the current directory when ``MIR_DEEDSBCV_DIR`` is unset.
 - ``CenterCropPad3D`` ignored the ``padding_value`` given to its constructor.
-- ``RandomMultiContrastRemap`` failed on unbatched ``(C, D, H, W)`` inputs.
+- ``RandomMultiContrastRemap`` failed on unbatched ``(C, D, H, W)`` inputs, and its contrast-LUT recipe
+  (``random_contrast_lut`` with the default ``use_half=True``) failed on CPU tensors.
 - The self-supervised learning heads required a GPU for their sampling noise (same random numbers as before).
 
 Fixed: checkpoints and devices
